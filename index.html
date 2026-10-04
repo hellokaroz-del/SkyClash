@@ -326,10 +326,10 @@ const ULT_IMG = ULT_SRC.map(src => { const im = new Image(); im.src = src; retur
 // Karoz's 15-frame loop played while the gauge is full
 const ULT_LOOP_SRC = ["assets/a076.webp", "assets/a077.webp", "assets/a078.webp", "assets/a079.webp", "assets/a080.webp", "assets/a081.webp", "assets/a082.webp", "assets/a083.webp", "assets/a084.webp", "assets/a085.webp", "assets/a086.webp", "assets/a087.webp", "assets/a088.webp", "assets/a089.webp", "assets/a090.webp"];
 const ULT_LOOP = ULT_LOOP_SRC.map(src => { const im = new Image(); im.src = src; return im; });
-const ULT_RECT = { x: 866, y: 352, w: 86, h: 86 };
+const ULT_RECT = { x: 866, y: 330, w: 86, h: 86 };
 // Karoz's skill frame: 6 slots over the Energy bar; positions measured on the source art (2172 px wide, cropped from y=95)
 const SKILL_FRAME = new Image(); SKILL_FRAME.src = 'assets/a091.webp';
-const SF = { x: 628, y: VH - 93, w: 330, src: 2172, srcH: 600, cx: [240, 580, 918, 1255, 1593, 1930], cy: 220, win: 230, track: [360, 445, 1854, 507] };
+const SF = { x: 628, y: VH - 113, w: 330, src: 2172, srcH: 600, cx: [240, 580, 918, 1255, 1593, 1930], cy: 220, win: 230, track: [360, 445, 1854, 507] };
 const ENERGY_MAX = 250, SKILL_COST = 100, WALK_COST = 0.7; // walking costs 0.7 Energy per unit moved; the Ultimate is free
 // skill slot icons (Karoz's art)
 const ICONS = {"warp": "assets/a092.png", "meteor": "assets/a093.png", "ice": "assets/a094.png"};
@@ -1534,8 +1534,11 @@ function drawHUD() {
   ctx.font = `600 22px ${FONT}`; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(8,14,40,.95)';
   ctx.strokeText(Math.round(p.angle), dcx - f * 14, dcy + 28); ctx.fillStyle = '#ffd36a'; ctx.fillText(Math.round(p.angle), dcx - f * 14, dcy + 28);
   drawSlots(p);
+  drawPassives(p);
+  drawWarpButton(p);
   drawUltButton();
   drawEnergy(p);
+  drawHpBar(p);
   }
 }
 // top bar: team 1 portraits | wind | team 2 portraits (player 0 is team 1, player 1 is team 2)
@@ -1544,17 +1547,20 @@ function teamOf(i) { return i === 0 ? 0 : 1; }
 function myTeam() { const h = meP(); return teamOf(h ? h.i : S.turn); }
 // skill slots Z X C inside the HUD, after the power bar (DDTank-style)
 const ICON_IMG = {}; for (const [k, src] of Object.entries(ICONS)) { const im = new Image(); im.src = src; ICON_IMG[k] = im; }
+function warpDef(p) {
+  return { key: 'Z', name: 'สกิลบิน', icon: 'warp', cd: p.warpCd, max: WARP_CD, on: p.armed === 'z', use: useWarp,
+      desc: 'ปาลูกแก้วที่หมุนกลางอากาศ แล้ววาร์ปไปยังจุดที่ลูกแก้วตก ไม่ทำดาเมจ และใช้แทนการยิงของตานั้น' };
+}
 function slotDefs(p) {
-  const sl = [
-    { key: 'Z', name: 'สกิลบิน', icon: 'warp', cd: p.warpCd, max: WARP_CD, on: p.armed === 'z', use: useWarp,
-      desc: 'ปาลูกแก้วที่หมุนกลางอากาศ แล้ววาร์ปไปยังจุดที่ลูกแก้วตก ไม่ทำดาเมจ และใช้แทนการยิงของตานั้น' },
-  ];
+  const sl = [];
   if (p.c.skill) sl.push({ key: 'X', name: p.c.skill.name, icon: p.c.icon, cd: p.skillCd, max: p.c.skill.cd, on: p.armed === 'x', use: useSkill, desc: p.c.tip || p.c.sdesc });
   if (p.c.skill2) sl.push({ key: 'C', name: p.c.skill2.name, icon: p.c.icon2, cd: p.skill2Cd, max: p.c.skill2.cd, on: p.armed === 'c', use: useSkill2, desc: p.c.tip2 || p.c.sdesc2 });
   while (sl.length < SLOTS) sl.push({ key: SLOT_KEYS[sl.length], empty: true });
   return sl;
 }
-const SLOTS = 6, SLOT_KEYS = ['Z', 'X', 'C', 'V', 'B', 'N'];
+const SLOTS = 6, SLOT_KEYS = ['X', 'C', 'V', 'B', 'N', 'M'];
+const WARP_RECT = { x: 209, y: 432, w: 48, h: 48 };
+const PASSIVE_RECTS = [{ x: 748, y: 384, w: 40, h: 40 }, { x: 796, y: 384, w: 40, h: 40 }];
 function slotRect(i) {
   const k = SF.w / SF.src, sz = SF.win * k;
   return { x: SF.x + SF.cx[i] * k - sz / 2, y: SF.y + SF.cy * k - sz / 2, w: sz, h: sz };
@@ -1744,6 +1750,111 @@ function drawSlots(p) {
     }
   });
 }
+// warp: a gold-rimmed orb with Karoz's warp icon, rune ring turning while it is ready
+function drawWarpButton(p) {
+  const d = warpDef(p), r = WARP_RECT, cx = r.x + r.w / 2, cy = r.y + r.h / 2, R = r.w / 2;
+  const use = slotUsable(p, d), hov = inRect(r, mouse.x, mouse.y), t = S.frame;
+  ctx.save();
+  if (d.on || (hov && use)) { ctx.shadowColor = d.on ? '#ffd36a' : 'rgba(170,140,255,.95)'; ctx.shadowBlur = d.on ? 18 : 14; }
+  ctx.fillStyle = goldGrad(cy - R, cy + R); ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#3a210c'; ctx.beginPath(); ctx.arc(cx, cy, R - 3, 0, 7); ctx.fill();
+  ctx.fillStyle = goldGrad(cy + R, cy - R); ctx.beginPath(); ctx.arc(cx, cy, R - 4, 0, 7); ctx.fill();
+  const g = ctx.createRadialGradient(cx, cy - 4, 2, cx, cy, R - 6);
+  g.addColorStop(0, '#5a4bd8'); g.addColorStop(0.6, '#1d1a6a'); g.addColorStop(1, '#090a2c');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R - 6, 0, 7); ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R - 6, 0, 7); ctx.clip();
+  const im = ICON_IMG.warp;
+  if (ready(im)) { const s2 = (R - 6) * 2.15; ctx.drawImage(im, cx - s2 / 2, cy - s2 / 2, s2, s2); }
+  if (!use) { ctx.fillStyle = 'rgba(8,10,25,.55)'; ctx.fillRect(r.x, r.y, r.w, r.h); }
+  ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.ellipse(cx - 3, cy - R * 0.45, R * 0.55, R * 0.22, -0.3, 0, 7); ctx.fill();
+  ctx.restore();
+  if (use || d.on) { // turning rune ring
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(t * 0.02);
+    ctx.strokeStyle = 'rgba(190,170,255,.75)'; ctx.lineWidth = 1.2; ctx.setLineDash([2, 5]);
+    ctx.beginPath(); ctx.arc(0, 0, R - 8, 0, 7); ctx.stroke(); ctx.restore();
+  }
+  if (d.cd > 0) {
+    ctx.font = `700 18px ${FONT}`; ctx.textAlign = 'center'; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(6,8,26,.95)';
+    ctx.strokeText(d.cd, cx, cy + 7); ctx.fillStyle = '#fff'; ctx.fillText(d.cd, cx, cy + 7);
+  }
+  drawGem(cx, cy - R + 1, 4.2, '#8f6bff', 0.5);
+  // key badge
+  ctx.fillStyle = 'rgba(10,14,34,.95)'; ctx.strokeStyle = goldGrad(cy + R - 12, cy + R + 2); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.roundRect(cx - 7, cy + R - 9, 14, 12, 3); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = `700 9px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText('Z', cx, cy + R);
+  ctx.restore();
+}
+// passive slots: two small gold-rimmed windows above the skill row (empty until a class has passives)
+function passiveDefs(p) {
+  const list = (p.c.passives || []).slice(0, 2);
+  return [0, 1].map(i => list[i] ? Object.assign({ key: 'P' + (i + 1), passive: true }, list[i]) : { key: 'P' + (i + 1), empty: true, passive: true });
+}
+function drawPassives(p) {
+  passiveDefs(p).forEach((d, i) => {
+    const r = PASSIVE_RECTS[i], hov = inRect(r, mouse.x, mouse.y);
+    ctx.save();
+    if (hov) { ctx.shadowColor = 'rgba(120,180,255,.9)'; ctx.shadowBlur = 12; }
+    ctx.fillStyle = goldGrad(r.y, r.y + r.h); ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 7); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#3a210c'; ctx.beginPath(); ctx.roundRect(r.x + 2.5, r.y + 2.5, r.w - 5, r.h - 5, 5); ctx.fill();
+    const ix = r.x + 4, iy = r.y + 4, iw = r.w - 8, ih = r.h - 8;
+    const g = ctx.createRadialGradient(ix + iw / 2, iy + ih / 2, 1, ix + iw / 2, iy + ih / 2, iw * 0.7);
+    g.addColorStop(0, '#24306e'); g.addColorStop(1, '#0a0d2e');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(ix, iy, iw, ih, 4); ctx.fill();
+    const im = d.icon ? (ICON_IMG[d.icon] || assetImage(d.icon)) : null;
+    if (!d.empty && im && ready(im)) { ctx.save(); ctx.beginPath(); ctx.roundRect(ix, iy, iw, ih, 4); ctx.clip(); ctx.drawImage(im, ix, iy, iw, ih); ctx.restore(); }
+    else if (!d.empty) { ctx.fillStyle = '#fff'; ctx.font = `600 9px ${FONT}`; ctx.textAlign = 'center'; wrapText(d.name || '', iw - 2).slice(0, 2).forEach((ln, k, a) => ctx.fillText(ln, ix + iw / 2, iy + ih / 2 + 3 + (k - (a.length - 1) / 2) * 10)); }
+    else { // empty: a faint rune
+      ctx.strokeStyle = 'rgba(150,175,255,.28)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(ix + iw / 2, iy + ih / 2, iw * 0.28, 0, 7); ctx.stroke();
+      ctx.beginPath(); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 4; ctx.moveTo(ix + iw / 2 + Math.cos(a) * iw * 0.12, iy + ih / 2 + Math.sin(a) * iw * 0.12); ctx.lineTo(ix + iw / 2 + Math.cos(a) * iw * 0.4, iy + ih / 2 + Math.sin(a) * iw * 0.4); } ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(ix, iy, iw, ih * 0.3);
+    drawGem(r.x + r.w / 2, r.y + 1, 3.4, '#3fd0ff', 0.35);
+    ctx.fillStyle = 'rgba(10,14,34,.92)'; ctx.strokeStyle = 'rgba(230,200,120,.8)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.roundRect(r.x + 2, r.y + r.h - 12, 14, 10, 2.5); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffe9a8'; ctx.font = `700 7px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText(d.key, r.x + 9, r.y + r.h - 4.5);
+    ctx.restore();
+  });
+}
+// HP bar under the energy bar: gold capsule, red liquid with a trailing "lost HP" glow and the count on top
+function drawHpBar(p) {
+  const k = SF.w / SF.src, [a, , c] = SF.track;
+  const x0 = SF.x + (a - 40) * k, x1 = SF.x + (c + 40) * k, y0 = SF.y + SF.srcH * k + 3, h = 15, w = x1 - x0;
+  const f = Math.max(0, Math.min(1, p.hp / p.maxHp));
+  p.hpShow = p.hpShow == null || p.hpShow < f ? f : Math.max(f, p.hpShow - 0.004);
+  ctx.save();
+  ctx.fillStyle = goldGrad(y0, y0 + h); ctx.beginPath(); ctx.roundRect(x0, y0, w, h, h / 2); ctx.fill();
+  ctx.fillStyle = '#2a0a12'; ctx.beginPath(); ctx.roundRect(x0 + 2, y0 + 2, w - 4, h - 4, (h - 4) / 2); ctx.fill();
+  const tx = x0 + 3, ty = y0 + 3, tw = w - 6, th = h - 6;
+  ctx.beginPath(); ctx.roundRect(tx, ty, tw, th, th / 2); ctx.clip();
+  if (p.hpShow > f) { ctx.fillStyle = 'rgba(255,214,120,.85)'; ctx.fillRect(tx, ty, tw * p.hpShow, th); }
+  if (f > 0) {
+    const low = f < 0.35, g = ctx.createLinearGradient(0, ty, 0, ty + th);
+    if (low) { g.addColorStop(0, '#ffc07a'); g.addColorStop(0.5, '#ff6a2a'); g.addColorStop(1, '#a8290c'); }
+    else { g.addColorStop(0, '#ff9a8a'); g.addColorStop(0.5, '#e8322a'); g.addColorStop(1, '#7a0c18'); }
+    ctx.fillStyle = g; ctx.fillRect(tx, ty, tw * f, th);
+    if (low) { ctx.fillStyle = `rgba(255,240,200,${0.18 + 0.18 * Math.sin(S.frame * 0.15)})`; ctx.fillRect(tx, ty, tw * f, th); }
+    const sx = tx + ((S.frame * 1.1) % (tw + 60)) - 30, sg = ctx.createLinearGradient(sx - 30, 0, sx + 30, 0);
+    sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(0.5, 'rgba(255,255,255,.35)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sg; ctx.fillRect(tx, ty, tw * f, th);
+    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(tx, ty + 0.5, tw * f, th * 0.3);
+  }
+  ctx.restore();
+  // heart gem at the left end
+  const hx = x0 + 1, hy = y0 + h / 2;
+  ctx.save(); ctx.translate(hx, hy);
+  const heart = s2 => { ctx.beginPath(); ctx.moveTo(0, s2 * 0.75); ctx.bezierCurveTo(-s2 * 1.3, -s2 * 0.1, -s2 * 0.55, -s2 * 1.05, 0, -s2 * 0.35); ctx.bezierCurveTo(s2 * 0.55, -s2 * 1.05, s2 * 1.3, -s2 * 0.1, 0, s2 * 0.75); ctx.closePath(); };
+  ctx.fillStyle = goldGrad(-11, 9); heart(11); ctx.fill();
+  const hg = ctx.createLinearGradient(-6, -7, 6, 6); hg.addColorStop(0, '#ffb3a8'); hg.addColorStop(0.5, '#e8322a'); hg.addColorStop(1, '#6a0814');
+  ctx.fillStyle = hg; heart(8); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(-2.6, -3.4, 1.4, 0, 7); ctx.fill();
+  ctx.restore();
+  ctx.font = `700 10px ${FONT}`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(30,4,10,.95)';
+  const label = `HP ${Math.max(0, Math.round(p.hp))} / ${p.maxHp}`;
+  ctx.strokeText(label, x0 + w / 2 + 4, y0 + h / 2 + 3.5); ctx.fillStyle = '#fff4ec'; ctx.fillText(label, x0 + w / 2 + 4, y0 + h / 2 + 3.5);
+}
 function wrapText(t, maxW) {
   const out = []; let line = '';
   for (const w of t.split(' ')) {
@@ -1756,13 +1867,17 @@ function wrapText(t, maxW) {
 function slotAt(x, y) { for (let i = 0; i < SLOTS; i++) { const r = slotRect(i); if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return i; } return -1; }
 function drawSlotTip() {
   const onUlt = inRect(ULT_RECT, mouse.x, mouse.y), p = ultOwner();
-  const i = onUlt ? -1 : slotAt(mouse.x, mouse.y); if (i < 0 && !onUlt) return;
-  const d = onUlt ? ultDef(p) : slotDefs(p)[i]; if (d.empty) return;
+  const onWarp = !onUlt && inRect(WARP_RECT, mouse.x, mouse.y), pi = onUlt || onWarp ? -1 : PASSIVE_RECTS.findIndex(r => inRect(r, mouse.x, mouse.y));
+  const solo = onUlt || onWarp || pi >= 0;
+  const i = solo ? -1 : slotAt(mouse.x, mouse.y); if (i < 0 && !solo) return;
+  let d = onUlt ? ultDef(p) : onWarp ? warpDef(p) : pi >= 0 ? passiveDefs(p)[pi] : slotDefs(p)[i];
+  if (d.passive) d = d.empty ? { name: 'สกิลติดตัว (Passive)', desc: 'ช่องนี้ยังว่าง สกิลติดตัวทำงานเองตลอดเวลา ไม่ต้องกดใช้', passive: true, key: d.key } : Object.assign({ desc: '' }, d);
+  else if (d.empty) return;
   ctx.font = `400 12px ${FONT}`;
   const w = 250, lines = wrapText(d.desc, w - 20);
-  const foot = d.pow ? `เกจ POW ${Math.floor(p.rage)}/${POW_MAX} · ไม่ใช้ Energy · ปุ่ม ${d.key}` : `ใช้ ${SKILL_COST} Energy · ทุก ${d.max} เทิร์น · ปุ่ม ${d.key}` + (d.cd > 0 ? ` · พร้อมในอีก ${d.cd} ตา` : '');
-  const h = 30 + lines.length * 17 + 20, r = onUlt ? ULT_RECT : slotRect(i);
-  const x = Math.max(6, Math.min(VW - w - 6, r.x + r.w / 2 - w / 2)), y = r.y - h - (onUlt ? 2 : 10);
+  const foot = d.passive ? 'ติดตัว · ทำงานเอง ไม่ต้องกด' : d.pow ? `เกจ POW ${Math.floor(p.rage)}/${POW_MAX} · ไม่ใช้ Energy · ปุ่ม ${d.key}` : `ใช้ ${SKILL_COST} Energy · ทุก ${d.max} เทิร์น · ปุ่ม ${d.key}` + (d.cd > 0 ? ` · พร้อมในอีก ${d.cd} ตา` : '');
+  const h = 30 + lines.length * 17 + 20, r = onUlt ? ULT_RECT : onWarp ? WARP_RECT : pi >= 0 ? PASSIVE_RECTS[pi] : slotRect(i);
+  const x = Math.max(6, Math.min(VW - w - 6, r.x + r.w / 2 - w / 2)), y = r.y - h - (solo ? 4 : 10);
   ctx.fillStyle = 'rgba(13,27,51,.96)'; ctx.beginPath(); ctx.roundRect(x, y, w, h, 9); ctx.fill();
   ctx.strokeStyle = '#b48cff'; ctx.lineWidth = 1.5; ctx.stroke();
   ctx.textAlign = 'left';
@@ -2195,6 +2310,7 @@ function mmLook(e) {
 cv.addEventListener('pointerdown', e => {
   if (playing()) { const r = cv.getBoundingClientRect(), ux = (e.clientX - r.left) / r.width * VW, uy = (e.clientY - r.top) / r.height * VH;
     if (inRect(ULT_RECT, ux, uy)) { if (ultUsable(cur())) useUlt(); return; }
+    if (inRect(WARP_RECT, ux, uy)) { if (slotUsable(cur(), warpDef(cur()))) useWarp(); return; }
     if (inRect(PASS_RECT, ux, uy) && passUsable()) { passTurn(); return; } }
   if (playing()) { const r = cv.getBoundingClientRect(), i = slotAt((e.clientX - r.left) / r.width * VW, (e.clientY - r.top) / r.height * VH); if (i >= 0) { const d = slotDefs(cur())[i]; if (slotUsable(cur(), d)) d.use(); return; } }
   if (playing() && mmLook(e)) { mmDrag = true; try { cv.setPointerCapture(e.pointerId); } catch (_) {} } });
