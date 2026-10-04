@@ -216,6 +216,7 @@ button.mk-prev { appearance: none; font: inherit; color: var(--fg); background: 
       <div class="mk-tabs" role="tablist">
         <button type="button" class="mk-tab" role="tab" data-t="classes">อาชีพ</button>
         <button type="button" class="mk-tab" role="tab" data-t="skills">สกิล</button>
+        <button type="button" class="mk-tab" role="tab" data-t="passives">พาสซีฟ</button>
         <button type="button" class="mk-tab" role="tab" data-t="stages">ด่าน</button>
       </div>
       <div class="mk-actions">
@@ -337,6 +338,15 @@ const ULT_RECT = { x: 866, y: 330, w: 86, h: 86 };
 const SKILL_FRAME = new Image(); SKILL_FRAME.src = 'assets/a091.webp';
 const SF = { x: 628, y: VH - 113, w: 330, src: 2172, srcH: 600, cx: [240, 580, 918, 1255, 1593, 1930], cy: 220, win: 230, track: [360, 445, 1854, 507] };
 const ENERGY_MAX = 250, SKILL_COST = 100, WALK_COST = 0.7; // walking costs 0.7 Energy per unit moved; the Ultimate is free
+// balance spec V1: damage = stat x skill% x DMG_K x 100 / (100 + DEF or MDEF); crit chance from LUK; Energy per turn from SPD
+const DMG_K = 4, CRIT_BASE = 3, CRIT_PER_LUK = 0.12, CRIT_MUL = 1.5, CC_RES_TURNS = 2;
+const maxEnergy = c => Math.round(235 + (+c.spd || 0) * 0.25);
+const SLOT_IDS = ['s1', 's2', 's3', 's4', 's5', 's6'];
+// Doram's four elements (i = colour index of the spirit shot) and the reactions two marks make
+const ELEM = { fire: { n: 'ไฟ', col: '#ff6a2a', i: 0 }, water: { n: 'น้ำ', col: '#3aa8ff', i: 1 }, thunder: { n: 'สายฟ้า', col: '#ffe14a', i: 4 }, nature: { n: 'ธรรมชาติ', col: '#4fd88a', i: 2 } };
+const ELEM_ORDER = ['fire', 'water', 'thunder', 'nature'];
+const REACTIONS = { 'fire+thunder': { name: 'Explosion', bonus: 70 }, 'thunder+water': { name: 'Electro Stun', bonus: 15, stun: 2 },
+  'nature+water': { name: 'Root Bind', bonus: 35, bind: 1 }, 'fire+nature': { name: 'Wildfire', burn: 25, burnTurns: 2 } };
 // skill slot icons (Karoz's art)
 const ICONS = {"warp": "assets/a092.png", "meteor": "assets/a093.png", "ice": "assets/a094.png"};
 const ready = im => im && im.complete && im.naturalWidth > 0;
@@ -345,43 +355,114 @@ const ready = im => im && im.complete && im.naturalWidth > 0;
 // DEFAULT_DATA is the built-in game; an exported game carries its own copy in <script id="game-data">,
 // and edits saved in the maker on this browser (IndexedDB) load over both.
 const DEFAULT_DATA = {
-  version: 1,
+  version: 2,
+  // Karoz's balance spec V1: 7 stats per class; nBase/nPct = the normal shot (stat and %); s1-s6 skill row, b ultimate, p1-p2 passives
   classes: {
-    blade:  { name: 'Swordman', hp: 1200, color: '#d9534f', dmg: 250, r: 32, wf: 1, gf: 1.15, spd: 1.0, shot: 'sword', desc: 'HP สูง ขว้างดาบหนัก', x: 'iron' },
-    mage:   { name: 'Mage', hp: 850, color: '#7a5fe0', dmg: 290, r: 52, wf: 1, gf: 1.0, spd: 1.0, shot: 'fire', desc: 'ระเบิดกว้าง ขุดดินมาก HP ต่ำ', x: 'meteor', c: 'ice', b: 'bolt' },
-    archer: { name: 'Archer', hp: 950, color: '#3f9b5a', dmg: 210, r: 22, wf: 1, gf: 0.85, spd: 1.08, shot: 'arrow', desc: 'ยิงไกล แม่น', x: 'double' },
-    cleric: { name: 'Acolyte', hp: 1000, color: '#e0a43a', dmg: 180, r: 34, wf: 1, gf: 1.0, spd: 1.0, shot: 'orb', desc: 'ดาเมจต่ำ แต่ฟื้นฟูตัวเองได้', x: 'heal' },
-    thief:  { name: 'Thief', hp: 900, color: '#a3313a', dmg: 205, r: 24, wf: 1, gf: 0.95, spd: 1.06, shot: 'dagger', desc: 'เร็ว ปามีดสั้น ดาเมจกลาง ๆ', x: 'steal' },
-    merchant: { name: 'Merchant', hp: 1100, color: '#b5652a', dmg: 240, r: 38, wf: 1, gf: 1.1, spd: 0.97, shot: 'axe', desc: 'HP สูง ขว้างขวาน', x: 'cart' },
-    doram:  { name: 'Doram', hp: 850, color: '#c98f2e', dmg: 230, r: 34, wf: 1, gf: 1.0, spd: 1.02, shot: 'spirit', desc: 'นักอัญเชิญแมว ยิงวิญญาณแมว', x: 'spirits' },
+    thief:  { name: 'Assassin', hp: 900, atk: 65, matk: 10, def: 25, mdef: 35, spd: 95, luk: 80, nBase: 'atk', nPct: 100, color: '#a3313a', r: 24, gf: 0.95, vel: 1.06, shot: 'dagger',
+              desc: 'ดาเมจระเบิด พิษ เลือดไหล ล่องหน คริติคอลสูง แต่ HP ต่ำ', s1: 'as_double', s2: 'as_venom', s3: 'as_backstab', s4: 'as_bleed', s5: 'as_hide', s6: 'as_assassinate', b: 'as_sonic', p1: 'pa_katar', p2: 'pa_exec' },
+    archer: { name: 'Archer', hp: 950, atk: 75, matk: 10, def: 30, mdef: 35, spd: 70, luk: 60, nBase: 'atk', nPct: 100, color: '#3f9b5a', r: 22, gf: 0.85, vel: 1.08, shot: 'arrow',
+              desc: 'ยิงธรรมดาแรงที่สุด แม่นและยิงไกล', s1: 'ar_strafe', s2: 'ar_shower', s3: 'ar_pierce', s4: 'ar_wind', s5: 'ar_mark', s6: 'ar_focus', b: 'ar_rain', p1: 'pa_vulture', p2: 'pa_critshot' },
+    blade:  { name: 'Swordman', hp: 1300, atk: 55, matk: 10, def: 75, mdef: 45, spd: 35, luk: 30, nBase: 'atk', nPct: 100, color: '#d9534f', r: 32, gf: 1.15, vel: 1, shot: 'sword',
+              desc: 'ทนที่สุด HP และ DEF สูง', s1: 'sw_bash', s2: 'sw_magnum', s3: 'sw_armor', s4: 'sw_provoke', s5: 'sw_endure', s6: 'sw_charge', b: 'sw_hundred', p1: 'pa_swordm', p2: 'pa_ironbody' },
+    mage:   { name: 'Mage', hp: 800, atk: 10, matk: 100, def: 20, mdef: 70, spd: 55, luk: 40, nBase: 'matk', nPct: 65, color: '#7a5fe0', r: 52, gf: 1, vel: 1, shot: 'fire', face: -1,
+              desc: 'เวทแรงที่สุด แช่แข็ง ระเบิดวงกว้าง แต่ HP ต่ำ', s1: 'mg_nova', s2: 'mg_meteor', s3: 'mg_firebolt', s4: 'mg_heaven', s5: 'mg_firewall', s6: 'mg_amp', b: 'mg_thunder', p1: 'pa_magicm', p2: 'pa_elem' },
+    merchant: { name: 'Merchant', hp: 1150, atk: 50, matk: 20, def: 60, mdef: 50, spd: 40, luk: 70, nBase: 'atk', nPct: 100, color: '#b5652a', r: 38, gf: 1.1, vel: 0.97, shot: 'axe',
+              desc: 'ถึกพอตัว มียา โล่ และบัฟตัวเอง', s1: 'mc_mammo', s2: 'mc_cartrev', s3: 'mc_coin', s4: 'mc_potion', s5: 'mc_upgrade', s6: 'mc_armor', b: 'mc_termination', p1: 'pa_overcharge', p2: 'pa_lucky' },
+    cleric: { name: 'Priest', hp: 1000, atk: 15, matk: 75, def: 45, mdef: 80, spd: 40, luk: 50, nBase: 'matk', nPct: 80, color: '#e0a43a', r: 34, gf: 1, vel: 1, shot: 'orb',
+              desc: 'ฮีลดีที่สุด บัฟ โล่ และล้างสถานะ', s1: 'pr_holy', s2: 'pr_heal', s3: 'pr_bless', s4: 'pr_angelus', s5: 'pr_barrier', s6: 'pr_purge', b: 'pr_sanct', p1: 'pa_grace', p2: 'pa_guardian' },
+    doram:  { name: 'Doram', hp: 900, atk: 20, matk: 70, def: 35, mdef: 55, spd: 65, luk: 65, nBase: 'matk', nPct: 85, color: '#c98f2e', r: 34, gf: 1, vel: 1.02, shot: 'spirit',
+              desc: 'คอมโบธาตุ ติดมาร์ค 2 ธาตุแล้วจุดปฏิกิริยา', s1: 'dr_flame', s2: 'dr_water', s3: 'dr_thunder', s4: 'dr_nature', s5: 'dr_burst', s6: 'dr_shift', b: '', p1: 'pa_bond', p2: 'pa_nine' },
   },
   skills: {
-    iron:   { name: 'กายเหล็ก', cd: 3, type: 'self', guard: 50, short: 'รับดาเมจครึ่งเดียวจนถึงตาถัดไป' },
-    heal:   { name: 'ฟื้นฟู', cd: 3, type: 'self', heal: 30, short: 'ฟื้น HP 30% ทันที' },
-    meteor: { name: 'ฝนดาวตก', cd: 3, type: 'shot', count: 3, powSpread: 7, size: 75, proj: 'fireball', icon: 'meteor', sound: 'meteor',
-              short: 'นัดถัดไปแตกเป็นลูกไฟ 3 ลูก', tip: 'นัดถัดไปแตกเป็นลูกไฟ 3 ลูก ตกกระจายใกล้ ๆ กัน แต่ละลูกแรง 75% ของปกติ' },
-    ice:    { name: 'คำสาปน้ำแข็ง', cd: 3, type: 'shot', size: 80, proj: 'ice', freeze: 2, icon: 'ice', sound: 'ice',
-              short: 'ใครโดนจะแข็ง ข้าม 2 เทิร์น', tip: 'นัดถัดไปเป็นผลึกน้ำแข็ง ดาเมจ 80% ใครอยู่ในวงระเบิดจะแข็ง และข้ามเทิร์นของตัวเอง 2 เทิร์นติดกัน' },
-    double: { name: 'ยิงคู่', cd: 2, type: 'shot', count: 2, delay: 14, short: 'ยิงลูกศร 2 ดอกติดกัน' },
-    steal:  { name: 'ขโมยพลัง', cd: 3, type: 'shot', proj: 'dagger', steal: 30, short: 'นัดถัดไปขโมย POW ศัตรู 30',
-              tip: 'นัดถัดไปเป็นมีดขโมย ถ้าโดนศัตรู จะดึง POW ของศัตรูมาเป็นของเรา 30 (เท่าที่ศัตรูมี)' },
-    cart:   { name: 'รถเข็นถล่ม', cd: 3, type: 'shot', size: 130, dmg: 105, weight: 112, proj: 'cart', short: 'นัดถัดไปขว้างรถเข็น วงระเบิดใหญ่ 130%',
-              tip: 'นัดถัดไปขว้างรถเข็นสินค้า วงระเบิดใหญ่ขึ้น 30% และแรงขึ้นประมาณ 35% แต่ตกเร็วกว่าปกติเพราะหนัก' },
-    spirits: { name: 'วิญญาณแมว 4 ธาตุ', cd: 3, type: 'shot', count: 4, spread: 12, size: 55, proj: 'spirit', short: 'นัดถัดไปปล่อยแมววิญญาณ 4 ตัว',
-              tip: 'นัดถัดไปปล่อยแมววิญญาณ 4 ธาตุ (ไฟ น้ำ ลม ดิน) บินแผ่เป็นพัด แต่ละตัวแรง 55%' },
-    bolt:   { name: 'สายฟ้าพิพากษา', type: 'shot', proj: 'bolt', homing: true, dmg: 180, sound: 'bolt',
-              tip: 'นัดถัดไปเป็นลูกสายฟ้า ถ้าตกในวงกลมรอบตัวศัตรู (กว้าง 2 ช่อง) ฟ้าจะผ่าลงตัวศัตรูเอง (นำวิถี) แรง 180% ถ้าไกลกว่านั้นจะผ่าลงจุดที่ตก' },
+    // Assassin
+    as_double: { name: 'Double Attack', cd: 2, type: 'shot', base: 'atk', dmg: 60, count: 2, delay: 12, proj: 'dagger', short: 'ปามีด 2 เล่มติดกัน เล่มละ 60% ATK (รวม 120%)' },
+    as_venom: { name: 'Venom Knife', cd: 2, type: 'shot', base: 'atk', dmg: 80, dotKind: 'poison', dotPct: 20, dotTurns: 3, proj: 'dagger', short: '80% ATK และติดพิษ 20% ATK ทุกเทิร์น 3 เทิร์น' },
+    as_backstab: { name: 'Backstab', cd: 3, type: 'shot', base: 'atk', dmg: 145, proj: 'dagger', short: '145% ATK' },
+    as_bleed: { name: 'Bleeding Edge', cd: 3, type: 'shot', base: 'atk', dmg: 90, dotKind: 'bleed', dotPct: 25, dotTurns: 2, proj: 'dagger', short: '90% ATK และเลือดไหล 25% ATK ทุกเทิร์น 2 เทิร์น' },
+    as_hide: { name: 'Hiding', cd: 4, type: 'self', hide: 4, short: 'ล่องหนสูงสุด 4 เทิร์น', tip: 'ล่องหนสูงสุด 4 เทิร์น ศัตรูมองไม่เห็นตำแหน่ง แต่ยังโดนดาเมจถ้ายิงโดนตัวจริงหรือโดนวงระเบิด ยิงเมื่อไรจะหลุดล่องหนทันที คูลดาวน์ 4 เทิร์นเริ่มนับหลังหลุดล่องหน' },
+    as_assassinate: { name: 'Assassinate', cd: 3, type: 'shot', base: 'atk', dmg: 130, vsDot: 170, proj: 'dagger', short: '130% ATK หรือ 170% ถ้าเป้าติดพิษหรือเลือดไหล' },
+    as_sonic: { name: 'Sonic Execution', type: 'shot', base: 'atk', dmg: 220, vsDot: 250, size: 120, proj: 'dagger', short: '220% ATK หรือ 250% ถ้าเป้าติดพิษหรือเลือดไหล' },
+    // Archer
+    ar_strafe: { name: 'Double Strafe', cd: 2, type: 'shot', base: 'atk', dmg: 70, count: 2, delay: 10, short: 'ยิงลูกศร 2 ดอกติดกัน ดอกละ 70% ATK (รวม 140%)' },
+    ar_shower: { name: 'Arrow Shower', cd: 2, type: 'shot', base: 'atk', dmg: 110, size: 170, short: '110% ATK วงระเบิดกว้าง' },
+    ar_pierce: { name: 'Piercing Arrow', cd: 3, type: 'shot', base: 'atk', dmg: 150, ignoreDef: 15, short: '150% ATK ไม่สน DEF ของเป้า 15%' },
+    ar_wind: { name: 'Wind Arrow', cd: 2, type: 'shot', base: 'atk', dmg: 120, knock: 70, short: '120% ATK และเป้ากระเด็นออกไป' },
+    ar_mark: { name: "Hunter's Mark", cd: 4, type: 'foe', debTaken: 15, debTurns: 2, short: 'ใช้ทันที: ศัตรูโดนดาเมจจากเรา +15% 2 เทิร์น' },
+    ar_focus: { name: 'Focus', cd: 3, type: 'self', bNext: 25, bTurns: 2, short: 'การยิงครั้งถัดไปแรงขึ้น 25%' },
+    ar_rain: { name: 'Arrow Rain', type: 'shot', base: 'atk', dmg: 40, count: 6, spread: 16, powSpread: 8, delay: 5, short: 'ฝนลูกศร 6 ดอก ดอกละ 40% ATK (รวมสูงสุด 240%)' },
+    // Swordman
+    sw_bash: { name: 'Bash', cd: 2, type: 'shot', base: 'atk', dmg: 135, short: '135% ATK' },
+    sw_magnum: { name: 'Magnum Break', cd: 2, type: 'shot', base: 'atk', dmg: 115, size: 160, knock: 60, short: '115% ATK วงกว้าง และเป้ากระเด็น' },
+    sw_armor: { name: 'Armor Break', cd: 3, type: 'shot', base: 'atk', dmg: 90, debDef: 20, debTurns: 2, short: '90% ATK และ DEF ของเป้า -20% 2 เทิร์น' },
+    sw_provoke: { name: 'Provoke', cd: 3, type: 'foe', debDeal: 20, debTurns: 2, short: 'ใช้ทันที: ศัตรูทำดาเมจใส่เรา -20% 2 เทิร์น' },
+    sw_endure: { name: 'Endure', cd: 4, type: 'self', bTaken: 30, bTurns: 1, short: 'รับดาเมจ -30% จนถึงตาถัดไปของเรา' },
+    sw_charge: { name: 'Charge Strike', cd: 3, type: 'shot', base: 'atk', dmg: 150, short: '150% ATK' },
+    sw_hundred: { name: 'Hundred Blades', type: 'shot', base: 'atk', dmg: 230, size: 130, debDef: 15, debTurns: 2, short: '230% ATK และ DEF ของเป้า -15% 2 เทิร์น' },
+    // Mage
+    mg_nova: { name: 'Frost Nova', cd: 5, type: 'shot', base: 'matk', dmg: 60, freeze: 2, proj: 'ice', icon: 'ice', sound: 'ice', short: '60% MATK และแช่แข็ง 2 เทิร์น', tip: 'นัดถัดไปเป็นผลึกน้ำแข็ง 60% MATK ใครโดนวงระเบิดจะแข็ง ข้ามเทิร์นของตัวเอง 2 เทิร์น หลังหายแข็งจะได้ CC Resistance 2 เทิร์น' },
+    mg_meteor: { name: 'Meteor Storm', cd: 3, type: 'shot', base: 'matk', dmg: 55, count: 3, powSpread: 7, size: 75, proj: 'fireball', icon: 'meteor', sound: 'meteor', short: 'ลูกไฟ 3 ลูก ลูกละ 55% MATK (รวมสูงสุด 165%)' },
+    mg_firebolt: { name: 'Fire Bolt', cd: 2, type: 'shot', base: 'matk', dmg: 140, short: '140% MATK' },
+    mg_heaven: { name: "Heaven's Drive", cd: 2, type: 'shot', base: 'matk', dmg: 115, size: 150, dig: 170, proj: 'orb', short: '115% MATK วงกว้าง และขุดพื้นมากกว่าปกติ' },
+    mg_firewall: { name: 'Fire Wall', cd: 3, type: 'shot', base: 'matk', dmg: 0, zone: 40, zoneTurns: 2, size: 110, short: 'วางกำแพงไฟ ใครอยู่ในไฟตอนเริ่มเทิร์นโดน 40% MATK อยู่ 2 เทิร์น' },
+    mg_amp: { name: 'Magic Amplification', cd: 4, type: 'self', bNextMagic: 25, bTurns: 3, short: 'สกิลเวทครั้งถัดไปแรงขึ้น 25% (รวมท่าไม้ตาย)' },
+    mg_thunder: { name: 'Thunder Judgment', type: 'shot', base: 'matk', dmg: 250, proj: 'bolt', homing: true, sound: 'bolt', short: '250% MATK สายฟ้านำวิถี',
+                  tip: 'นัดถัดไปเป็นลูกสายฟ้า ถ้าตกในวงกลมรอบตัวศัตรู ฟ้าจะผ่าลงตัวศัตรูเอง 250% MATK ใช้คู่กับ Magic Amplification ได้ 312.5%' },
+    // Merchant
+    mc_mammo: { name: 'Mammonite', cd: 2, type: 'shot', base: 'atk', dmg: 150, short: '150% ATK' },
+    mc_cartrev: { name: 'Cart Revolution', cd: 2, type: 'shot', base: 'atk', dmg: 120, size: 150, knock: 60, weight: 112, proj: 'cart', short: '120% ATK วงกว้าง และเป้ากระเด็น' },
+    mc_coin: { name: 'Coin Toss', cd: 3, type: 'shot', base: 'atk', dmg: 100, debDef: 10, debMdef: 10, debTurns: 2, proj: 'orb', short: '100% ATK และ DEF/MDEF ของเป้า -10% 2 เทิร์น' },
+    mc_potion: { name: 'Potion Pitcher', cd: 3, type: 'self', heal: 15, consumable: true, short: 'ฟื้น HP 15% ของ HP สูงสุด' },
+    mc_upgrade: { name: 'Weapon Upgrade', cd: 4, type: 'self', bAtk: 20, bTurns: 2, short: 'ATK +20% 2 เทิร์น' },
+    mc_armor: { name: 'Discount Armor', cd: 4, type: 'self', shieldPct: 15, consumable: true, short: 'ได้โล่ 15% ของ HP สูงสุด' },
+    mc_termination: { name: 'Cart Termination', type: 'shot', base: 'atk', dmg: 220, size: 160, weight: 112, proj: 'cart', short: '220% ATK วงกว้าง' },
+    // Priest
+    pr_holy: { name: 'Holy Light', cd: 2, type: 'shot', base: 'matk', dmg: 110, short: '110% MATK' },
+    pr_heal: { name: 'Heal', cd: 2, type: 'self', healMatk: 130, short: 'ฟื้น HP 130% MATK' },
+    pr_bless: { name: 'Blessing', cd: 4, type: 'self', team: true, bAtk: 15, bMatk: 15, bTurns: 2, short: 'ATK และ MATK +15% 2 เทิร์น (ทั้งทีม)' },
+    pr_angelus: { name: 'Angelus', cd: 4, type: 'self', team: true, bDef: 20, bMdef: 20, bTurns: 2, short: 'DEF และ MDEF +20% 2 เทิร์น (ทั้งทีม)' },
+    pr_barrier: { name: 'Holy Barrier', cd: 3, type: 'self', shieldMatk: 120, short: 'ได้โล่ 120% MATK' },
+    pr_purge: { name: 'Purge', cd: 4, type: 'self', purge: true, healMatk: 50, short: 'ล้างสถานะผิดปกติ 1 อย่าง และฟื้น 50% MATK', tip: 'ล้างสถานะผิดปกติ 1 อย่าง (แข็ง มึน ตรึง ดีบัฟ หรือพิษ) และฟื้น HP 50% MATK ใช้ได้แม้ตอนโดนแข็งหรือมึน แล้วเล่นตานั้นต่อได้' },
+    pr_sanct: { name: 'Sanctuary', type: 'self', team: true, healMatk: 160, shieldMatk: 60, short: 'ฟื้น 160% MATK และโล่ 60% MATK ทั้งทีม' },
+    // Doram
+    dr_flame: { name: 'Flame Spirit', cd: 2, type: 'shot', base: 'matk', dmg: 70, mark: 'fire', proj: 'spirit', short: '70% MATK และติดมาร์คไฟ' },
+    dr_water: { name: 'Water Spirit', cd: 2, type: 'shot', base: 'matk', dmg: 70, mark: 'water', proj: 'spirit', short: '70% MATK และติดมาร์คน้ำ' },
+    dr_thunder: { name: 'Thunder Spirit', cd: 2, type: 'shot', base: 'matk', dmg: 70, mark: 'thunder', proj: 'spirit', short: '70% MATK และติดมาร์คสายฟ้า' },
+    dr_nature: { name: 'Nature Spirit', cd: 2, type: 'shot', base: 'matk', dmg: 70, mark: 'nature', proj: 'spirit', short: '70% MATK และติดมาร์คธรรมชาติ' },
+    dr_burst: { name: 'Spirit Burst', cd: 2, type: 'shot', base: 'matk', dmg: 90, burst: true, proj: 'spirit', short: '90% MATK จุดปฏิกิริยาจากมาร์ค 2 ธาตุบนตัวเป้า',
+                tip: '90% MATK ถ้าเป้ามีมาร์ค 2 ธาตุจากเรา: ไฟ+สายฟ้า ระเบิด +70% MATK · น้ำ+สายฟ้า +15% และมึน 2 เทิร์น · น้ำ+ธรรมชาติ +35% และตรึง 1 เทิร์น · ไฟ+ธรรมชาติ ไหม้ 25% MATK 2 เทิร์น มาร์คหายถ้าไม่ต่อคอมโบในตาถัดไป' },
+    dr_shift: { name: 'Spirit Shift', cd: 4, type: 'foe', shift: true, short: 'ใช้ทันที: เปลี่ยนมาร์คล่าสุดบนศัตรูเป็นธาตุถัดไป (ไฟ > น้ำ > สายฟ้า > ธรรมชาติ)' },
+  },
+  // passives work by kind: crit / critDmg / atk / matk (+%), execute and ironBody (+% below hp%), healBonus, guardian, nineLives, spiritBond, consumable, luckMul, none
+  passives: {
+    pa_katar: { name: 'Katar Mastery', kind: 'crit', v: 10, tip: 'โอกาสคริติคอล +10%' },
+    pa_exec: { name: 'Executioner', kind: 'execute', v: 15, hp: 30, tip: 'ดาเมจ +15% เมื่อเป้ามี HP ไม่เกิน 30%' },
+    pa_vulture: { name: "Vulture's Eye", kind: 'none', tip: 'ยิงไกลแค่ไหนดาเมจก็ไม่ลด (ทุกอาชีพในเกมนี้ยังไม่มีดาเมจลดตามระยะ)' },
+    pa_critshot: { name: 'Critical Shot', kind: 'critDmg', v: 20, tip: 'ดาเมจคริติคอล +20%' },
+    pa_swordm: { name: 'Sword Mastery', kind: 'atk', v: 8, tip: 'ATK +8%' },
+    pa_ironbody: { name: 'Iron Body', kind: 'ironBody', v: 15, hp: 40, tip: 'เมื่อ HP ไม่เกิน 40% DEF และ MDEF +15%' },
+    pa_magicm: { name: 'Magic Mastery', kind: 'matk', v: 8, tip: 'MATK +8%' },
+    pa_elem: { name: 'Elemental Mastery', kind: 'none', tip: 'โจมตีธาตุที่เป้าแพ้ ดาเมจ +12% (ระบบธาตุของเป้ายังไม่ได้ทำ จึงยังไม่มีผล)' },
+    pa_overcharge: { name: 'Overcharge', kind: 'consumable', v: 15, tip: 'ยาและโล่จากสกิลแรงขึ้น 15%' },
+    pa_lucky: { name: 'Lucky Merchant', kind: 'luckMul', v: 50, tip: 'LUK มีผลกับโอกาสคริติคอลมากกว่าอาชีพอื่น 50%' },
+    pa_grace: { name: 'Divine Grace', kind: 'healBonus', v: 12, tip: 'การฟื้น HP แรงขึ้น 12%' },
+    pa_guardian: { name: 'Guardian Angel', kind: 'guardian', v: 15, hp: 30, tip: 'ครั้งแรกที่ HP ต่ำกว่า 30% ได้โล่ 15% ของ HP สูงสุด' },
+    pa_bond: { name: 'Spirit Bond', kind: 'spiritBond', v: 8, tip: 'ทำปฏิกิริยาธาตุสำเร็จ MATK +8% ในตาถัดไป' },
+    pa_nine: { name: 'Nine Lives', kind: 'nineLives', v: 30, hp: 30, tip: 'ครั้งแรกที่ HP ต่ำกว่า 30% ดาเมจครั้งถัดไปที่รับ -30%' },
   },
   stages: {
     jungle: { name: 'อารยธรรมโบราณ', hard: true, spawn: [500, 1300], scanFrom: 220, music: 'sounds/SM_Stage_01.mp3', bg: 'jungle-bg', fg: 'jungle-fg', col: 'jungle-col' },
   },
   assets: {}, // id -> { name, kind: 'image' | 'audio', data: data URI }
 };
-const SK_DEF = { type: 'shot', cd: 3, count: 1, spread: 0, powSpread: 0, delay: 0, size: 100, dmg: 100, weight: 100, proj: '',
-  freeze: 0, steal: 0, heal: 0, guard: 0, homing: false, warp: false, icon: '', sound: '', short: '', tip: '' };
-const CLASS_DEF = { name: 'อาชีพใหม่', hp: 1000, color: '#5a8fd8', dmg: 220, r: 34, wf: 1, gf: 1, spd: 1, shot: 'orb', desc: '', face: 1 };
+const SK_DEF = { type: 'shot', cd: 3, base: 'atk', dmg: 100, count: 1, spread: 0, powSpread: 0, delay: 0, size: 100, dig: 100, weight: 100, proj: '',
+  ignoreDef: 0, vsDot: 0, dotKind: '', dotPct: 0, dotTurns: 2, debDef: 0, debMdef: 0, debTaken: 0, debDeal: 0, debTurns: 2, knock: 0, mark: '', burst: false, shift: false,
+  zone: 0, zoneTurns: 2, heal: 0, healMatk: 0, shieldPct: 0, shieldMatk: 0, bAtk: 0, bMatk: 0, bDef: 0, bMdef: 0, bTaken: 0, bNext: 0, bNextMagic: 0, bTurns: 2,
+  purge: false, hide: 0, team: false, consumable: false, freeze: 0, steal: 0, guard: 0, homing: false, warp: false, icon: '', sound: '', short: '', tip: '' };
+const CLASS_DEF = { name: 'อาชีพใหม่', hp: 1000, atk: 50, matk: 50, def: 40, mdef: 40, spd: 50, luk: 50, nBase: 'atk', nPct: 100,
+  color: '#5a8fd8', r: 34, wf: 1, gf: 1, vel: 1, shot: 'orb', desc: '', face: 1 };
+const PASSIVE_DEF = { name: 'พาสซีฟใหม่', kind: 'none', v: 0, hp: 30, tip: '', icon: '' };
 const STAGE_DEF = { name: 'ด่านใหม่', hard: false, spawn: [500, 1300], scanFrom: 0, music: '', bg: '', fg: '', col: '' };
-let GD = null, CLASSES = {}, SKILLS = {}, STAGES = {};
+let GD = null, CLASSES = {}, SKILLS = {}, STAGES = {}, PASSIVES = {};
 const BUILTIN_SHOW = Object.assign({}, SHOW_SRC), BUILTIN_FACE = Object.assign({}, SHOW_FACE);
 // uploaded files are referenced as 'a:<id>'; anything else is a built-in name (or a file path for music)
 const assetImg = {};
@@ -397,18 +478,34 @@ function iconKey(sk) {
   return sk.icon;
 }
 function showURL(k) { return SHOW_SRC[k] || ''; }
+// game data from before the balance spec (version 1) keeps its stages and uploads; classes and skills come from the new default
+function migrateData(gd) {
+  if (gd && gd.version >= 2) { gd.passives = gd.passives || {}; gd.assets = gd.assets || {}; return gd; }
+  const d = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  if (gd && gd.stages && Object.keys(gd.stages).length) d.stages = gd.stages;
+  if (gd && gd.assets) d.assets = gd.assets;
+  return d;
+}
 function applyData(gd) {
+  gd = migrateData(gd);
   GD = gd;
   SKILLS = {};
   for (const [k, s] of Object.entries(gd.skills || {})) SKILLS[k] = Object.assign({}, SK_DEF, s, { id: k });
+  PASSIVES = {};
+  for (const [k, s] of Object.entries(gd.passives || {})) PASSIVES[k] = Object.assign({}, PASSIVE_DEF, s, { id: k });
   CLASSES = {};
   for (const [k, d] of Object.entries(gd.classes || {})) {
     const c = Object.assign({}, CLASS_DEF, d);
-    const sx = SKILLS[d.x] || null, sc = SKILLS[d.c] || null, sb = SKILLS[d.b] || null;
-    c.sk = { x: sx, c: sc, b: sb };
-    c.skill = sx ? { name: sx.name, cd: sx.cd } : null; c.sdesc = sx ? sx.short : ''; c.tip = sx ? (sx.tip || sx.short) : ''; c.icon = sx ? iconKey(sx) : '';
-    c.skill2 = sc ? { name: sc.name, cd: sc.cd } : null; c.sdesc2 = sc ? sc.short : ''; c.tip2 = sc ? (sc.tip || sc.short) : ''; c.icon2 = sc ? iconKey(sc) : '';
+    c.sk = { b: SKILLS[d.b] || null };
+    for (const sl of SLOT_IDS) { c.sk[sl] = SKILLS[d[sl]] || null; if (c.sk[sl]) iconKey(c.sk[sl]); }
+    const sb = c.sk.b;
     c.ult = sb ? { name: sb.name, tip: sb.tip || sb.short } : null;
+    // passives: shown in the two windows; their numbers summed by kind for the combat rules
+    const pas = ['p1', 'p2'].map(x => PASSIVES[d[x]]).filter(Boolean);
+    c.passives = pas.map(pa => ({ name: pa.name, desc: pa.tip, icon: pa.icon }));
+    c.pv = {};
+    for (const pa of pas) if (pa.kind && pa.kind !== 'none') { c.pv[pa.kind] = (c.pv[pa.kind] || 0) + (+pa.v || 0); c.pv[pa.kind + 'Hp'] = +pa.hp || 30; }
+    c.maxEn = maxEnergy(c);
     if (d.show) { SHOW_SRC[k] = assetURL(d.show); SHOW[k] = assetImage(d.show); }
     else if (BUILTIN_SHOW[k]) { SHOW_SRC[k] = BUILTIN_SHOW[k]; SHOW[k] = new Image(); SHOW[k].src = BUILTIN_SHOW[k]; }
     else { delete SHOW_SRC[k]; delete SHOW[k]; }
@@ -423,18 +520,227 @@ function skillShots(p, sk, power, mult) {
   const n = Math.max(1, Math.round(sk.count)), out = [];
   for (let i = 0; i < n; i++) {
     const t = n > 1 ? i / (n - 1) * 2 - 1 : 0;
-    const ex = { mult: mult * sk.dmg / 100, delay: i * sk.delay, gf: p.c.gf * sk.weight / 100, skill: sk.id };
+    const ex = { up: mult, pct: sk.dmg, base: sk.base, delay: i * sk.delay, gf: p.c.gf * sk.weight / 100, skill: sk.id };
     if (sk.size !== 100) ex.scale = sk.size / 100;
     if (sk.proj === 'fireball') ex.meteor = true;
     else if (sk.proj) ex.kind = sk.proj;
-    if (sk.proj === 'spirit') ex.elem = i % 4;
+    if (sk.proj === 'spirit') ex.elem = sk.mark && ELEM[sk.mark] ? ELEM[sk.mark].i : sk.burst ? 3 : i % 4;
     if (sk.freeze > 0) { ex.ice = true; ex.freeze = sk.freeze; }
     if (sk.steal > 0) ex.steal = sk.steal;
-    if (sk.homing) { ex.kind = sk.proj && sk.proj !== 'bolt' ? sk.proj : 'bolt'; ex.bolt = true; ex.strikeMult = sk.dmg / 100; }
+    if (sk.homing) { ex.kind = sk.proj && sk.proj !== 'bolt' ? sk.proj : 'bolt'; ex.bolt = true; }
     if (sk.warp) { ex.kind = ex.kind || 'warp'; ex.warp = true; ex.gf = 1; ex.wf = 1; }
     out.push(makeProj(p, p.angle + t * sk.spread / 2, power + t * sk.powSpread, ex));
   }
   return out;
+}
+
+// ---------- combat rules (Karoz's balance spec V1) ----------
+// a stat after passives, buffs and debuffs
+function statOf(p, k) {
+  const pv = p.c.pv || {}; let pct = 0;
+  if (k === 'atk') pct += pv.atk || 0;
+  if (k === 'matk') pct += pv.matk || 0;
+  if ((k === 'def' || k === 'mdef') && pv.ironBody && p.hp <= p.maxHp * pv.ironBodyHp / 100) pct += pv.ironBody;
+  for (const b of p.buffs || []) pct += b[k] || 0;
+  for (const d of p.debs || []) pct -= d[k] || 0;
+  return Math.max(0, (p.c[k] || 0) * (1 + pct / 100));
+}
+// damage before crit: stat x % x DMG_K, cut by the target's DEF (physical) or MDEF (magic) as 100 / (100 + defence)
+function hitDamage(o, t, base, pct, ign, up) {
+  const magic = base === 'matk';
+  let dmg = statOf(o, magic ? 'matk' : 'atk') * pct / 100 * DMG_K * (up || 1);
+  dmg *= 100 / (100 + statOf(t, magic ? 'mdef' : 'def') * (1 - (ign || 0) / 100));
+  for (const d of t.debs || []) if (d.taken && d.by === o.i) dmg *= 1 + d.taken / 100;
+  for (const d of o.debs || []) if (d.deal && d.by === t.i) dmg *= 1 - d.deal / 100;
+  for (const b of t.buffs || []) if (b.taken) dmg *= 1 - b.taken / 100;
+  const pv = o.c.pv || {};
+  if (pv.execute && t.hp <= t.maxHp * pv.executeHp / 100) dmg *= 1 + pv.execute / 100;
+  return dmg;
+}
+const critChance = o => (CRIT_BASE + statOf(o, 'luk') * CRIT_PER_LUK * (1 + (o.c.pv.luckMul || 0) / 100) + (o.c.pv.crit || 0)) / 100;
+const critMul = o => CRIT_MUL + (o.c.pv.critDmg || 0) / 100;
+const hasDot = t => t.dots.some(d => d.kind === 'poison' || d.kind === 'bleed');
+function say(pl, s, col, t, dy) { fx.texts.push({ x: pl.x, y: pl.y - (dy || 74), s, col, t: t || 80 }); }
+const DOT_NAME = { poison: 'พิษ', bleed: 'เลือดไหล', burn: 'ไหม้' }, DOT_COL = { poison: '#8de05a', bleed: '#ff4a5a', burn: '#ff9a3a' };
+// the same poison / bleed / burn again refreshes it instead of stacking
+function addDot(t, kind, amt, turns, o) {
+  t.dots = t.dots.filter(d => d.kind !== kind);
+  t.dots.push({ kind, amt: Math.max(1, Math.round(amt)), t: turns, by: o.i });
+  say(t, DOT_NAME[kind] + '!', DOT_COL[kind], 80, 88);
+}
+function addDeb(t, sk, o) {
+  t.debs = t.debs.filter(d => d.id !== sk.id);
+  t.debs.push({ id: sk.id, name: sk.name, t: sk.debTurns || 2, def: sk.debDef || 0, mdef: sk.debMdef || 0, taken: sk.debTaken || 0, deal: sk.debDeal || 0, by: o.i });
+  say(t, sk.name, '#c98cff', 80, 100);
+}
+function addBuff(t, sk) {
+  t.buffs = t.buffs.filter(b => b.id !== sk.id);
+  t.buffs.push({ id: sk.id, name: sk.name, t: sk.bTurns || 1, atk: sk.bAtk || 0, matk: sk.bMatk || 0, def: sk.bDef || 0, mdef: sk.bMdef || 0,
+    taken: sk.bTaken || 0, next: sk.bNext || 0, nextMagic: sk.bNextMagic || 0 });
+}
+// freeze / stun never refresh while they last; after a 2-turn one the target resists for a while (new ones last 1 turn at most)
+function applyCC(t, kind, turns) {
+  if (t.frozen > 0 || turns <= 0) return;
+  if (t.ccRes > 0) turns = Math.min(1, turns);
+  t.frozen = turns; t.cck = kind; t.ccLen = turns;
+  say(t, kind === 'stun' ? 'มึน!' : 'แข็ง!', kind === 'stun' ? '#ffe14a' : '#bfeaff');
+}
+// Doram: the two newest marks on a target; each new mark keeps that caster's marks alive one more turn
+function addMark(t, e, o) {
+  t.marks = t.marks.filter(m => m.e !== e);
+  t.marks.push({ e, by: o.i, ttl: 2 });
+  while (t.marks.filter(m => m.by === o.i).length > 2) t.marks.splice(t.marks.findIndex(m => m.by === o.i), 1);
+  for (const m of t.marks) if (m.by === o.i) m.ttl = 2;
+  say(t, 'มาร์ค' + ELEM[e].n, ELEM[e].col, 80, 88);
+}
+function reactionOf(t, o) {
+  const ms = t.marks.filter(m => m.by === o.i).map(m => m.e);
+  t.marks = t.marks.filter(m => m.by !== o.i); // Spirit Burst uses the marks up either way
+  return ms.length < 2 ? null : REACTIONS[ms.slice(-2).sort().join('+')] || null;
+}
+function applyReaction(o, t, rx) {
+  say(t, rx.name + '!', '#ffe9a8', 90, 104);
+  if (rx.stun) applyCC(t, 'stun', rx.stun);
+  if (rx.bind) { t.bind = Math.max(t.bind, rx.bind); say(t, 'ตรึง!', '#7fd98a', 80, 88); }
+  if (rx.burn) addDot(t, 'burn', hitDamage(o, t, 'matk', rx.burn) * (o.bot ? 0.7 : 1), rx.burnTurns || 2, o);
+  if (o.c.pv.spiritBond) addBuff(o, { id: 'bond', name: 'Spirit Bond', bTurns: 2, bMatk: o.c.pv.spiritBond });
+}
+// knockback: slide along the ground (climbing small steps like walking) until a wall stops it; gravity does the rest
+function pushPlayer(pl, dx) {
+  const dir = Math.sign(dx);
+  for (let n = Math.abs(Math.round(dx)); n > 0; n--) {
+    const nx = pl.x + dir; let ny = pl.y, k = 0;
+    while (solid(nx, ny - 1) && k < 6) { ny--; k++; }
+    if (nx < 0 || nx > WW - 1 || solid(nx, ny - 1)) break;
+    pl.x = nx; pl.y = ny;
+  }
+}
+// once-per-match passives that wake up when HP drops low
+function lowHp(pl) {
+  const pv = pl.c.pv || {};
+  if (!pl.alive) return;
+  if (pv.guardian && !pl.once.guardian && pl.hp < pl.maxHp * pv.guardianHp / 100) {
+    pl.once.guardian = true; const s = Math.round(pl.maxHp * pv.guardian / 100); pl.shield += s; say(pl, 'Guardian Angel โล่ +' + s, '#9fe0ff', 90, 104);
+  }
+  if (pv.nineLives && !pl.once.nine && pl.hp < pl.maxHp * pv.nineLivesHp / 100) { pl.once.nine = true; pl.nineNext = true; say(pl, 'Nine Lives!', '#ffd36a', 90, 104); }
+}
+// HP lost outside a blast (poison, burn, fire wall): shields soak it first
+function hurtRaw(pl, amt, label, col) {
+  if (!pl.alive || (ADMIN.god && !NET.on && !pl.bot)) return;
+  let d = Math.round(amt);
+  if (pl.shield > 0) { const s = Math.min(pl.shield, d); pl.shield -= s; d -= s; }
+  pl.hp = Math.max(0, pl.hp - d);
+  say(pl, `${label} -${d}`, col, 80, 50);
+  if (pl.hp <= 0) pl.alive = false; else lowHp(pl);
+}
+// leaving Hiding starts its cooldown (one more when it is left during your own turn, since that turn's tick is already past)
+function unhide(p, early) {
+  if (!(p.hidden > 0)) return;
+  p.hidden = 0;
+  const i = SLOT_IDS.findIndex(s => p.c.sk[s] && p.c.sk[s].hide);
+  if (i >= 0) p.cds[i] = Math.max(2, p.c.sk[SLOT_IDS[i]].cd) + (early ? 1 : 0);
+  say(p, 'หลุดล่องหน', '#d9c8ff', 70, 60);
+}
+// start of a player's own turn: their poisons and burns tick, fire walls burn them, and every timer they own counts down
+function turnStartEffects(q) {
+  for (const d of q.dots) { hurtRaw(q, d.amt, DOT_NAME[d.kind], DOT_COL[d.kind]); d.t--; }
+  q.dots = q.dots.filter(d => d.t > 0);
+  for (const z of S.zones) if (z.owner !== q.i && q.alive && boxDist(q, z.x, z.y) <= z.r) {
+    const o = S.players[z.owner]; hurtRaw(q, hitDamage(o, q, z.base, z.pct) * (o.bot ? 0.7 : 1), 'กำแพงไฟ', '#ff9a3a');
+  }
+  for (const z of S.zones) if (z.owner === q.i) z.t--;
+  S.zones = S.zones.filter(z => z.t > 0);
+  q.buffs = q.buffs.filter(b => --b.t > 0);
+  q.debs = q.debs.filter(d => --d.t > 0);
+  for (const pl of S.players) pl.marks = pl.marks.filter(m => m.by !== q.i || --m.ttl > 0);
+  q.bindNow = q.bind > 0; if (q.bind > 0) q.bind--;
+  if (q.ccRes > 0) q.ccRes--;
+  if (q.hidden > 0 && --q.hidden <= 0) { q.hidden = 1; unhide(q, false); }
+}
+function purge(t) {
+  if (t.frozen > 0) { t.frozen = 0; t.thawNext = false; t.ccTurn = false; say(t, 'หายจากสถานะ!', '#fff3a8'); return; }
+  if (t.bind > 0 || t.bindNow) { t.bind = 0; t.bindNow = false; say(t, 'หายตรึง', '#fff3a8'); return; }
+  if (t.debs.length) { const d = t.debs.pop(); say(t, 'ล้าง ' + d.name, '#fff3a8'); return; }
+  if (t.dots.length) { const d = t.dots.pop(); say(t, 'ล้าง' + DOT_NAME[d.kind], '#fff3a8'); }
+}
+// self skills: heals, shields and buffs on yourself (or the whole team), Hiding, Purge
+function selfSkill(p, sk) {
+  const pv = p.c.pv || {}, more = 1 + ((sk.consumable && pv.consumable) || 0) / 100;
+  const team = sk.team ? S.players.filter(x => x.alive && teamOf(x.i) === teamOf(p.i)) : [p];
+  fx.texts.push({ x: p.x, y: p.y - 80, s: sk.name + '!', col: '#ffd36a', t: 70 });
+  for (const t of team) {
+    if (sk.purge) purge(t);
+    const h = Math.round((t.maxHp * (sk.heal || 0) / 100 + statOf(p, 'matk') * (sk.healMatk || 0) / 100 * DMG_K) * more * (1 + (pv.healBonus || 0) / 100));
+    if (h > 0) { t.hp = Math.min(t.maxHp, t.hp + h); fx.texts.push({ x: t.x, y: t.y - 50, s: '+' + h, col: '#7dff9a', t: 70 }); }
+    const s = Math.round((t.maxHp * (sk.shieldPct || 0) / 100 + statOf(p, 'matk') * (sk.shieldMatk || 0) / 100 * DMG_K) * more);
+    if (s > 0) { t.shield = (t.shield || 0) + s; say(t, 'โล่ +' + s, '#7fd8ff', 70, 64); }
+    if (sk.bAtk || sk.bMatk || sk.bDef || sk.bMdef || sk.bTaken || sk.bNext || sk.bNextMagic) addBuff(t, sk);
+  }
+  if (sk.guard > 0) { p.iron = true; p.guard = sk.guard; }
+  if (sk.hide > 0) { p.hidden = sk.hide; p.seenX = p.x; say(p, 'ล่องหน!', '#d9c8ff', 70, 60); }
+  sfx(sk.sound);
+}
+// foe skills land at once on the nearest enemy, no shot needed (Provoke, Hunter's Mark, Spirit Shift)
+function foeSkill(p, sk) {
+  const t = S.players.filter(x => x.alive && teamOf(x.i) !== teamOf(p.i)).sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
+  if (p.hidden > 0) unhide(p, true);
+  fx.texts.push({ x: p.x, y: p.y - 50, s: sk.name + '!', col: '#c98cff', t: 70 });
+  if (t) {
+    if (sk.debDef || sk.debMdef || sk.debTaken || sk.debDeal) addDeb(t, sk, p);
+    if (sk.shift) {
+      const ms = t.marks.filter(m => m.by === p.i), m = ms[ms.length - 1];
+      if (m) { const ne = ELEM_ORDER[(ELEM_ORDER.indexOf(m.e) + 1) % ELEM_ORDER.length]; t.marks = t.marks.filter(x => x === m || x.e !== ne); m.e = ne; m.ttl = 2; say(t, 'มาร์ค' + ELEM[ne].n, ELEM[ne].col, 80, 88); }
+      else say(t, 'ไม่มีมาร์ค', '#c8d0e0', 70, 88);
+    }
+  }
+  sfx(sk.sound);
+}
+// a fire wall on the ground: flickering flames across its width
+function drawZones() {
+  for (const z of S.zones || []) {
+    const cx = z.x - cam.x, cy = z.y - cam.y;
+    if (cx < -z.r - 20 || cx > VW + z.r + 20) continue;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, z.r);
+    g.addColorStop(0, 'rgba(255,140,40,.35)'); g.addColorStop(1, 'rgba(255,60,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(cx, cy, z.r, z.r * 0.35, 0, 0, 7); ctx.fill();
+    const n = Math.max(5, Math.round(z.r / 7));
+    for (let k = 0; k < n; k++) {
+      const fx0 = cx - z.r * 0.9 + (k + 0.5) * z.r * 1.8 / n, ph = S.frame * 0.25 + k * 1.7, h = 16 + Math.sin(ph) * 6 + (k % 3) * 4;
+      const fg = ctx.createLinearGradient(0, cy, 0, cy - h);
+      fg.addColorStop(0, 'rgba(255,90,20,.85)'); fg.addColorStop(0.6, 'rgba(255,190,60,.6)'); fg.addColorStop(1, 'rgba(255,240,160,0)');
+      ctx.fillStyle = fg; ctx.beginPath();
+      ctx.moveTo(fx0 - 6, cy); ctx.quadraticCurveTo(fx0 - 5 + Math.sin(ph) * 2, cy - h * 0.6, fx0 + Math.sin(ph * 1.3) * 3, cy - h);
+      ctx.quadraticCurveTo(fx0 + 5, cy - h * 0.5, fx0 + 6, cy); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+// small status chips under a character's name: poisons, freeze/stun, buffs, debuffs, marks, shield, hiding
+function drawStatus(p, x, y) {
+  if (!p.alive) return;
+  const chips = [];
+  for (const d of p.dots || []) chips.push([DOT_NAME[d.kind] + ' ' + d.t, DOT_COL[d.kind]]);
+  if (p.frozen > 0) chips.push([(p.cck === 'stun' ? 'มึน ' : 'แข็ง ') + p.frozen, p.cck === 'stun' ? '#ffe14a' : '#9fe0ff']);
+  if (p.bind > 0 || p.bindNow) chips.push(['ตรึง', '#7fd98a']);
+  if (p.ccRes > 0) chips.push(['ต้าน CC ' + p.ccRes, '#c8d0e0']);
+  for (const b of p.buffs || []) chips.push(['▲ ' + b.name, '#ffd36a']);
+  for (const d of p.debs || []) chips.push(['▼ ' + d.name, '#d6a0ff']);
+  for (const m of p.marks || []) chips.push(['◆ ' + ELEM[m.e].n, ELEM[m.e].col]);
+  if (p.shield > 0) chips.push(['โล่ ' + Math.round(p.shield), '#7fd8ff']);
+  if (p.hidden > 0) chips.push(['ล่องหน ' + p.hidden, '#d9c8ff']);
+  if (!chips.length) return;
+  ctx.font = `600 9px ${FONT}`; ctx.textAlign = 'center';
+  const rows = [[]]; let rw = 0;
+  for (const c of chips) { const w = ctx.measureText(c[0]).width + 8; if (rw + w > 150 && rows[rows.length - 1].length) { rows.push([]); rw = 0; } rows[rows.length - 1].push([c[0], c[1], w]); rw += w + 3; }
+  rows.forEach((row, ri) => {
+    let cx = x - (row.reduce((a, c) => a + c[2] + 3, -3)) / 2; const cy = y + ri * 14;
+    for (const [s, col, w] of row) {
+      ctx.fillStyle = 'rgba(10,16,40,.82)'; ctx.strokeStyle = col; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect(cx, cy, w, 12, 4); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = col; ctx.fillText(s, cx + w / 2, cy + 9); cx += w + 3;
+    }
+  });
 }
 
 // ---------- setup UI ----------
@@ -451,8 +757,10 @@ function buildSetup() {
       const b = document.createElement('button');
       b.className = 'cls'; b.id = `pick-${i}-${k}`;
       const th = showURL(k) ? `<img class="thumb" alt="" src="${showURL(k)}">` : `<span class="thumb" style="background:${c.color};border-radius:50%;width:40px;height:40px;align-self:center"></span>`;
+      const sks = SLOT_IDS.map(x => c.sk[x]).filter(Boolean).map(x => x.name);
       b.innerHTML = `${th}<b><span class="sw" style="background:${c.color}"></span>${esc(c.name)}</b><small>${esc(c.desc)}</small>` +
-        (c.skill ? `<small>ทักษะ 1: ${esc(c.skill.name)} (${esc(c.sdesc)})</small>` : '') + (c.skill2 ? `<small>ทักษะ 2: ${esc(c.skill2.name)} (${esc(c.sdesc2)})</small>` : '');
+        `<small>HP ${c.hp} · ATK ${c.atk} · MATK ${c.matk} · DEF ${c.def} · MDEF ${c.mdef} · SPD ${c.spd} · LUK ${c.luk} · Energy ${c.maxEn}</small>` +
+        (sks.length ? `<small>สกิล: ${esc(sks.join(', '))}</small>` : '') + (c.ult ? `<small>ท่าไม้ตาย: ${esc(c.ult.name)}</small>` : '');
       b.setAttribute('aria-pressed', String(picks[i] === k));
       b.onclick = () => { if (NET.on && i !== NET.me) return; picks[i] = k; box.querySelectorAll('.cls').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
       box.appendChild(b);
@@ -591,14 +899,18 @@ function newMatch(demo) {
   loadStage();
   const mk = (i, k, x, bot) => {
     const c = CLASSES[k];
-    return { i, k, c, x, y: surfaceY(x), vy: 0, hp: c.hp, maxHp: c.hp, face: i === 0 ? 1 : -1, angle: 45, energy: ENERGY_MAX,
-      skillCd: 0, skill2Cd: 0, warpCd: 0, frozen: 0, walk: 0, armed: null, rage: 0, dmgAcc: 0, lossAcc: 0, iron: false, bot, alive: true, lastPower: null, items: 2, boost: false,
+    return { i, k, c, x, y: surfaceY(x), vy: 0, hp: c.hp, maxHp: c.hp, face: i === 0 ? 1 : -1, angle: 45, energy: c.maxEn, maxEn: c.maxEn,
+      cds: [0, 0, 0, 0, 0, 0], warpCd: 0, frozen: 0, cck: '', ccRes: 0, bind: 0, shield: 0, buffs: [], debs: [], dots: [], marks: [], hidden: 0, seenX: x, once: {},
+      walk: 0, armed: null, rage: 0, dmgAcc: 0, lossAcc: 0, iron: false, bot, alive: true, lastPower: null, items: 2, boost: false,
       name: bot ? 'บอท' : (vsBot ? 'คุณ' : 'ผู้เล่น ' + (i + 1)),
       guild: bot ? 'หุ่นเหล็ก' : i === 0 ? 'ฟ้าคราม' : 'ลมใต้', level: bot ? 15 : i === 0 ? 12 : 10 };
   };
+  const pls = [mk(0, picks[0], STAGE.spawn[0], false), mk(1, picks[1], STAGE.spawn[1], vsBot)];
+  // the higher max Energy (from SPD) starts; a tie is a coin flip
+  const e0 = pls[0].maxEn, e1 = pls[1].maxEn;
   S = {
-    demo, players: [mk(0, picks[0], STAGE.spawn[0], false), mk(1, picks[1], STAGE.spawn[1], vsBot)],
-    turn: Math.random() < 0.5 ? 0 : 1, state: 'aim', power: 0, timer: TURN_TIME, wind: 0, projs: [], settle: 0,
+    demo, players: pls,
+    turn: e0 === e1 ? (Math.random() < 0.5 ? 0 : 1) : e0 > e1 ? 0 : 1, state: 'aim', power: 0, timer: TURN_TIME, wind: 0, projs: [], settle: 0, zones: [],
     banner: 0, bot: null, frame: 0, turnCount: 0,
   };
   fx.booms.length = fx.parts.length = fx.texts.length = 0;
@@ -614,14 +926,13 @@ function other(p) { return S.players[1 - p.i]; }
 
 function startTurn(first) {
   if (!first) { const pr = cur(); if (pr.passed) pr.passed = false; else addRage(pr, 5); } // finished own turn (+5), unless PASS already paid +15
-  if (!first) { const prev = cur(); if (prev.thawNext) { prev.frozen = Math.max(0, prev.frozen - 1); prev.thawNext = false; } }
+  if (!first) { const prev = cur(); if (prev.thawNext) { prev.frozen = Math.max(0, prev.frozen - 1); prev.thawNext = false; prev.ccTurn = false; if (prev.frozen === 0 && prev.ccLen >= 2) prev.ccRes = CC_RES_TURNS; } }
   if (!first) S.turn = 1 - S.turn;
   const p = cur();
   if (!p.alive) { S.turn = 1 - S.turn; }
   const q = cur();
-  q.iron = false; q.energy = ENERGY_MAX; q.armed = null; q.boost = false;
-  if (q.skillCd > 0) q.skillCd--;
-  if (q.skill2Cd > 0) q.skill2Cd--;
+  q.iron = false; q.energy = q.maxEn; q.armed = null; q.boost = false; q.ccTurn = false;
+  for (let i = 0; i < q.cds.length; i++) if (q.cds[i] > 0) q.cds[i]--;
   if (q.warpCd > 0) q.warpCd--;
   // strength: anywhere in 0.0 ... 6.0 on the first turn, then at most 1.5 away from last turn's strength;
   // direction: random on the first turn, then a 30% chance each turn to swap sides
@@ -632,16 +943,26 @@ function startTurn(first) {
   S.state = 'aim'; S.power = 0; S.timer = TURN_TIME; S.banner = 90; S.turnCount++;
   S.bot = q.bot ? { phase: 'think', t: 40 } : null;
   cam.manual = false;
+  if (!S.demo) turnStartEffects(q);
+  if (first && !S.demo) say(q, `เริ่มก่อน! Energy ${q.maxEn}`, '#ffe9a8', 110, 96);
+  if (!q.alive) { S.bot = null; S.state = 'settle'; S.settle = 70; updatePad(); return; } // poison or a fire wall finished them
   if (q.frozen > 0) {
-    q.thawNext = true; S.bot = null; S.state = 'settle'; S.settle = 80;
-    fx.texts.push({ x: q.x, y: q.y - 60, s: q.frozen > 1 ? 'แข็งอยู่! ข้ามเทิร์น (อีก 2)' : 'แข็งอยู่! ข้ามเทิร์น', col: '#bfeaff', t: 90 });
+    q.thawNext = true;
+    const word = q.cck === 'stun' ? 'มึนอยู่!' : 'แข็งอยู่!';
+    // Priest: a ready Purge can still be used while frozen or stunned (nothing else can)
+    const pi = SLOT_IDS.findIndex(x => q.c.sk[x] && q.c.sk[x].purge);
+    if (pi >= 0 && q.cds[pi] <= 0 && q.energy >= SKILL_COST) { q.ccTurn = true; say(q, word + ' ใช้ Purge ได้', '#bfeaff', 110, 60); }
+    else {
+      S.bot = null; S.state = 'settle'; S.settle = 80;
+      fx.texts.push({ x: q.x, y: q.y - 60, s: q.frozen > 1 ? word + ' ข้ามเทิร์น (อีก ' + q.frozen + ')' : word + ' ข้ามเทิร์น', col: q.cck === 'stun' ? '#ffe14a' : '#bfeaff', t: 90 });
+    }
   }
   updatePad();
 }
 
 // ---------- projectile physics (shared with bot simulation) ----------
 function makeProj(p, angleDeg, power, extra) {
-  const a = angleDeg * Math.PI / 180, v = power / 100 * MAXV * p.c.spd;
+  const a = angleDeg * Math.PI / 180, v = power / 100 * MAXV * (p.c.vel || 1);
   const tip = CAST[p.k] ? 30 : 8; // the mage's shot leaves from the staff orb
   const q = Object.assign({ x: p.x + p.face * tip, y: p.y - 22, vx: Math.cos(a) * v * p.face, vy: -Math.sin(a) * v,
     gf: p.c.gf, wf: 1, owner: p.i, age: 0, delay: 0, trail: [], kind: p.c.shot, spin: 0 }, extra || {});
@@ -668,12 +989,18 @@ function fire() {
   const p = cur();
   const power = Math.max(5, Math.min(100, S.power));
   p.lastPower = power;
-  const mult = p.boost ? 1.3 : 1;
+  let up = p.boost ? 1.3 : 1;
   const list = [];
   const sk = p.armed && p.armed !== 'z' ? p.c.sk[p.armed] : null;
+  if (p.armed !== 'z') {
+    // Focus (any shot) and Magic Amplification (a magic skill) are spent on this shot; attacking ends Hiding
+    const nb = p.buffs.find(b => b.next > 0); if (nb) { up *= 1 + nb.next / 100; p.buffs = p.buffs.filter(b => b !== nb); }
+    if (sk && sk.base === 'matk' && sk.dmg > 0) { const mb = p.buffs.find(b => b.nextMagic > 0); if (mb) { up *= 1 + mb.nextMagic / 100; p.buffs = p.buffs.filter(b => b !== mb); } }
+    if (p.hidden > 0) unhide(p, true);
+  }
   if (p.armed === 'z') list.push(makeProj(p, p.angle, power, { kind: 'warp', warp: true, gf: 1, wf: 1 }));
-  else if (sk) list.push(...skillShots(p, sk, power, mult));
-  else list.push(makeProj(p, p.angle, power, { mult }));
+  else if (sk) list.push(...skillShots(p, sk, power, up));
+  else list.push(makeProj(p, p.angle, power, { up, pct: p.c.nPct, base: p.c.nBase }));
   if (sk) sfx(sk.sound);
   p.armed = null;
   if (CAST[p.k]) { p.releaseT = CAST_RELEASE; cam.shake = Math.max(cam.shake, 5); }
@@ -705,76 +1032,88 @@ function warpTo(q) {
 function useWarp() {
   if (netGuard('z')) return;
   const p = cur();
-  if (S.state !== 'aim' || p.warpCd > 0 || p.armed || !payEnergy(p)) return;
+  if (S.state !== 'aim' || p.warpCd > 0 || p.armed || p.frozen > 0 || !payEnergy(p)) return;
   p.armed = 'z'; p.warpCd = WARP_CD + 1;
   fx.texts.push({ x: p.x, y: p.y - 50, s: 'สกิลบิน!', col: '#d9c8ff', t: 70 });
   updatePad();
 }
 function explode(q) {
-  const owner = S.players[q.owner], c = owner.c;
-  const r = c.r * (q.scale || 1), base = c.dmg * (q.scale || 1) * (q.mult || 1) * (owner.bot ? 0.7 : 1); // easy bot hits softer
-  carve(q.x, q.y, r);
+  const owner = S.players[q.owner], c = owner.c, sk = q.skill ? SKILLS[q.skill] : null;
+  const r = c.r * (q.scale || 1);
+  carve(q.x, q.y, r * ((sk && sk.dig) || 100) / 100);
   fx.booms.push({ x: q.x, y: q.y, r, t: 0, col: c.color, ice: q.ice });
   boomParts(q.x, q.y, q.ice);
+  if (sk && sk.zone > 0) { S.zones.push({ x: q.x, y: q.y, r: Math.max(36, r), pct: sk.zone, base: sk.base, owner: owner.i, t: sk.zoneTurns || 2 }); fx.texts.push({ x: q.x, y: q.y - 40, s: sk.name + '!', col: '#ff9a3a', t: 80 }); }
+  const pct = q.pct != null ? q.pct : 100, base = q.base || c.nBase || 'atk';
   for (const pl of S.players) {
-    if (!pl.alive) continue;
-    if (boxDist(pl, q.x, q.y) <= r) {
-      let dmg = base;
-      const foe = pl !== owner, crit = foe && Math.random() < 0.12;
-      if (crit) dmg *= 1.5;
-      if (pl.iron) dmg *= 1 - (pl.guard != null ? pl.guard : 50) / 100;
-      if (ADMIN.god && !NET.on && !pl.bot) { fx.texts.push({ x: pl.x, y: pl.y - 50, s: 'อมตะ', col: '#9fe0ff', t: 60 }); continue; }
-      // your own shots (on yourself or a teammate) hurt but never kill: they leave at least 1 HP
-      const ally = teamOf(pl.i) === teamOf(owner.i);
-      dmg = Math.min(ally ? Math.max(0, pl.hp - 1) : pl.hp, Math.round(dmg));
-      pl.hp = Math.max(0, pl.hp - dmg);
-      fx.texts.push({ x: pl.x, y: pl.y - 50, s: (crit ? 'คริติคอล! -' : '-') + dmg, col: crit ? '#ffe066' : '#ff5a4a', t: 70 });
-      const sh = S.shot || (S.shot = { hit: new Set(), hurt: new Set() });
-      pl.lossAcc += dmg / pl.maxHp * 10; addRage(pl, 4 * Math.floor(pl.lossAcc)); pl.lossAcc %= 1;
-      if (foe) {
-        let g = crit ? 5 : 0;
-        if (!sh.hit.has(pl.i)) { sh.hit.add(pl.i); g += 10; }
-        owner.dmgAcc += dmg / pl.maxHp * 10; g += 3 * Math.floor(owner.dmgAcc); owner.dmgAcc %= 1;
-        if (pl.hp <= 0) g += 10;
-        addRage(owner, g);
-        if (!sh.hurt.has(pl.i)) { sh.hurt.add(pl.i); addRage(pl, 8); }
-        if (q.steal && pl.rage > 0) { // Thief: pull POW across
-          const n = Math.min(q.steal === true ? 30 : q.steal, pl.rage); pl.rage -= n; addRage(owner, n);
-          fx.texts.push({ x: pl.x, y: pl.y - 74, s: 'ถูกขโมย POW -' + n, col: '#ff9ad0', t: 80 });
-        }
+    if (!pl.alive || boxDist(pl, q.x, q.y) > r) continue;
+    const foe = teamOf(pl.i) !== teamOf(owner.i);
+    if (pct <= 0 && !foe) continue;
+    let dmg = pct > 0 ? hitDamage(owner, pl, base, sk && sk.vsDot && hasDot(pl) ? sk.vsDot : pct, sk ? sk.ignoreDef : 0, q.up) : 0, rx = null;
+    if (foe && sk && sk.burst) { rx = reactionOf(pl, owner); if (rx && rx.bonus) dmg += hitDamage(owner, pl, 'matk', rx.bonus, 0, q.up); }
+    const crit = foe && dmg > 0 && Math.random() < critChance(owner);
+    if (crit) dmg *= critMul(owner);
+    if (owner.bot) dmg *= 0.7; // easy bot hits softer
+    if (pl.iron) dmg *= 1 - (pl.guard != null ? pl.guard : 50) / 100;
+    if (pl.nineNext && dmg > 0) { dmg *= 1 - (pl.c.pv.nineLives || 30) / 100; pl.nineNext = false; }
+    if (ADMIN.god && !NET.on && !pl.bot) { fx.texts.push({ x: pl.x, y: pl.y - 50, s: 'อมตะ', col: '#9fe0ff', t: 60 }); continue; }
+    dmg = Math.round(dmg);
+    let soak = 0;
+    if (pl.shield > 0 && dmg > 0) { soak = Math.min(pl.shield, dmg); pl.shield -= soak; dmg -= soak; }
+    // your own shots (on yourself or a teammate) hurt but never kill: they leave at least 1 HP
+    dmg = Math.min(!foe ? Math.max(0, pl.hp - 1) : pl.hp, dmg);
+    pl.hp = Math.max(0, pl.hp - dmg);
+    if (pct > 0 || dmg > 0) fx.texts.push({ x: pl.x, y: pl.y - 50, s: (crit ? 'คริติคอล! -' : '-') + dmg + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff5a4a', t: 70 });
+    const sh = S.shot || (S.shot = { hit: new Set(), hurt: new Set() });
+    pl.lossAcc += dmg / pl.maxHp * 10; addRage(pl, 4 * Math.floor(pl.lossAcc)); pl.lossAcc %= 1;
+    if (foe) {
+      let g = crit ? 5 : 0;
+      if (!sh.hit.has(pl.i)) { sh.hit.add(pl.i); g += 10; }
+      owner.dmgAcc += dmg / pl.maxHp * 10; g += 3 * Math.floor(owner.dmgAcc); owner.dmgAcc %= 1;
+      if (pl.hp <= 0) g += 10;
+      addRage(owner, g);
+      if (!sh.hurt.has(pl.i)) { sh.hurt.add(pl.i); addRage(pl, 8); }
+      if (q.steal && pl.rage > 0) { // pull POW across
+        const n = Math.min(q.steal === true ? 30 : q.steal, pl.rage); pl.rage -= n; addRage(owner, n);
+        fx.texts.push({ x: pl.x, y: pl.y - 74, s: 'ถูกขโมย POW -' + n, col: '#ff9ad0', t: 80 });
       }
-      if (pl.hp <= 0) pl.alive = false;
-      else if (q.ice) { pl.frozen = Math.max(pl.frozen, q.freeze || ICE_TURNS); fx.texts.push({ x: pl.x, y: pl.y - 74, s: 'แข็ง!', col: '#bfeaff', t: 80 }); }
     }
+    if (pl.hp <= 0) { pl.alive = false; continue; }
+    if (foe && sk) { // what the skill leaves on the target
+      if (sk.dotKind && sk.dotPct > 0) addDot(pl, sk.dotKind, hitDamage(owner, pl, base, sk.dotPct) * (owner.bot ? 0.7 : 1), sk.dotTurns || 2, owner);
+      if (sk.debDef || sk.debMdef || sk.debTaken || sk.debDeal) addDeb(pl, sk, owner);
+      if (sk.freeze > 0) applyCC(pl, 'freeze', sk.freeze);
+      if (sk.knock > 0) pushPlayer(pl, (Math.sign(pl.x - q.x) || owner.face) * sk.knock);
+      if (sk.mark && ELEM[sk.mark]) addMark(pl, sk.mark, owner);
+      if (rx) applyReaction(owner, pl, rx); else if (sk.burst) say(pl, 'ไม่มีปฏิกิริยา', '#c8d0e0', 60, 104);
+    } else if (foe && q.ice) applyCC(pl, 'freeze', q.freeze || ICE_TURNS);
+    lowHp(pl);
   }
 }
 
 // ---------- actions ----------
 // X / C use a skill from the class's slots (Energy + cooldown); B is the ultimate (full POW, no cooldown).
 // A "self" skill takes effect at once; a "shot" skill arms the next shot.
-const SLOT_COL = { x: '#ffd36a', c: '#bfeaff', b: '#ffe066' };
+const SLOT_COL = ['#ffd36a', '#bfeaff', '#ffb0d0', '#a8ffb0', '#ffc890', '#c8b8ff'];
+// slots s1-s6 are the skill row, b the ultimate (full POW, no cooldown).
+// "self" skills act on yourself (or your team) at once, "foe" skills on the nearest enemy at once, "shot" skills arm the next shot.
 function useSlot(slot) {
   if (netGuard(slot)) return;
   const p = cur(), sk = p.c.sk[slot];
   if (!sk || S.state !== 'aim' || p.armed) return;
-  const cdKey = slot === 'x' ? 'skillCd' : 'skill2Cd';
+  if (p.frozen > 0 && !sk.purge) return; // frozen / stunned: only Purge works
+  if (sk.hide && p.hidden > 0) return;
+  const i = SLOT_IDS.indexOf(slot);
   if (slot === 'b') { if (p.rage < POW_MAX) return; p.rage = 0; }
-  else if (p[cdKey] > 0 || !payEnergy(p)) return;
-  if (sk.type === 'self') {
-    let said = false;
-    if (sk.guard > 0) { p.iron = true; p.guard = sk.guard; }
-    if (sk.heal > 0) { const h = Math.round(p.maxHp * sk.heal / 100); p.hp = Math.min(p.maxHp, p.hp + h); fx.texts.push({ x: p.x, y: p.y - 50, s: '+' + h, col: '#7dff9a', t: 70 }); said = true; }
-    if (!said) fx.texts.push({ x: p.x, y: p.y - 50, s: sk.name + '!', col: '#ffd36a', t: 70 });
-    sfx(sk.sound);
-  } else {
-    p.armed = slot;
-    fx.texts.push({ x: p.x, y: p.y - 50, s: sk.name + '!', col: SLOT_COL[slot], t: slot === 'b' ? 80 : 70 });
-  }
-  if (slot !== 'b') p[cdKey] = sk.cd + 1; // ticks down at the start of own next turn
+  else if (p.cds[i] > 0 || !payEnergy(p)) return;
+  if (sk.type === 'self') selfSkill(p, sk);
+  else if (sk.type === 'foe') foeSkill(p, sk);
+  else { p.armed = slot; fx.texts.push({ x: p.x, y: p.y - 50, s: sk.name + '!', col: slot === 'b' ? '#ffe066' : SLOT_COL[i], t: slot === 'b' ? 80 : 70 }); }
+  if (slot !== 'b' && !sk.hide) p.cds[i] = Math.max(2, sk.cd) + 1; // ticks down at the start of own next turn; no active skill is under 2 turns
   updatePad();
 }
-function useSkill() { useSlot('x'); }
-function useSkill2() { useSlot('c'); }
+function useSkill() { useSlot('s1'); }
+function useSkill2() { useSlot('s2'); }
 
 function payEnergy(p) {
   if (p.energy < SKILL_COST) { fx.texts.push({ x: p.x, y: p.y - 50, s: 'Energy ไม่พอ', col: '#7fe9ff', t: 60 }); return false; }
@@ -785,11 +1124,11 @@ function useUlt() { useSlot('b'); }
 function boltStrike(q) {
   const owner = S.players[q.owner], e = other(owner);
   const lx = Math.max(0, Math.min(WW, q.x));
-  const homing = e.alive && Math.hypot(e.x - lx, (e.y - 14) - q.y) <= BOLT_R;
+  const homing = e.alive && !(e.hidden > 0) && Math.hypot(e.x - lx, (e.y - 14) - q.y) <= BOLT_R;
   const tx = homing ? e.x : lx, ty = homing ? e.y - 14 : Math.min(q.y, WH);
   fx.bolts.push({ x: tx, y: ty, gy: homing ? e.y : ty, t: -16 });
   if (homing) fx.texts.push({ x: tx, y: ty - 70, s: 'นำวิถี!', col: '#ffe066', t: 70 });
-  S.projs.push({ x: tx, y: ty, owner: q.owner, delay: 16, strike: true, scale: 1, mult: q.strikeMult || 1.8, trail: [], done: false });
+  S.projs.push({ x: tx, y: ty, owner: q.owner, delay: 16, strike: true, scale: 1, pct: q.pct, base: q.base, up: q.up, skill: q.skill, trail: [], done: false });
 }
 
 // ---------- bot ----------
@@ -805,7 +1144,7 @@ function botPlan(p) {
       const r = stepProj(q, S.players, wind);
       if (r === 2) return 1e9;
       if (r === 1) {
-        let sc = Math.hypot(q.x - e.x, q.y - (e.y - 14));
+        let sc = Math.hypot(q.x - (e.hidden > 0 ? e.seenX : e.x), q.y - (e.y - 14)); // a hidden target: aim where it was last seen
         if (Math.hypot(q.x - p.x, q.y - (p.y - 14)) < p.c.r + 20) sc += 2000;
         return sc;
       }
@@ -824,14 +1163,17 @@ function botTick(p) {
   const b = S.bot;
   if (b.phase === 'think') {
     if (--b.t > 0) return;
-    const e = other(p);
-    if (p.c.ult && p.rage >= POW_MAX && Math.random() < 0.3) useUlt();
-    if (p.c.skill2 && p.skill2Cd === 0 && !e.frozen && Math.random() < 0.12) useSkill2();
-    const sx = p.c.sk.x;
-    if (sx && p.skillCd === 0 && !p.armed) {
-      if (sx.heal > 0) { if (p.hp < p.maxHp * 0.65) useSkill(); }
-      else if (Math.random() < 0.15) useSkill();
+    const avail = f => SLOT_IDS.filter((x, i) => p.c.sk[x] && p.cds[i] <= 0 && f(p.c.sk[x])), any = l => l[Math.floor(Math.random() * l.length)];
+    if (p.frozen > 0) { // frozen / stunned: Purge if it can, else the turn goes by
+      const pg = avail(sk => sk.purge); if (pg.length) useSlot(pg[0]);
+      if (p.frozen > 0) { S.state = 'settle'; S.settle = 40; S.bot = null; return; }
     }
+    const mend = sk => sk.type === 'self' && (sk.heal || sk.healMatk || sk.shieldPct || sk.shieldMatk);
+    if (p.c.ult && p.rage >= POW_MAX && Math.random() < 0.3) useUlt();
+    if (p.hp < p.maxHp * 0.6 && Math.random() < 0.7) { const l = avail(mend); if (l.length) useSlot(any(l)); }
+    if (Math.random() < 0.2) { const l = avail(sk => sk.type === 'self' && !mend(sk) && !sk.purge && !sk.hide); if (l.length) useSlot(any(l)); }
+    if (Math.random() < 0.15) { const l = avail(sk => sk.type === 'foe'); if (l.length) useSlot(any(l)); }
+    if (!p.armed && Math.random() < 0.35) { const l = avail(sk => sk.type === 'shot'); if (l.length) useSlot(any(l)); }
     Object.assign(b, botPlan(p), { phase: 'aim' });
   } else if (b.phase === 'aim') {
     const d = b.ang - p.angle;
@@ -871,7 +1213,7 @@ function update() {
 
   if (!S.demo && !NET.on) for (const pl of S.players) if (!pl.bot && pl.alive) {
     if (ADMIN.pow && pl.armed !== 'b') pl.rage = POW_MAX;
-    if (ADMIN.nocd) pl.skillCd = pl.skill2Cd = pl.warpCd = 0;
+    if (ADMIN.nocd) { pl.cds.fill(0); pl.warpCd = 0; }
   }
   if (S.demo) { S.demoT = (S.demoT || 0) + 1; return; }
   if (S.state === 'over') return;
@@ -882,13 +1224,13 @@ function update() {
   }
   if (S.state === 'aim') {
     if (p.bot) botTick(p);
-    else {
+    else if (!(p.frozen > 0)) { // frozen / stunned (waiting to Purge): no walking, no shot
       if (pin.up) p.angle = Math.min(90, p.angle + 0.5);
       if (pin.down) p.angle = Math.max(0, p.angle - 0.5);
       const dir = pin.left ? -1 : pin.right ? 1 : 0;
       if (dir) {
         p.face = dir; cam.manual = false;
-        if (p.energy > 0 && !settling) {
+        if (p.energy > 0 && !settling && !p.bindNow) { // bound: can turn but not walk
           const nx = p.x + dir * 1.3; p.walk++;
           let ny = p.y, k = 0;
           while (solid(nx, ny - 1) && k < 6) { ny--; k++; }
@@ -1195,7 +1537,9 @@ function drawHero(p, active) {
   p.tilt = (p.tilt || 0) + (want - (p.tilt || 0)) * 0.2;
   ctx.save(); ctx.translate(x, y); ctx.rotate(p.tilt);
   if (corpse) drawCorpse(p); else if (cast) drawCast(p, cast); else drawAvatar(p, 'prone');
-  if (p.frozen > 0 && p.alive) {
+  if (p.frozen > 0 && p.alive && p.cck === 'stun') { // stunned: stars circling the head
+    for (let k = 0; k < 3; k++) { const a = S.frame * 0.12 + k * 2.1; ctx.fillStyle = '#ffe14a'; ctx.beginPath(); ctx.arc(Math.cos(a) * 16, -40 + Math.sin(a) * 4, 3, 0, 7); ctx.fill(); }
+  } else if (p.frozen > 0 && p.alive) {
     ctx.fillStyle = 'rgba(170,225,255,.5)'; ctx.strokeStyle = 'rgba(235,250,255,.95)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.roundRect(-26, -46, 52, 48, 6); ctx.fill(); ctx.stroke();
     ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.beginPath(); ctx.moveTo(-18, -38); ctx.lineTo(-6, -26); ctx.moveTo(12, -40); ctx.lineTo(18, -34); ctx.stroke();
@@ -1208,6 +1552,8 @@ function drawHero(p, active) {
   ctx.font = `600 11px ${FONT}`; ctx.textAlign = 'center';
   ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,24,48,.8)'; ctx.strokeText(p.name, x, y + 24);
   ctx.fillStyle = '#fff'; ctx.fillText(p.name, x, y + 24);
+  if (p.shield > 0 && p.alive) { ctx.fillStyle = '#7fd8ff'; ctx.fillRect(x - w / 2, y + 7, w * Math.min(1, p.shield / p.maxHp), 2); }
+  drawStatus(p, x, y + 30);
   if (active && p.alive) {
     const by = y - (castFrame(p) ? 84 : 66) + Math.sin(S.frame * 0.12) * 3;
     ctx.fillStyle = '#ffd36a'; ctx.beginPath(); ctx.moveTo(x - 7, by); ctx.lineTo(x + 7, by); ctx.lineTo(x, by + 9); ctx.fill();
@@ -1333,7 +1679,7 @@ function drawProj(q) {
     ctx.fillStyle = '#3a2a1c'; ctx.beginPath(); ctx.arc(-8, 6, 4.5, 0, 7); ctx.arc(8, 6, 4.5, 0, 7); ctx.fill();
     ctx.fillStyle = '#c9a26a'; ctx.beginPath(); ctx.arc(-8, 6, 1.6, 0, 7); ctx.arc(8, 6, 1.6, 0, 7); ctx.fill();
   } else if (q.kind === 'spirit') {
-    const col = ['#ff6a2a', '#3aa8ff', '#4fd88a', '#b08a52'][q.elem] || '#ffc84a', s = q.scale ? 0.8 + q.scale * 0.4 : 1;
+    const col = ['#ff6a2a', '#3aa8ff', '#4fd88a', '#b08a52', '#ffe14a'][q.elem] || '#ffc84a', s = q.scale ? 0.8 + q.scale * 0.4 : 1;
     ctx.globalAlpha = 0.45; q.trail.forEach(([tx, ty], i) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(tx - q.x, ty - q.y, (1.5 + i * 0.25) * s, 0, 7); ctx.fill(); }); ctx.globalAlpha = 1;
     const g = ctx.createRadialGradient(0, 0, 1, 0, 0, 13 * s); g.addColorStop(0, '#fffbe8'); g.addColorStop(0.45, col); g.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 13 * s, 0, 7); ctx.fill();
@@ -1490,7 +1836,7 @@ function drawHUD() {
   ctx.drawImage(terr, mx, my, mw, mh);
   const sc = mw / WW;
   ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 1.5; ctx.strokeRect(mx + cam.x * sc, my + cam.y * sc, VW * sc, VH * sc);
-  for (const pl of S.players) if (pl.alive) { ctx.fillStyle = pl.c.color; ctx.beginPath(); ctx.arc(mx + pl.x * sc, my + (pl.y - 12) * sc, 3.5, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.stroke(); }
+  for (const pl of S.players) if (pl.alive && !(pl.hidden > 0 && teamOf(pl.i) !== myTeam())) { ctx.fillStyle = pl.c.color; ctx.beginPath(); ctx.arc(mx + pl.x * sc, my + (pl.y - 12) * sc, 3.5, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.stroke(); }
   for (const q of S.projs) if (!q.done && q.delay <= 0) { ctx.fillStyle = '#ffd36a'; ctx.fillRect(mx + q.x * sc - 1.5, my + q.y * sc - 1.5, 3, 3); }
   drawMapFrame(mx, my, mw, mh);
 
@@ -1606,9 +1952,11 @@ function warpDef(p) {
 }
 function slotDefs(p) {
   const sl = [];
-  if (p.c.skill) sl.push({ key: '1', name: p.c.skill.name, icon: p.c.icon, cd: p.skillCd, max: p.c.skill.cd, on: p.armed === 'x', use: useSkill, desc: p.c.tip || p.c.sdesc });
-  if (p.c.skill2) sl.push({ key: '2', name: p.c.skill2.name, icon: p.c.icon2, cd: p.skill2Cd, max: p.c.skill2.cd, on: p.armed === 'c', use: useSkill2, desc: p.c.tip2 || p.c.sdesc2 });
-  while (sl.length < SLOTS) sl.push({ key: SLOT_KEYS[sl.length], empty: true });
+  SLOT_IDS.forEach((id, i) => {
+    const sk = p.c.sk[id];
+    sl.push(!sk ? { key: SLOT_KEYS[i], empty: true } : { key: SLOT_KEYS[i], name: sk.name, icon: sk.icon, cd: p.cds[i], max: Math.max(2, sk.cd), on: p.armed === id,
+      use: () => useSlot(id), desc: sk.tip || sk.short, purge: !!sk.purge, locked: !!(sk.hide && p.hidden > 0) });
+  });
   return sl;
 }
 const SLOTS = 6, SLOT_KEYS = ['1', '2', '3', '4', '5', '6'];
@@ -1618,7 +1966,7 @@ function slotRect(i) {
   const k = SF.w / SF.src, sz = SF.win * k;
   return { x: SF.x + SF.cx[i] * k - sz / 2, y: SF.y + SF.cy * k - sz / 2, w: sz, h: sz };
 }
-function slotUsable(p, d) { return !d.empty && p === cur() && playing() && ctl(p) && S.state === 'aim' && d.cd <= 0 && !p.armed && p.energy >= SKILL_COST; }
+function slotUsable(p, d) { return !d.empty && p === cur() && playing() && ctl(p) && S.state === 'aim' && d.cd <= 0 && !p.armed && p.energy >= SKILL_COST && !d.locked && (!(p.frozen > 0) || !!d.purge); }
 // PASS: skip the rest of your turn (sits under the turn clock)
 const PASS_RECT = { x: VW / 2 - 50, y: 137, w: 100, h: 32 };
 const PASS_IMG = new Image(); PASS_IMG.src = 'assets/a098.webp';
@@ -1737,7 +2085,7 @@ function ultDef(p) {
 const inRect = (r, x, y) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 // the button always shows the human's own gauge (vs bot), or whoever's turn it is (2 players)
 function ultOwner() { return meP() || cur(); }
-function ultUsable(p) { if (p !== cur()) return false; return playing() && ctl(p) && S.state === 'aim' && !p.armed && !!p.c.ult && p.rage >= POW_MAX; }
+function ultUsable(p) { if (p !== cur()) return false; return playing() && ctl(p) && S.state === 'aim' && !p.armed && !(p.frozen > 0) && !!p.c.ult && p.rage >= POW_MAX; }
 function drawUltButton() {
   const p = ultOwner(), r = ULT_RECT, k = Math.min(1, p.rage / POW_MAX);
   const im = ULT_IMG[Math.min(9, Math.max(0, Math.floor(k * 10) - 1))];
@@ -1758,7 +2106,7 @@ function drawUltButton() {
 }
 function drawEnergy(p) {
   const k = SF.w / SF.src, [a, b, c, d] = SF.track;
-  const x0 = SF.x + a * k, y0 = SF.y + b * k, w = (c - a) * k, h = (d - b) * k, f = Math.max(0, Math.min(1, p.energy / ENERGY_MAX));
+  const x0 = SF.x + a * k, y0 = SF.y + b * k, w = (c - a) * k, h = (d - b) * k, f = Math.max(0, Math.min(1, p.energy / (p.maxEn || ENERGY_MAX)));
   if (f > 0) {
     ctx.save(); ctx.beginPath(); ctx.roundRect(x0, y0, w, h, h / 2); ctx.clip();
     const g = ctx.createLinearGradient(0, y0, 0, y0 + h);
@@ -1773,7 +2121,7 @@ function drawEnergy(p) {
     ctx.restore();
   }
   ctx.font = `700 9px ${FONT}`; ctx.textAlign = 'center'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(6,10,36,.95)';
-  const t = `ENERGY ${Math.round(p.energy)} / ${ENERGY_MAX}`;
+  const t = `ENERGY ${Math.round(p.energy)} / ${p.maxEn || ENERGY_MAX}`;
   ctx.strokeText(t, x0 + w / 2, y0 + h / 2 + 3); ctx.fillStyle = '#eafcff'; ctx.fillText(t, x0 + w / 2, y0 + h / 2 + 3);
 }
 function drawSlots(p) {
@@ -1784,10 +2132,15 @@ function drawSlots(p) {
       const im = ICON_IMG[d.icon];
       ctx.save(); ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 6); ctx.clip();
       if (ready(im)) ctx.drawImage(im, r.x, r.y, r.w, r.h);
-      else {
-        ctx.fillStyle = p.c.color; ctx.fillRect(r.x, r.y, r.w, r.h);
-        ctx.fillStyle = '#fff'; ctx.font = `600 11px ${FONT}`; ctx.textAlign = 'center';
-        wrapText(d.name, r.w - 6).slice(0, 3).forEach((ln, k, arr) => ctx.fillText(ln, r.x + r.w / 2, r.y + r.h / 2 + 4 + (k - (arr.length - 1) / 2) * 13));
+      else { // no icon yet: the skill's name on a class-coloured tile, shrunk until every word fits
+        const g = ctx.createLinearGradient(0, r.y, 0, r.y + r.h);
+        g.addColorStop(0, p.c.color); g.addColorStop(1, 'rgba(10,14,40,.95)');
+        ctx.fillStyle = g; ctx.fillRect(r.x, r.y, r.w, r.h);
+        ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fillRect(r.x, r.y, r.w, r.h * 0.35);
+        let fs = 10, lines;
+        for (; fs >= 6.5; fs -= 0.5) { ctx.font = `600 ${fs}px ${FONT}`; lines = wrapText(d.name, r.w - 4); if (lines.length <= 3 && lines.every(ln => ctx.measureText(ln).width <= r.w - 3)) break; }
+        ctx.textAlign = 'center'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(6,8,26,.85)'; ctx.fillStyle = '#fff';
+        lines.slice(0, 3).forEach((ln, k, arr) => { const ty = r.y + r.h / 2 + fs * 0.35 + (k - (arr.length - 1) / 2) * (fs + 1.5); ctx.strokeText(ln, r.x + r.w / 2, ty); ctx.fillText(ln, r.x + r.w / 2, ty); });
       }
       if (!slotUsable(p, d)) { ctx.fillStyle = 'rgba(8,10,25,.55)'; ctx.fillRect(r.x, r.y, r.w, r.h); }
       if (d.cd > 0) { ctx.fillStyle = '#fff'; ctx.font = `600 20px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText(d.cd, r.x + r.w / 2, r.y + r.h / 2 + 7); }
@@ -1905,7 +2258,7 @@ function drawHpBar(p) {
   ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(-2.6, -3.4, 1.4, 0, 7); ctx.fill();
   ctx.restore();
   ctx.font = `700 10px ${FONT}`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(30,4,10,.95)';
-  const label = `HP ${Math.max(0, Math.round(p.hp))} / ${p.maxHp}`;
+  const label = `HP ${Math.max(0, Math.round(p.hp))} / ${p.maxHp}` + (p.shield > 0 ? ` +โล่ ${Math.round(p.shield)}` : '');
   ctx.strokeText(label, x0 + w / 2 + 4, y0 + h / 2 + 3.5); ctx.fillStyle = '#fff4ec'; ctx.fillText(label, x0 + w / 2 + 4, y0 + h / 2 + 3.5);
 }
 function wrapText(t, maxW) {
@@ -2052,7 +2405,13 @@ function draw() {
   ctx.drawImage(terr, cam.x, cam.y, VW, VH, 0, 0, VW, VH);
   drawMist();
   if (!S) return;
-  S.players.forEach(p => drawHero(p, p.i === S.turn && !S.demo));
+  drawZones();
+  // Hiding: the other side sees nothing; your own side sees a faint figure
+  S.players.forEach(p => {
+    const h = p.alive && p.hidden > 0;
+    if (h && teamOf(p.i) !== myTeam()) return;
+    ctx.globalAlpha = h ? 0.45 : 1; drawHero(p, p.i === S.turn && !S.demo); ctx.globalAlpha = 1;
+  });
   if (ADMIN.hitbox) for (const p of S.players) if (p.alive) { const b = hitBox(p); ctx.strokeStyle = 'rgba(255,60,60,.9)'; ctx.lineWidth = 1.5; ctx.strokeRect(b.l - cam.x, b.t - cam.y, HB.w, HB.h); }
   S.projs.forEach(drawProj);
   drawFx();
@@ -2418,17 +2777,16 @@ function updatePad() {
   const human = playing() && p && ctl(p);
   for (const id of ['b-up', 'b-down', 'b-fire']) document.getElementById(id).disabled = !human;
   for (const id of ['b-left', 'b-right']) document.getElementById(id).disabled = !(human || (playing() && (vsBot || NET.on)));
-  const sk = document.getElementById('b-skill');
-  sk.hidden = !(p && p.c.skill);
-  if (p && p.c.skill) setSlot(sk, ICONS[p.c.icon], p.c.skill.name, '1', p.skillCd, p.c.tip || p.c.sdesc, p.c.skill.cd, p.armed === 'x');
-  sk.disabled = !human || !p || !p.c.skill || p.skillCd > 0 || !!p.armed || S.state !== 'aim';
+  const sd = p ? slotDefs(p) : [];
+  [['b-skill', 0], ['b-skill2', 1]].forEach(([id, i]) => { // the touch pad carries the first two skills of the row
+    const el = document.getElementById(id), d = sd[i];
+    el.hidden = !(d && !d.empty);
+    if (d && !d.empty) setSlot(el, ICONS[d.icon], d.name, d.key, d.cd, d.desc, d.max, d.on);
+    el.disabled = !human || !d || d.empty || !slotUsable(p, d);
+  });
   const wb = document.getElementById('b-warp');
   if (p) setSlot(wb, ICONS.warp, 'สกิลบิน', 'F', p.warpCd, 'ปาลูกแก้วที่หมุนกลางอากาศ แล้ววาร์ปไปยังจุดที่ลูกแก้วตก ไม่ทำดาเมจ และใช้แทนการยิงของตานั้น', WARP_CD, p.armed === 'z');
   wb.disabled = !human || !p || p.warpCd > 0 || !!p.armed || S.state !== 'aim';
-  const sk2 = document.getElementById('b-skill2');
-  sk2.hidden = !(p && p.c.skill2);
-  if (p && p.c.skill2) setSlot(sk2, ICONS[p.c.icon2], p.c.skill2.name, '2', p.skill2Cd, p.c.tip2 || p.c.sdesc2, p.c.skill2.cd, p.armed === 'c');
-  sk2.disabled = !human || !p || !p.c.skill2 || p.skill2Cd > 0 || !!p.armed || S.state !== 'aim';
 }
 
 const sndBtn = document.getElementById('snd-btn');
@@ -2466,7 +2824,8 @@ function reloadData(gd) { applyData(gd); buildSetup(); if (!S || S.demo || S.sta
 // back in its own presence. Terrain carves, effects and sounds travel as a numbered event list that the guest
 // acknowledges, so none is lost when presence updates are coalesced. The room itself comes from a transport
 // with join(name) -> { presence(patch), peers(), onPeers(fn), leave() } (the artifact's room capability here).
-const PK = ['x', 'y', 'vy', 'hp', 'maxHp', 'rage', 'energy', 'angle', 'face', 'skillCd', 'skill2Cd', 'warpCd', 'frozen', 'armed', 'alive', 'iron', 'castT', 'releaseT', 'walk', 'boost', 'gone', 'lastPower', 'items', 'guard', 'passed'];
+const PK = ['x', 'y', 'vy', 'hp', 'maxHp', 'rage', 'energy', 'maxEn', 'angle', 'face', 'cds', 'warpCd', 'frozen', 'cck', 'ccRes', 'ccTurn', 'bind', 'bindNow', 'shield', 'buffs', 'debs', 'dots', 'marks', 'hidden',
+  'armed', 'alive', 'iron', 'castT', 'releaseT', 'walk', 'boost', 'gone', 'lastPower', 'items', 'guard', 'passed'];
 const PJK = ['x', 'y', 'vx', 'vy', 'gf', 'wf', 'kind', 'owner', 'age', 'delay', 'strike', 'scale', 'spin', 'bolt', 'meteor', 'steal', 'elem', 'ice', 'warp'];
 const nr = v => typeof v === 'number' ? Math.round(v * 100) / 100 : v === undefined ? null : v;
 const netMsg = t => { document.getElementById('net-msg').textContent = t; };
@@ -2555,7 +2914,7 @@ function hostAct(a) {
     }
     else if (a.k === 'z') useWarp();
     else if (a.k === 'p') passTurn();
-    else if (a.k === 'x' || a.k === 'c' || a.k === 'b') useSlot(a.k);
+    else if (a.k === 'b' || SLOT_IDS.includes(a.k)) useSlot(a.k);
   } finally { NET.applying = false; }
 }
 function captureFx() {
@@ -2573,7 +2932,7 @@ function hostSnap() {
   const ea = NET.gpres && NET.gpres.ea, ack = Array.isArray(ea) && ea[0] === NET.m ? +ea[1] || 0 : 0;
   NET.ev = NET.ev.filter(e => e[0] > ack);
   const sn = { n: ++NET.sn, m: NET.m, mt: NET.mt, f: S.frame, st: S.state, t: S.turn, tc: S.turnCount, pw: nr(S.power), tm: nr(S.timer), w: S.wind,
-    bn: S.banner, cs: Math.round(cam.shake || 0), wn: S.state === 'over' ? S.winIdx : -1, aa: NET.lastAct,
+    bn: S.banner, cs: Math.round(cam.shake || 0), wn: S.state === 'over' ? S.winIdx : -1, aa: NET.lastAct, zn: (S.zones || []).map(z => [nr(z.x), nr(z.y), nr(z.r), z.t]),
     pl: S.players.map(p => PK.map(k => nr(p[k]))),
     pj: S.projs.filter(q => !q.done).map(q => PJK.map(k => nr(k === 'kind' ? q.src || q.kind : q[k]))), ev: [] };
   const enc = new TextEncoder(), base = enc.encode(JSON.stringify(sn)).length + 80;
@@ -2617,7 +2976,7 @@ function applySnap(sn) {
   NET.lastSn = sn.n;
   for (const e of Array.isArray(sn.ev) ? sn.ev : []) if (Array.isArray(e) && e[0] > NET.eseq) { applyEv(e); NET.eseq = e[0]; }
   NET.aa = sn.aa;
-  Object.assign(S, { turn: sn.t, turnCount: sn.tc, power: sn.pw, timer: sn.tm, wind: sn.w, banner: sn.bn });
+  Object.assign(S, { turn: sn.t, turnCount: sn.tc, power: sn.pw, timer: sn.tm, wind: sn.w, banner: sn.bn, zones: (sn.zn || []).map(z => ({ x: z[0], y: z[1], r: z[2], t: z[3] })) });
   if (!NET.ended) S.state = sn.st;
   if (sn.cs) cam.shake = Math.max(cam.shake || 0, sn.cs);
   (sn.pl || []).forEach((row, i) => {
@@ -2636,7 +2995,7 @@ function applySnap(sn) {
   });
   if (NET.gc) { S.state = 'charging'; S.power = NET.gc.pw; }
   if (sn.st === 'over' && !NET.ended) { NET.ended = true; S.winIdx = sn.wn; endMatch(sn.wn >= 0 ? S.players[sn.wn] : null); }
-  const sig = [S.turn, S.state, S.turnCount].concat(S.players.map(p => [p.armed, p.skillCd, p.skill2Cd, p.warpCd, p.energy >= SKILL_COST].join())).join('|');
+  const sig = [S.turn, S.state, S.turnCount].concat(S.players.map(p => [p.armed, (p.cds || []).join('.'), p.warpCd, p.energy >= SKILL_COST, p.frozen, p.hidden].join())).join('|');
   if (sig !== NET.sig) { NET.sig = sig; updatePad(); }
 }
 // the guest's frame: draw what the host said, moving shots and players smoothly between snapshots
@@ -2791,7 +3150,7 @@ const SKILL_PROJ_OPTS = [['', 'ใช้กระสุนปกติของ�
 const SOUND_OPTS = [['', 'ไม่มีเสียง'], ['meteor', 'เสียงฝนดาวตก'], ['ice', 'เสียงน้ำแข็ง'], ['bolt', 'เสียงสายฟ้า']];
 const ICON_OPTS = [['', 'ไม่มี (แสดงชื่อสกิล)'], ['meteor', 'ไอคอนฝนดาวตก'], ['ice', 'ไอคอนน้ำแข็ง'], ['warp', 'ไอคอนลูกแก้ววาร์ป']];
 const IMG_OPTS = { bg: [['', 'ท้องฟ้าธรรมดา'], ['jungle-bg', 'ฉากป่าโบราณ']], fg: [['hills', 'เนินหญ้า (ในตัว)'], ['jungle-fg', 'พื้นป่าโบราณ']], col: [['', 'ใช้ส่วนทึบของรูปพื้น'], ['jungle-col', 'ขอบเขตพื้นป่าโบราณ']] };
-const TABS = { classes: 'อาชีพ', skills: 'สกิล', stages: 'ด่าน' };
+const TABS = { classes: 'อาชีพ', skills: 'สกิล', passives: 'พาสซีฟ', stages: 'ด่าน' };
 const $m = id => document.getElementById(id);
 
 // --- storage: draft in IndexedDB, saved copy in the artifact ---
@@ -2950,15 +3309,16 @@ function refreshList() {
   }
 }
 function addItem() {
-  const t = MK.tab, k = newId(t === 'classes' ? 'c' : t === 'skills' ? 's' : 'st');
-  if (t === 'classes') GD.classes[k] = { name: 'อาชีพใหม่', hp: 1000, color: '#5a8fd8', dmg: 220, r: 34, wf: 1, gf: 1, spd: 1, shot: 'orb', desc: 'อาชีพที่สร้างเอง', face: 1 };
-  if (t === 'skills') GD.skills[k] = { name: 'สกิลใหม่', type: 'shot', cd: 3, short: 'สกิลที่สร้างเอง' };
+  const t = MK.tab, k = newId(t === 'classes' ? 'c' : t === 'skills' ? 's' : t === 'passives' ? 'pa' : 'st');
+  if (t === 'classes') GD.classes[k] = Object.assign({}, CLASS_DEF, { desc: 'อาชีพที่สร้างเอง' });
+  if (t === 'skills') GD.skills[k] = { name: 'สกิลใหม่', type: 'shot', cd: 3, base: 'atk', dmg: 100, short: 'สกิลที่สร้างเอง' };
+  if (t === 'passives') GD.passives[k] = { name: 'พาสซีฟใหม่', kind: 'none', v: 0, hp: 30, tip: 'พาสซีฟที่สร้างเอง' };
   if (t === 'stages') GD.stages[k] = { name: 'ด่านใหม่', hard: false, spawn: [500, 1300], fg: 'hills', bg: '' };
   MK.sel[t] = k; touched(); renderMaker();
 }
 function copyItem() {
   const t = MK.tab, k = MK.sel[t]; if (!k) return;
-  const nk = newId(t === 'classes' ? 'c' : t === 'skills' ? 's' : 'st');
+  const nk = newId(t === 'classes' ? 'c' : t === 'skills' ? 's' : t === 'passives' ? 'pa' : 'st');
   GD[t][nk] = JSON.parse(JSON.stringify(GD[t][k])); GD[t][nk].name = (GD[t][nk].name || '') + ' (สำเนา)';
   MK.sel[t] = nk; touched(); renderMaker();
 }
@@ -2967,7 +3327,8 @@ function delItem() {
   if (Object.keys(GD[t]).length <= 1) { alert('ต้องเหลืออย่างน้อย 1 รายการ'); return; }
   if (!confirm(`ลบ "${GD[t][k].name}" ใช่ไหม`)) return;
   delete GD[t][k];
-  if (t === 'skills') for (const c of Object.values(GD.classes)) for (const s of ['x', 'c', 'b']) if (c[s] === k) c[s] = '';
+  if (t === 'skills') for (const c of Object.values(GD.classes)) for (const s of SLOT_IDS.concat('b')) if (c[s] === k) c[s] = '';
+  if (t === 'passives') for (const c of Object.values(GD.classes)) for (const s of ['p1', 'p2']) if (c[s] === k) c[s] = '';
   MK.sel[t] = Object.keys(GD[t])[0]; touched(); renderMaker();
 }
 
@@ -2983,17 +3344,36 @@ function classForm(f, c) {
   const face = c.face != null ? c.face : (BUILTIN_FACE[MK.sel.classes] != null ? BUILTIN_FACE[MK.sel.classes] : 1);
   const fo = { face: String(face) };
   f.append(fieldRow('รูปหันหน้าไปทาง', inSelect(fo, 'face', [['1', 'ขวา'], ['-1', 'ซ้าย']], () => { c.face = +fo.face; touched(); })));
-  f.append(section('พลัง'));
-  f.append(fieldRow('HP', inNum(c, 'hp', 100, 5000, 10, 1000)));
-  f.append(fieldRow('ดาเมจต่อนัด', inNum(c, 'dmg', 10, 1000, 5, 220)));
+  f.append(section('สถานะ'));
+  f.append(fieldRow('HP', inNum(c, 'hp', 100, 5000, 10, 1000), 'HP มาตรฐานของเกม = 1000'));
+  f.append(fieldRow('ATK', inNum(c, 'atk', 0, 300, 1, 50), 'พลังโจมตีกายภาพ'));
+  f.append(fieldRow('MATK', inNum(c, 'matk', 0, 300, 1, 50), 'พลังโจมตีเวท'));
+  f.append(fieldRow('DEF', inNum(c, 'def', 0, 300, 1, 40), 'ลดดาเมจกายภาพ: ดาเมจ × 100 / (100 + DEF)'));
+  f.append(fieldRow('MDEF', inNum(c, 'mdef', 0, 300, 1, 40), 'ลดดาเมจเวท: ดาเมจ × 100 / (100 + MDEF)'));
+  f.append(fieldRow('SPD', inNum(c, 'spd', 0, 200, 1, 50), 'Energy ต่อเทิร์น = 235 + SPD × 0.25 ใคร Energy สูงกว่าได้เริ่มก่อน'));
+  f.append(fieldRow('LUK', inNum(c, 'luk', 0, 200, 1, 50), 'โอกาสคริติคอล = 3% + LUK × 0.12%'));
+  f.append(section('การยิงปกติ'));
+  f.append(fieldRow('ใช้พลัง', inSelect(c, 'nBase', [['atk', 'ATK (กายภาพ)'], ['matk', 'MATK (เวท)']])));
+  f.append(fieldRow('ดาเมจยิงปกติ (%)', inNum(c, 'nPct', 0, 300, 5, 100), 'ไม่ใช้ Energy'));
   f.append(fieldRow('รัศมีระเบิด', inNum(c, 'r', 8, 120, 1, 34), 'ยิ่งมากยิ่งโดนง่าย และขุดดินมาก'));
   f.append(fieldRow('น้ำหนักกระสุน', inNum(c, 'gf', 0.3, 2, 0.01, 1), 'มากกว่า 1 = ตกเร็ว ยิงได้ใกล้ลง'));
-  f.append(fieldRow('ความแรงยิง', inNum(c, 'spd', 0.6, 1.5, 0.01, 1), 'มากกว่า 1 = ยิงได้ไกลขึ้น'));
+  f.append(fieldRow('ความแรงยิง', inNum(c, 'vel', 0.6, 1.5, 0.01, 1), 'มากกว่า 1 = ยิงได้ไกลขึ้น'));
   f.append(fieldRow('กระสุนปกติ', inAsset(c, 'shot', 'image', PROJ_OPTS, { maxW: 96, maxH: 96 }), 'รูปที่อัปโหลดควรหันหัวไปทางขวา'));
   f.append(section('สกิล'));
-  f.append(fieldRow('ช่องสกิล 1', inSelect(c, 'x', skillOpts('ไม่มี'))));
-  f.append(fieldRow('ช่องสกิล 2', inSelect(c, 'c', skillOpts('ไม่มี'))));
+  SLOT_IDS.forEach((x, i) => f.append(fieldRow('ช่องสกิล ' + (i + 1), inSelect(c, x, skillOpts('ไม่มี')))));
   f.append(fieldRow('ท่าไม้ตาย (B)', inSelect(c, 'b', skillOpts('ไม่มี')), 'ใช้ได้เมื่อเกจ POW เต็ม ไม่ใช้ Energy'));
+  const popts = [['', 'ไม่มี']].concat(Object.entries(GD.passives || {}).map(([k, pa]) => [k, pa.name]));
+  f.append(fieldRow('พาสซีฟ 1', inSelect(c, 'p1', popts)));
+  f.append(fieldRow('พาสซีฟ 2', inSelect(c, 'p2', popts)));
+}
+const DOT_OPTS = [['', 'ไม่มี'], ['poison', 'พิษ'], ['bleed', 'เลือดไหล'], ['burn', 'ไหม้']];
+const MARK_OPTS = [['', 'ไม่มี'], ['fire', 'ไฟ'], ['water', 'น้ำ'], ['thunder', 'สายฟ้า'], ['nature', 'ธรรมชาติ']];
+function debuffRows(f, s) {
+  f.append(fieldRow('DEF ของเป้า ลด (%)', inNum(s, 'debDef', 0, 100, 1, 0)));
+  f.append(fieldRow('MDEF ของเป้า ลด (%)', inNum(s, 'debMdef', 0, 100, 1, 0)));
+  f.append(fieldRow('เป้าโดนดาเมจจากเราเพิ่ม (%)', inNum(s, 'debTaken', 0, 100, 1, 0), 'แบบ Hunter\'s Mark'));
+  f.append(fieldRow('เป้าทำดาเมจใส่เราลด (%)', inNum(s, 'debDeal', 0, 100, 1, 0), 'แบบ Provoke'));
+  f.append(fieldRow('ดีบัฟอยู่ (เทิร์น)', inNum(s, 'debTurns', 1, 6, 1, 2)));
 }
 function skillForm(f, s) {
   const redo = () => renderForm();
@@ -3001,32 +3381,82 @@ function skillForm(f, s) {
   f.append(fieldRow('ชื่อสกิล', inText(s, 'name')));
   f.append(fieldRow('คำอธิบายสั้น (บนการ์ด)', inText(s, 'short')));
   f.append(fieldRow('คำอธิบายเต็ม (ตอนชี้เมาส์)', inText(s, 'tip', true)));
-  f.append(fieldRow('ชนิด', inSelect(s, 'type', [['shot', 'ยิง (เปลี่ยนนัดถัดไป)'], ['self', 'ใช้กับตัวเองทันที']], redo)));
-  f.append(fieldRow('คูลดาวน์ (เทิร์น)', inNum(s, 'cd', 0, 10, 1, 3), 'ไม่มีผลกับท่าไม้ตาย'));
+  f.append(fieldRow('ชนิด', inSelect(s, 'type', [['shot', 'ยิง (เปลี่ยนนัดถัดไป)'], ['self', 'ใช้กับตัวเองหรือทีมทันที'], ['foe', 'ใช้กับศัตรูทันที (ไม่ต้องยิง)']], redo)));
+  f.append(fieldRow('คูลดาวน์ (เทิร์น)', inNum(s, 'cd', 2, 10, 1, 3), 'ขั้นต่ำ 2 เทิร์น ไม่มีผลกับท่าไม้ตาย'));
   f.append(fieldRow('ไอคอน', inAsset(s, 'icon', 'image', ICON_OPTS, { exact: [128, 128], builtinURL: v => ICONS[v] || '' })));
   f.append(fieldRow('เสียง', inAsset(s, 'sound', 'audio', SOUND_OPTS)));
-  if ((s.type || 'shot') === 'self') {
-    f.append(section('ผลกับตัวเอง'));
-    f.append(fieldRow('ฟื้น HP (%)', inNum(s, 'heal', 0, 100, 1, 0)));
-    f.append(fieldRow('ลดดาเมจที่รับ (%)', inNum(s, 'guard', 0, 100, 1, 0), 'ถึงตาถัดไปของตัวเอง'));
-  } else {
+  const t = s.type || 'shot';
+  if (t === 'shot') {
+    f.append(section('ดาเมจ'));
+    f.append(fieldRow('ใช้พลัง', inSelect(s, 'base', [['atk', 'ATK (กายภาพ ลดด้วย DEF)'], ['matk', 'MATK (เวท ลดด้วย MDEF)']])));
+    f.append(fieldRow('ดาเมจต่อลูก (%)', inNum(s, 'dmg', 0, 400, 5, 100), '% ของ ATK หรือ MATK'));
+    f.append(fieldRow('ดาเมจถ้าเป้าติดพิษ/เลือดไหล (%)', inNum(s, 'vsDot', 0, 400, 5, 0), '0 = ใช้ค่าปกติ'));
+    f.append(fieldRow('ไม่สน DEF/MDEF (%)', inNum(s, 'ignoreDef', 0, 100, 1, 0)));
     f.append(section('กระสุน'));
     f.append(fieldRow('จำนวนลูก', inNum(s, 'count', 1, 8, 1, 1)));
     f.append(fieldRow('กระจายมุม (องศา)', inNum(s, 'spread', 0, 60, 1, 0), 'ระยะห่างของมุมลูกแรกถึงลูกสุดท้าย'));
     f.append(fieldRow('กระจายแรง', inNum(s, 'powSpread', 0, 30, 1, 0), 'ลูกแรกแรงน้อยกว่า ลูกท้ายแรงกว่า'));
     f.append(fieldRow('หน่วงระหว่างลูก (เฟรม)', inNum(s, 'delay', 0, 60, 1, 0), '60 เฟรม = 1 วินาที'));
-    f.append(fieldRow('ขนาดระเบิด (%)', inNum(s, 'size', 20, 300, 5, 100), 'มีผลกับดาเมจด้วย'));
-    f.append(fieldRow('ดาเมจเพิ่ม (%)', inNum(s, 'dmg', 0, 400, 5, 100)));
+    f.append(fieldRow('ขนาดระเบิด (%)', inNum(s, 'size', 20, 300, 5, 100), 'วงกว้างขึ้น (AOE) ไม่มีผลกับดาเมจ'));
+    f.append(fieldRow('ขุดพื้น (%)', inNum(s, 'dig', 0, 400, 10, 100)));
     f.append(fieldRow('น้ำหนัก (%)', inNum(s, 'weight', 30, 300, 1, 100), 'มากกว่า 100 = ตกเร็วขึ้น'));
     f.append(fieldRow('รูปกระสุน', inAsset(s, 'proj', 'image', SKILL_PROJ_OPTS, { maxW: 96, maxH: 96 })));
-    f.append(section('ผลพิเศษเมื่อโดน'));
-    f.append(fieldRow('แช่แข็ง (เทิร์น)', inNum(s, 'freeze', 0, 5, 1, 0)));
+    f.append(section('ผลเมื่อโดนศัตรู'));
+    f.append(fieldRow('ติดสถานะต่อเนื่อง', inSelect(s, 'dotKind', DOT_OPTS)));
+    f.append(fieldRow('ดาเมจต่อเนื่องต่อเทิร์น (%)', inNum(s, 'dotPct', 0, 200, 1, 0), '% ของพลังเดียวกับสกิล'));
+    f.append(fieldRow('ต่อเนื่องกี่เทิร์น', inNum(s, 'dotTurns', 1, 6, 1, 2)));
+    debuffRows(f, s);
+    f.append(fieldRow('แช่แข็ง (เทิร์น)', inNum(s, 'freeze', 0, 5, 1, 0), 'CC แรง ควรดาเมจต่ำและคูลดาวน์สูง'));
+    f.append(fieldRow('กระเด็น (ระยะ)', inNum(s, 'knock', 0, 200, 5, 0)));
+    f.append(fieldRow('ติดมาร์คธาตุ', inSelect(s, 'mark', MARK_OPTS)));
+    f.append(fieldRow('', inCheck(s, 'burst', 'จุดปฏิกิริยาจากมาร์ค 2 ธาตุบนเป้า (แบบ Spirit Burst)')));
+    f.append(fieldRow('กำแพงไฟต่อเทิร์น (%)', inNum(s, 'zone', 0, 200, 5, 0), 'ใครอยู่ในไฟตอนเริ่มเทิร์นของตัวเองจะโดน'));
+    f.append(fieldRow('กำแพงไฟอยู่ (เทิร์น)', inNum(s, 'zoneTurns', 1, 6, 1, 2)));
     f.append(fieldRow('ขโมย POW', inNum(s, 'steal', 0, 120, 5, 0)));
     f.append(fieldRow('', inCheck(s, 'homing', 'สายฟ้านำวิถี (ถ้าตกใกล้ศัตรู ฟ้าจะผ่าลงตัวศัตรู)')));
     f.append(fieldRow('', inCheck(s, 'warp', 'วาร์ปไปจุดที่ตก (ไม่ทำดาเมจ)')));
+  } else if (t === 'self') {
+    f.append(section('ฟื้นฟูและโล่'));
+    f.append(fieldRow('ฟื้น HP (% ของ HP สูงสุด)', inNum(s, 'heal', 0, 100, 1, 0)));
+    f.append(fieldRow('ฟื้น HP (% MATK)', inNum(s, 'healMatk', 0, 400, 5, 0)));
+    f.append(fieldRow('โล่ (% ของ HP สูงสุด)', inNum(s, 'shieldPct', 0, 100, 1, 0)));
+    f.append(fieldRow('โล่ (% MATK)', inNum(s, 'shieldMatk', 0, 400, 5, 0)));
+    f.append(fieldRow('', inCheck(s, 'consumable', 'นับเป็นไอเทม (พาสซีฟ Overcharge เพิ่มผล)')));
+    f.append(fieldRow('', inCheck(s, 'purge', 'ล้างสถานะผิดปกติ 1 อย่าง ใช้ได้แม้ตอนแข็งหรือมึน')));
+    f.append(fieldRow('', inCheck(s, 'team', 'ใช้กับทั้งทีม')));
+    f.append(section('บัฟ'));
+    f.append(fieldRow('ATK เพิ่ม (%)', inNum(s, 'bAtk', 0, 100, 1, 0)));
+    f.append(fieldRow('MATK เพิ่ม (%)', inNum(s, 'bMatk', 0, 100, 1, 0)));
+    f.append(fieldRow('DEF เพิ่ม (%)', inNum(s, 'bDef', 0, 100, 1, 0)));
+    f.append(fieldRow('MDEF เพิ่ม (%)', inNum(s, 'bMdef', 0, 100, 1, 0)));
+    f.append(fieldRow('รับดาเมจลด (%)', inNum(s, 'bTaken', 0, 100, 1, 0), 'แบบ Endure'));
+    f.append(fieldRow('การยิงครั้งถัดไปแรงขึ้น (%)', inNum(s, 'bNext', 0, 100, 1, 0), 'แบบ Focus'));
+    f.append(fieldRow('สกิลเวทครั้งถัดไปแรงขึ้น (%)', inNum(s, 'bNextMagic', 0, 100, 1, 0), 'แบบ Magic Amplification'));
+    f.append(fieldRow('บัฟอยู่ (เทิร์น)', inNum(s, 'bTurns', 1, 6, 1, 2), 'นับเทิร์นของตัวเอง รวมเทิร์นที่ใช้'));
+    f.append(section('อื่น ๆ'));
+    f.append(fieldRow('ล่องหน (เทิร์น)', inNum(s, 'hide', 0, 6, 1, 0), 'คูลดาวน์เริ่มนับหลังหลุดล่องหน'));
+  } else {
+    f.append(section('ผลกับศัตรูที่ใกล้ที่สุด'));
+    debuffRows(f, s);
+    f.append(fieldRow('', inCheck(s, 'shift', 'เปลี่ยนมาร์คล่าสุดบนศัตรูเป็นธาตุถัดไป (แบบ Spirit Shift)')));
   }
-  const users = Object.values(GD.classes).filter(c => [c.x, c.c, c.b].includes(MK.sel.skills)).map(c => c.name);
+  const users = Object.values(GD.classes).filter(c => SLOT_IDS.concat('b').some(x => c[x] === MK.sel.skills)).map(c => c.name);
   const p = document.createElement('p'); p.className = 'mk-hint'; p.textContent = users.length ? 'อาชีพที่ใช้สกิลนี้: ' + users.join(', ') : 'ยังไม่มีอาชีพไหนใช้สกิลนี้ ไปเลือกที่แท็บอาชีพ';
+  f.append(p);
+}
+const PASSIVE_KINDS = [['none', 'ไม่มีผล (แสดงอย่างเดียว)'], ['crit', 'โอกาสคริติคอล +%'], ['critDmg', 'ดาเมจคริติคอล +%'], ['atk', 'ATK +%'], ['matk', 'MATK +%'],
+  ['execute', 'ดาเมจ +% เมื่อเป้า HP ต่ำ'], ['ironBody', 'DEF/MDEF +% เมื่อ HP ตัวเองต่ำ'], ['healBonus', 'ฟื้น HP แรงขึ้น +%'], ['guardian', 'ได้โล่ % HP ครั้งแรกที่ HP ต่ำ'],
+  ['nineLives', 'ดาเมจครั้งถัดไป -% ครั้งแรกที่ HP ต่ำ'], ['spiritBond', 'MATK +% หลังทำปฏิกิริยาธาตุ'], ['consumable', 'ยาและโล่ที่นับเป็นไอเทม +%'], ['luckMul', 'LUK มีผลกับคริติคอลมากขึ้น %']];
+function passiveForm(f, pa) {
+  f.append(section('ข้อมูลพาสซีฟ'));
+  f.append(fieldRow('ชื่อพาสซีฟ', inText(pa, 'name')));
+  f.append(fieldRow('คำอธิบาย (ตอนชี้เมาส์)', inText(pa, 'tip', true)));
+  f.append(fieldRow('ไอคอน', inAsset(pa, 'icon', 'image', [['', 'ไม่มี (แสดงชื่อ)']], { exact: [128, 128] })));
+  f.append(fieldRow('ผล', inSelect(pa, 'kind', PASSIVE_KINDS)));
+  f.append(fieldRow('ค่า (%)', inNum(pa, 'v', 0, 100, 1, 0)));
+  f.append(fieldRow('เงื่อนไข HP ต่ำกว่า (%)', inNum(pa, 'hp', 1, 100, 1, 30), 'ใช้กับผลที่ขึ้นกับ HP'));
+  const users = Object.values(GD.classes).filter(c => c.p1 === MK.sel.passives || c.p2 === MK.sel.passives).map(c => c.name);
+  const p = document.createElement('p'); p.className = 'mk-hint'; p.textContent = users.length ? 'อาชีพที่ใช้พาสซีฟนี้: ' + users.join(', ') : 'ยังไม่มีอาชีพไหนใช้พาสซีฟนี้';
   f.append(p);
 }
 function stageForm(f, st) {
@@ -3060,7 +3490,7 @@ function renderForm() {
   const f = $m('mk-form'); f.textContent = '';
   const k = MK.sel[MK.tab], it = items()[k];
   if (!it) return;
-  if (MK.tab === 'classes') classForm(f, it); else if (MK.tab === 'skills') skillForm(f, it); else stageForm(f, it);
+  if (MK.tab === 'classes') classForm(f, it); else if (MK.tab === 'skills') skillForm(f, it); else if (MK.tab === 'passives') passiveForm(f, it); else stageForm(f, it);
 }
 function renderMaker() {
   if (!items()[MK.sel[MK.tab]]) MK.sel[MK.tab] = Object.keys(items())[0];
@@ -3090,7 +3520,7 @@ async function loadSavedData() {
   try { const r = await fetch('game-data.json', { cache: 'no-cache' }); if (r.ok) base = await r.json(); } catch (_) {}
   if (base) { base.assets = base.assets || {}; reloadData(base); }
   const d = await idbGet('draft');
-  if (d && d.classes) { MK.dirty = true; reloadData(d); }
+  if (d && d.classes && d.version >= 2) { MK.dirty = true; reloadData(d); }
 }
 
 applyData(embeddedData()); buildSetup(); startDemo();
@@ -3098,7 +3528,7 @@ loadSavedData();
 cam.x = 0;
 fitCanvas(); drawStripResize();
 requestAnimationFrame(loop);
-window.__game = { NET, get S() { return S; }, get cam() { return cam; }, input, fire, useSkill, botPlan, useUlt };
+window.__game = { NET, get S() { return S; }, get cam() { return cam; }, input, fire, useSkill, botPlan, useUlt, useSlot, statOf, hitDamage, critChance, get SKILLS() { return SKILLS; } };
 })();
 </script>
 
