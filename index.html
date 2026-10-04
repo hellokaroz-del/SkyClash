@@ -1510,30 +1510,24 @@ function drawHUD() {
     ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(tx0 + tw * pw - 2, ty0, 2, th);
   }
   ctx.textAlign = 'center'; ctx.font = `600 9px ${FONT}`; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(8,14,40,.9)';
-  // ruler band above the track (like a measuring tape): tick every 1, longer every 5, tallest every 10 with its number
+  // ruler inside the track (like a measuring tape), drawn over the fill: tick every 1, longer every 5, tallest every 10 with its number
   {
-    const ry1 = ty0 - 5, ry0 = ry1 - 18;
-    const g = ctx.createLinearGradient(0, ry0, 0, ry1);
-    g.addColorStop(0, 'rgba(235,245,255,.34)'); g.addColorStop(0.5, 'rgba(190,215,255,.16)'); g.addColorStop(1, 'rgba(170,205,255,.30)');
-    ctx.fillStyle = g; ctx.fillRect(tx0, ry0, tw, ry1 - ry0);
-    ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(tx0, ry0, tw, 1);
-    for (let v = 0; v <= 100; v++) {
+    const g = ctx.createLinearGradient(0, ty0, 0, ty1);
+    g.addColorStop(0, 'rgba(235,245,255,.16)'); g.addColorStop(1, 'rgba(170,205,255,.06)');
+    ctx.fillStyle = g; ctx.fillRect(tx0, ty0, tw, th);
+    for (let v = 1; v < 100; v++) {
       const x = tx0 + tw * v / 100, major = v % 10 === 0, mid = v % 5 === 0;
-      ctx.strokeStyle = major ? 'rgba(255,255,255,.95)' : mid ? 'rgba(240,246,255,.8)' : 'rgba(225,235,255,.6)'; ctx.lineWidth = major ? 1.4 : 1;
-      ctx.beginPath(); ctx.moveTo(x, ry1); ctx.lineTo(x, ry1 - (major ? 10 : mid ? 7 : 4)); ctx.stroke();
+      ctx.strokeStyle = major ? 'rgba(255,255,255,.95)' : mid ? 'rgba(240,246,255,.8)' : 'rgba(225,235,255,.55)'; ctx.lineWidth = major ? 1.4 : 1;
+      ctx.beginPath(); ctx.moveTo(x, ty1); ctx.lineTo(x, ty1 - th * (major ? 0.62 : mid ? 0.4 : 0.22)); ctx.stroke();
     }
     ctx.font = `700 9px ${FONT}`; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(8,14,40,.9)'; ctx.fillStyle = '#f2f6ff';
     for (let v = 0; v <= 100; v += 10) {
       const x = tx0 + tw * v / 100, end = v === 100;
       ctx.textAlign = end ? 'right' : 'left';
       const lx = end ? x - 2 : x + 2;
-      ctx.strokeText(v, lx, ry0 + 9); ctx.fillText(v, lx, ry0 + 9);
+      ctx.strokeText(v, lx, ty0 + 9); ctx.fillText(v, lx, ty0 + 9);
     }
     ctx.textAlign = 'center';
-  }
-  for (let v = 10; v < 100; v += 10) { // faint guide lines through the track
-    const x = tx0 + tw * v / 100;
-    ctx.strokeStyle = 'rgba(160,190,255,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, ty0); ctx.lineTo(x, ty1); ctx.stroke();
   }
   if (p.lastPower != null) {
     const tx = tx0 + tw * p.lastPower / 100;
