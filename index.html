@@ -1506,10 +1506,12 @@ function drawHUD() {
     ctx.drawImage(HUD.barM, X0 + LW, BTOP, MW, BH);
     ctx.drawImage(HUD.barR, X0 + LW + MW, BTOP, 260 * BS, BH);
   } else { panel(tx0 - 6, ty0 - 6, tw + 12, th + 12, 8); }
-  if (p.lastPower != null) { // the last shot's power stays in the track as a faint red band
-    const lw = tw * Math.min(100, p.lastPower) / 100;
-    ctx.fillStyle = 'rgba(230,50,60,.38)'; ctx.fillRect(tx0, ty0, lw, th);
-    ctx.fillStyle = 'rgba(255,150,150,.22)'; ctx.fillRect(tx0, ty0 + 1, lw, th * 0.3);
+  if (p.lastPower != null) { // the last shot's power stays in the track as a faint gold band
+    const lw = tw * Math.min(100, p.lastPower) / 100, g = ctx.createLinearGradient(0, ty0, 0, ty1);
+    g.addColorStop(0, 'rgba(255,214,80,.5)'); g.addColorStop(1, 'rgba(230,165,40,.4)');
+    ctx.fillStyle = g; ctx.fillRect(tx0, ty0, lw, th);
+    ctx.fillStyle = 'rgba(255,240,190,.22)'; ctx.fillRect(tx0, ty0 + 1, lw, th * 0.3);
+    ctx.fillStyle = 'rgba(255,220,120,.7)'; ctx.fillRect(tx0 + lw - 1, ty0, 1, th);
   }
   if (pw > 0) {
     const g = ctx.createLinearGradient(tx0, 0, tx1, 0);
@@ -1544,16 +1546,28 @@ function drawHUD() {
     }
     ctx.textAlign = 'center';
   }
-  // pointer that hangs from the top edge down through the track
-  const pin = (v, col, dash) => {
-    const tx = tx0 + tw * Math.min(100, v) / 100;
-    ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 2; if (dash) ctx.setLineDash([3, 2]);
-    ctx.beginPath(); ctx.moveTo(tx, ty0 + 2); ctx.lineTo(tx, ty1); ctx.stroke(); ctx.restore();
-    ctx.fillStyle = col; ctx.strokeStyle = 'rgba(8,14,40,.9)'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(tx - 6, ty0 - 7); ctx.lineTo(tx + 6, ty0 - 7); ctx.lineTo(tx, ty0 + 3); ctx.closePath(); ctx.fill(); ctx.stroke();
-  };
-  if (p.lastPower != null) pin(p.lastPower, '#ff3b4a', false);
-  if (MARKS[p.i] != null) pin(MARKS[p.i], '#ffd36a', true);
+  // the player's mark: a ruby gem in a gold setting on the top edge, with a glowing red line down the track
+  if (MARKS[p.i] != null) {
+    const tx = tx0 + tw * Math.min(100, MARKS[p.i]) / 100, gy = ty0 - 3;
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,40,60,.9)'; ctx.shadowBlur = 6;
+    ctx.strokeStyle = 'rgba(255,70,80,.95)'; ctx.lineWidth = 2; ctx.setLineDash([4, 2]);
+    ctx.beginPath(); ctx.moveTo(tx, gy + 6); ctx.lineTo(tx, ty1); ctx.stroke();
+    ctx.setLineDash([]);
+    // gold setting
+    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 3;
+    ctx.fillStyle = goldGrad(gy - 9, gy + 9); ctx.beginPath();
+    ctx.moveTo(tx, gy - 9); ctx.lineTo(tx + 7.5, gy - 1); ctx.lineTo(tx, gy + 10); ctx.lineTo(tx - 7.5, gy - 1); ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+    // ruby
+    const rg = ctx.createLinearGradient(tx - 5, gy - 6, tx + 5, gy + 7);
+    rg.addColorStop(0, '#ff9aa2'); rg.addColorStop(0.45, '#e8202f'); rg.addColorStop(1, '#7a0612');
+    ctx.fillStyle = rg; ctx.beginPath();
+    ctx.moveTo(tx, gy - 6); ctx.lineTo(tx + 5, gy - 1); ctx.lineTo(tx, gy + 7); ctx.lineTo(tx - 5, gy - 1); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.beginPath();
+    ctx.moveTo(tx - 1, gy - 4); ctx.lineTo(tx + 1.5, gy - 1.5); ctx.lineTo(tx - 2.5, gy - 1); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
 
   // angle dial: Karoz's compass frame, needle and number drawn on top
   // dial art's centre star sits at (336, 331) in the cropped image; ring inner radius ~215
