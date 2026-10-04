@@ -417,7 +417,7 @@ const DEFAULT_DATA = {
     as_venom: { name: 'Venom Knife', cd: 2, type: 'shot', base: 'atk', dmg: 80, dotKind: 'poison', dotPct: 20, dotTurns: 3, proj: 'dagger', short: '80% ATK และติดพิษ 20% ATK ทุกเทิร์น 3 เทิร์น' },
     as_backstab: { name: 'Backstab', cd: 3, type: 'shot', base: 'atk', dmg: 145, proj: 'dagger', short: '145% ATK' },
     as_bleed: { name: 'Bleeding Edge', cd: 3, type: 'shot', base: 'atk', dmg: 90, dotKind: 'bleed', dotPct: 25, dotTurns: 2, proj: 'dagger', short: '90% ATK และเลือดไหล 25% ATK ทุกเทิร์น 2 เทิร์น' },
-    as_hide: { name: 'Hiding', cd: 4, type: 'self', hide: 4, short: 'ล่องหนสูงสุด 4 เทิร์น', tip: 'ล่องหนสูงสุด 4 เทิร์น ศัตรูมองไม่เห็นตำแหน่ง แต่ยังโดนดาเมจถ้ายิงโดนตัวจริงหรือโดนวงระเบิด ยิงเมื่อไรจะหลุดล่องหนทันที คูลดาวน์ 4 เทิร์นเริ่มนับหลังหลุดล่องหน' },
+    as_hide: { name: 'Hiding', cd: 4, type: 'self', hide: 4, short: 'ล่องหนสูงสุด 4 เทิร์น', tip: 'ล่องหนสูงสุด 4 เทิร์น ศัตรูมองไม่เห็นตำแหน่ง ถ้ายิง หรือโดนดาเมจ (รวมพิษ ไหม้ กองไฟ) จะหลุดล่องหนทันที คูลดาวน์ 4 เทิร์นเริ่มนับหลังหลุดล่องหน' },
     as_assassinate: { name: 'Assassinate', cd: 3, type: 'shot', base: 'atk', dmg: 130, vsDot: 170, proj: 'dagger', short: '130% ATK หรือ 170% ถ้าเป้าติดพิษหรือเลือดไหล' },
     as_sonic: { name: 'Sonic Execution', type: 'shot', base: 'atk', dmg: 220, vsDot: 250, size: 120, proj: 'dagger', short: '220% ATK หรือ 250% ถ้าเป้าติดพิษหรือเลือดไหล' },
     // Archer
@@ -671,6 +671,7 @@ function hurtRaw(pl, amt, label, col, by) {
   pl.hp = Math.max(0, pl.hp - d);
   if (by != null && by !== pl.i) stAdd(by, 'dmg', d); stAdd(pl.i, 'taken', d);
   say(pl, `${label} -${d}`, col, 80, 50);
+  if (d > 0 || amt > 0) unhide(pl, S.turn === pl.i); // taking damage breaks Hiding
   if (pl.hp <= 0) pl.alive = false; else lowHp(pl);
 }
 // leaving Hiding starts its cooldown (one more when it is left during your own turn, since that turn's tick is already past)
@@ -1107,6 +1108,7 @@ function explode(q) {
     pl.hp = Math.max(0, pl.hp - dmg);
     if (foe) stAdd(owner.i, 'dmg', dmg); stAdd(pl.i, 'taken', dmg);
     if (pct > 0 || dmg > 0) fx.texts.push({ x: pl.x, y: pl.y - 50, s: (crit ? 'คริติคอล! -' : '-') + dmg + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff5a4a', t: 70 });
+    if (foe && (dmg > 0 || soak > 0)) unhide(pl, S.turn === pl.i); // getting hit breaks Hiding
     const sh = S.shot || (S.shot = { hit: new Set(), hurt: new Set() });
     pl.lossAcc += dmg / pl.maxHp * 10; addRage(pl, 4 * Math.floor(pl.lossAcc)); pl.lossAcc %= 1;
     if (foe) {
@@ -1359,6 +1361,7 @@ function tickFx(p) {
   // camera
   if (cam.manual) return;
   let tx = p.x, ty = p.y;
+  if (p.hidden > 0 && teamOf(p.i) !== myTeam()) { tx = p.seenX; ty = surfaceY(p.seenX); } // don't lead the enemy's camera to a hidden player
   const fly = S.projs.find(q => !q.done && q.delay <= 0);
   if (S.state === 'flying' && fly) { tx = fly.x; ty = fly.y; }
   const stk = S.projs.find(q => q.strike && !q.done);
@@ -1822,6 +1825,9 @@ function drawFx() {
   for (const q of fx.parts) { ctx.fillStyle = q.col; ctx.fillRect(q.x - cam.x - 2, q.y - cam.y - 2, 4, 4); }
   ctx.textAlign = 'center';
   for (const t of fx.texts) {
+    // floating text over a hidden player (buffs, damage, POW...) stays hidden from the other side
+    if (t._w === undefined) { const h = S.players.find(p => p.hidden > 0 && Math.abs(p.x - t.x) < 3); t._w = h ? h.i : -1; }
+    if (t._w >= 0) { const h = S.players[t._w]; if (h && h.hidden > 0 && teamOf(h.i) !== myTeam()) continue; }
     ctx.font = `600 20px ${FONT}`; ctx.globalAlpha = Math.min(1, t.t / 20);
     ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(10,24,48,.85)'; ctx.strokeText(t.s, t.x - cam.x, t.y - cam.y);
     ctx.fillStyle = t.col; ctx.fillText(t.s, t.x - cam.x, t.y - cam.y);
