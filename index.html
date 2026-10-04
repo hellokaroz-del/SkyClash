@@ -341,13 +341,13 @@ const ready = im => im && im.complete && im.naturalWidth > 0;
 const DEFAULT_DATA = {
   version: 1,
   classes: {
-    blade:  { name: 'Swordman', hp: 1200, color: '#d9534f', dmg: 250, r: 32, wf: 0.4, gf: 1.15, spd: 1.0, shot: 'sword', desc: 'HP สูง ขว้างดาบหนัก ลมมีผลน้อย', x: 'iron' },
-    mage:   { name: 'Mage', hp: 850, color: '#7a5fe0', dmg: 290, r: 52, wf: 1.0, gf: 1.0, spd: 1.0, shot: 'fire', desc: 'ระเบิดกว้าง ขุดดินมาก HP ต่ำ', x: 'meteor', c: 'ice', b: 'bolt' },
-    archer: { name: 'Archer', hp: 950, color: '#3f9b5a', dmg: 210, r: 22, wf: 1.6, gf: 0.85, spd: 1.08, shot: 'arrow', desc: 'ยิงไกล แม่น แต่โดนลมมาก', x: 'double' },
-    cleric: { name: 'Acolyte', hp: 1000, color: '#e0a43a', dmg: 180, r: 34, wf: 1.0, gf: 1.0, spd: 1.0, shot: 'orb', desc: 'ดาเมจต่ำ แต่ฟื้นฟูตัวเองได้', x: 'heal' },
-    thief:  { name: 'Thief', hp: 900, color: '#a3313a', dmg: 205, r: 24, wf: 1.2, gf: 0.95, spd: 1.06, shot: 'dagger', desc: 'เร็ว ปามีดสั้น ดาเมจกลาง ๆ', x: 'steal' },
-    merchant: { name: 'Merchant', hp: 1100, color: '#b5652a', dmg: 240, r: 38, wf: 0.7, gf: 1.1, spd: 0.97, shot: 'axe', desc: 'HP สูง ขว้างขวาน ลมมีผลน้อย', x: 'cart' },
-    doram:  { name: 'Doram', hp: 850, color: '#c98f2e', dmg: 230, r: 34, wf: 1.1, gf: 1.0, spd: 1.02, shot: 'spirit', desc: 'นักอัญเชิญแมว ยิงวิญญาณแมว', x: 'spirits' },
+    blade:  { name: 'Swordman', hp: 1200, color: '#d9534f', dmg: 250, r: 32, wf: 1, gf: 1.15, spd: 1.0, shot: 'sword', desc: 'HP สูง ขว้างดาบหนัก', x: 'iron' },
+    mage:   { name: 'Mage', hp: 850, color: '#7a5fe0', dmg: 290, r: 52, wf: 1, gf: 1.0, spd: 1.0, shot: 'fire', desc: 'ระเบิดกว้าง ขุดดินมาก HP ต่ำ', x: 'meteor', c: 'ice', b: 'bolt' },
+    archer: { name: 'Archer', hp: 950, color: '#3f9b5a', dmg: 210, r: 22, wf: 1, gf: 0.85, spd: 1.08, shot: 'arrow', desc: 'ยิงไกล แม่น', x: 'double' },
+    cleric: { name: 'Acolyte', hp: 1000, color: '#e0a43a', dmg: 180, r: 34, wf: 1, gf: 1.0, spd: 1.0, shot: 'orb', desc: 'ดาเมจต่ำ แต่ฟื้นฟูตัวเองได้', x: 'heal' },
+    thief:  { name: 'Thief', hp: 900, color: '#a3313a', dmg: 205, r: 24, wf: 1, gf: 0.95, spd: 1.06, shot: 'dagger', desc: 'เร็ว ปามีดสั้น ดาเมจกลาง ๆ', x: 'steal' },
+    merchant: { name: 'Merchant', hp: 1100, color: '#b5652a', dmg: 240, r: 38, wf: 1, gf: 1.1, spd: 0.97, shot: 'axe', desc: 'HP สูง ขว้างขวาน', x: 'cart' },
+    doram:  { name: 'Doram', hp: 850, color: '#c98f2e', dmg: 230, r: 34, wf: 1, gf: 1.0, spd: 1.02, shot: 'spirit', desc: 'นักอัญเชิญแมว ยิงวิญญาณแมว', x: 'spirits' },
   },
   skills: {
     iron:   { name: 'กายเหล็ก', cd: 3, type: 'self', guard: 50, short: 'รับดาเมจครึ่งเดียวจนถึงตาถัดไป' },
@@ -635,7 +635,7 @@ function makeProj(p, angleDeg, power, extra) {
   const a = angleDeg * Math.PI / 180, v = power / 100 * MAXV * p.c.spd;
   const tip = CAST[p.k] ? 30 : 8; // the mage's shot leaves from the staff orb
   const q = Object.assign({ x: p.x + p.face * tip, y: p.y - 22, vx: Math.cos(a) * v * p.face, vy: -Math.sin(a) * v,
-    gf: p.c.gf, wf: p.c.wf, owner: p.i, age: 0, delay: 0, trail: [], kind: p.c.shot, spin: 0 }, extra || {});
+    gf: p.c.gf, wf: 1, owner: p.i, age: 0, delay: 0, trail: [], kind: p.c.shot, spin: 0 }, extra || {});
   if (q.kind && q.kind.startsWith('a:')) { q.src = q.kind; q.img = assetImage(q.kind); q.kind = 'img'; }
   return q;
 }
@@ -2929,7 +2929,6 @@ function classForm(f, c) {
   f.append(fieldRow('HP', inNum(c, 'hp', 100, 5000, 10, 1000)));
   f.append(fieldRow('ดาเมจต่อนัด', inNum(c, 'dmg', 10, 1000, 5, 220)));
   f.append(fieldRow('รัศมีระเบิด', inNum(c, 'r', 8, 120, 1, 34), 'ยิ่งมากยิ่งโดนง่าย และขุดดินมาก'));
-  f.append(fieldRow('ผลของลม', inNum(c, 'wf', 0, 3, 0.05, 1), '0 = ลมไม่มีผล, 1 = ปกติ'));
   f.append(fieldRow('น้ำหนักกระสุน', inNum(c, 'gf', 0.3, 2, 0.01, 1), 'มากกว่า 1 = ตกเร็ว ยิงได้ใกล้ลง'));
   f.append(fieldRow('ความแรงยิง', inNum(c, 'spd', 0.6, 1.5, 0.01, 1), 'มากกว่า 1 = ยิงได้ไกลขึ้น'));
   f.append(fieldRow('กระสุนปกติ', inAsset(c, 'shot', 'image', PROJ_OPTS, { maxW: 96, maxH: 96 }), 'รูปที่อัปโหลดควรหันหัวไปทางขวา'));
