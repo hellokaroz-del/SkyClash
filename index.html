@@ -387,7 +387,7 @@ const ELEM_ORDER = ['fire', 'water', 'thunder', 'nature'];
 const REACTIONS = { 'fire+thunder': { name: 'Explosion', bonus: 70 }, 'thunder+water': { name: 'Electro Stun', bonus: 15, stun: 2 },
   'nature+water': { name: 'Root Bind', bonus: 35, bind: 1 }, 'fire+nature': { name: 'Wildfire', burn: 25, burnTurns: 2 } };
 // skill slot icons (Karoz's art)
-const ICONS = {"warp": "assets/a092.png", "meteor": "assets/a093.png", "ice": "assets/a094.png"};
+const ICONS = {"warp": "assets/a092.png", "meteor": "assets/a093.png", "ice": "assets/a094.png", "sw_bash": "assets/a212.webp", "sw_magnum": "assets/a213.webp", "sw_armor": "assets/a214.webp", "sw_provoke": "assets/a215.webp", "sw_endure": "assets/a216.webp", "sw_charge": "assets/a217.webp", "pa_swordm": "assets/a218.webp", "pa_ironbody": "assets/a219.webp"};
 const ready = im => im && im.complete && im.naturalWidth > 0;
 // ---------- game data ----------
 // Everything the game maker edits lives in one data object: classes, skills, stages and uploaded files.
@@ -430,12 +430,12 @@ const DEFAULT_DATA = {
     ar_focus: { name: 'Focus', cd: 3, type: 'self', bNext: 25, bTurns: 2, short: 'การยิงครั้งถัดไปแรงขึ้น 25%' },
     ar_rain: { name: 'Arrow Rain', type: 'shot', base: 'atk', dmg: 40, count: 6, spread: 16, powSpread: 8, delay: 5, short: 'ฝนลูกศร 6 ดอก ดอกละ 40% ATK (รวมสูงสุด 240%)' },
     // Swordman
-    sw_bash: { name: 'Bash', cd: 2, type: 'shot', base: 'atk', dmg: 135, short: '135% ATK' },
-    sw_magnum: { name: 'Magnum Break', cd: 2, type: 'shot', base: 'atk', dmg: 115, size: 160, knock: 60, short: '115% ATK วงกว้าง และเป้ากระเด็น' },
-    sw_armor: { name: 'Armor Break', cd: 3, type: 'shot', base: 'atk', dmg: 90, debDef: 20, debTurns: 2, short: '90% ATK และ DEF ของเป้า -20% 2 เทิร์น' },
-    sw_provoke: { name: 'Provoke', cd: 3, type: 'foe', debDeal: 20, debTurns: 2, short: 'ใช้ทันที: ศัตรูทำดาเมจใส่เรา -20% 2 เทิร์น' },
-    sw_endure: { name: 'Endure', cd: 4, type: 'self', bTaken: 30, bTurns: 1, short: 'รับดาเมจ -30% จนถึงตาถัดไปของเรา' },
-    sw_charge: { name: 'Charge Strike', cd: 3, type: 'shot', base: 'atk', dmg: 150, short: '150% ATK' },
+    sw_bash: { icon: 'sw_bash', name: 'Bash', cd: 2, type: 'shot', base: 'atk', dmg: 135, short: '135% ATK' },
+    sw_magnum: { icon: 'sw_magnum', name: 'Magnum Break', cd: 2, type: 'shot', base: 'atk', dmg: 115, size: 160, knock: 60, short: '115% ATK วงกว้าง และเป้ากระเด็น' },
+    sw_armor: { icon: 'sw_armor', name: 'Armor Break', cd: 3, type: 'shot', base: 'atk', dmg: 90, debDef: 20, debTurns: 2, short: '90% ATK และ DEF ของเป้า -20% 2 เทิร์น' },
+    sw_provoke: { icon: 'sw_provoke', name: 'Provoke', cd: 3, type: 'foe', debDeal: 20, debTurns: 2, short: 'ใช้ทันที: ศัตรูทำดาเมจใส่เรา -20% 2 เทิร์น' },
+    sw_endure: { icon: 'sw_endure', name: 'Endure', cd: 4, type: 'self', bTaken: 30, bTurns: 1, short: 'รับดาเมจ -30% จนถึงตาถัดไปของเรา' },
+    sw_charge: { icon: 'sw_charge', name: 'Charge Strike', cd: 3, type: 'shot', base: 'atk', dmg: 150, short: '150% ATK' },
     sw_hundred: { name: 'Hundred Blades', type: 'shot', base: 'atk', dmg: 230, size: 130, debDef: 15, debTurns: 2, short: '230% ATK และ DEF ของเป้า -15% 2 เทิร์น' },
     // Mage
     mg_nova: { name: 'Frost Nova', cd: 5, type: 'shot', base: 'matk', dmg: 60, freeze: 2, proj: 'ice', icon: 'ice', sound: 'ice', short: '60% MATK และแช่แข็ง 2 เทิร์น', tip: 'นัดถัดไปเป็นผลึกน้ำแข็ง 60% MATK ใครโดนวงระเบิดจะแข็ง ข้ามเทิร์นของตัวเอง 2 เทิร์น หลังหายแข็งจะได้ CC Resistance 2 เทิร์น' },
@@ -479,8 +479,8 @@ const DEFAULT_DATA = {
     pa_exec: { name: 'Executioner', kind: 'execute', v: 15, hp: 30, tip: 'ดาเมจ +15% เมื่อเป้ามี HP ไม่เกิน 30%' },
     pa_vulture: { name: "Vulture's Eye", kind: 'none', tip: 'ยิงไกลแค่ไหนดาเมจก็ไม่ลด (ทุกอาชีพในเกมนี้ยังไม่มีดาเมจลดตามระยะ)' },
     pa_critshot: { name: 'Critical Shot', kind: 'critDmg', v: 20, tip: 'ดาเมจคริติคอล +20%' },
-    pa_swordm: { name: 'Sword Mastery', kind: 'atk', v: 8, tip: 'ATK +8%' },
-    pa_ironbody: { name: 'Iron Body', kind: 'ironBody', v: 15, hp: 40, tip: 'เมื่อ HP ไม่เกิน 40% DEF และ MDEF +15%' },
+    pa_swordm: { icon: 'pa_swordm', name: 'Sword Mastery', kind: 'atk', v: 8, tip: 'ATK +8%' },
+    pa_ironbody: { icon: 'pa_ironbody', name: 'Iron Body', kind: 'ironBody', v: 15, hp: 40, tip: 'เมื่อ HP ไม่เกิน 40% DEF และ MDEF +15%' },
     pa_magicm: { name: 'Magic Mastery', kind: 'matk', v: 8, tip: 'MATK +8%' },
     pa_elem: { name: 'Elemental Mastery', kind: 'none', tip: 'โจมตีธาตุที่เป้าแพ้ ดาเมจ +12% (ระบบธาตุของเป้ายังไม่ได้ทำ จึงยังไม่มีผล)' },
     pa_overcharge: { name: 'Overcharge', kind: 'consumable', v: 15, tip: 'ยาและโล่จากสกิลแรงขึ้น 15%' },
@@ -3665,7 +3665,7 @@ const PROJ_OPTS = [['fire', 'ลูกไฟเล็ก'], ['orb', 'ลูก�
   ['arrow', 'ลูกศร'], ['cart', 'รถเข็น'], ['spirit', 'วิญญาณแมว'], ['bolt', 'ลูกสายฟ้า']];
 const SKILL_PROJ_OPTS = [['', 'ใช้กระสุนปกติของอาชีพ'], ['fireball', 'ลูกไฟอุกกาบาต']].concat(PROJ_OPTS);
 const SOUND_OPTS = [['', 'ไม่มีเสียง'], ['meteor', 'เสียงฝนดาวตก'], ['ice', 'เสียงน้ำแข็ง'], ['bolt', 'เสียงสายฟ้า']];
-const ICON_OPTS = [['', 'ไม่มี (แสดงชื่อสกิล)'], ['meteor', 'ไอคอนฝนดาวตก'], ['ice', 'ไอคอนน้ำแข็ง'], ['warp', 'ไอคอนลูกแก้ววาร์ป']];
+const ICON_OPTS = [['', 'ไม่มี (แสดงชื่อสกิล)'], ['meteor', 'ไอคอนฝนดาวตก'], ['ice', 'ไอคอนน้ำแข็ง'], ['warp', 'ไอคอนลูกแก้ววาร์ป'], ['sw_bash', 'ไอคอน Bash'], ['sw_magnum', 'ไอคอน Magnum Break'], ['sw_armor', 'ไอคอน Armor Break'], ['sw_provoke', 'ไอคอน Provoke'], ['sw_endure', 'ไอคอน Endure'], ['sw_charge', 'ไอคอน Charge Strike']];
 const IMG_OPTS = { bg: [['', 'ท้องฟ้าธรรมดา'], ['jungle-bg', 'ฉากป่าโบราณ']], fg: [['hills', 'เนินหญ้า (ในตัว)'], ['jungle-fg', 'พื้นป่าโบราณ']], col: [['', 'ใช้ส่วนทึบของรูปพื้น'], ['jungle-col', 'ขอบเขตพื้นป่าโบราณ']] };
 const TABS = { classes: 'อาชีพ', skills: 'สกิล', passives: 'พาสซีฟ', stages: 'ด่าน' };
 const $m = id => document.getElementById(id);
@@ -3968,7 +3968,7 @@ function passiveForm(f, pa) {
   f.append(section('ข้อมูลพาสซีฟ'));
   f.append(fieldRow('ชื่อพาสซีฟ', inText(pa, 'name')));
   f.append(fieldRow('คำอธิบาย (ตอนชี้เมาส์)', inText(pa, 'tip', true)));
-  f.append(fieldRow('ไอคอน', inAsset(pa, 'icon', 'image', [['', 'ไม่มี (แสดงชื่อ)']], { exact: [128, 128] })));
+  f.append(fieldRow('ไอคอน', inAsset(pa, 'icon', 'image', [['', 'ไม่มี (แสดงชื่อ)'], ['pa_swordm', 'ไอคอน Sword Mastery'], ['pa_ironbody', 'ไอคอน Iron Body']], { exact: [128, 128], builtinURL: v => ICONS[v] || '' })));
   f.append(fieldRow('ผล', inSelect(pa, 'kind', PASSIVE_KINDS)));
   f.append(fieldRow('ค่า (%)', inNum(pa, 'v', 0, 100, 1, 0)));
   f.append(fieldRow('เงื่อนไข HP ต่ำกว่า (%)', inNum(pa, 'hp', 1, 100, 1, 30), 'ใช้กับผลที่ขึ้นกับ HP'));
