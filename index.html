@@ -1548,7 +1548,7 @@ function myTeam() { const h = meP(); return teamOf(h ? h.i : S.turn); }
 // skill slots Z X C inside the HUD, after the power bar (DDTank-style)
 const ICON_IMG = {}; for (const [k, src] of Object.entries(ICONS)) { const im = new Image(); im.src = src; ICON_IMG[k] = im; }
 function warpDef(p) {
-  return { key: 'Z', name: 'สกิลบิน', icon: 'warp', cd: p.warpCd, max: WARP_CD, on: p.armed === 'z', use: useWarp,
+  return { key: 'F', name: 'สกิลบิน', icon: 'warp', cd: p.warpCd, max: WARP_CD, on: p.armed === 'z', use: useWarp,
       desc: 'ปาลูกแก้วที่หมุนกลางอากาศ แล้ววาร์ปไปยังจุดที่ลูกแก้วตก ไม่ทำดาเมจ และใช้แทนการยิงของตานั้น' };
 }
 function slotDefs(p) {
@@ -1782,7 +1782,7 @@ function drawWarpButton(p) {
   // key badge
   ctx.fillStyle = 'rgba(10,14,34,.95)'; ctx.strokeStyle = goldGrad(cy + R - 12, cy + R + 2); ctx.lineWidth = 1.2;
   ctx.beginPath(); ctx.roundRect(cx - 7, cy + R - 9, 14, 12, 3); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = `700 9px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText('Z', cx, cy + R);
+  ctx.fillStyle = '#fff'; ctx.font = `700 9px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText('F', cx, cy + R);
   ctx.restore();
 }
 // passive slots: two small gold-rimmed windows above the skill row (empty until a class has passives)
@@ -2224,7 +2224,7 @@ window.addEventListener('keydown', e => {
   const k = keyOf(e);
   if (KEY[k]) { input[KEY[k]] = true; e.preventDefault(); }
   if (e.repeat) return;
-  if (k === 'z' || k === 'f') useWarp();
+  if (k === 'f') useWarp();
   if (k === 'x' || k === 'q') useSkill();
   if (k === 'c' || k === 'w') useSkill2();
   if (k === 'b') useUlt();
@@ -2365,7 +2365,7 @@ function updatePad() {
   if (p && p.c.skill) setSlot(sk, ICONS[p.c.icon], p.c.skill.name, 'X', p.skillCd, p.c.tip || p.c.sdesc, p.c.skill.cd, p.armed === 'x');
   sk.disabled = !human || !p || !p.c.skill || p.skillCd > 0 || !!p.armed || S.state !== 'aim';
   const wb = document.getElementById('b-warp');
-  if (p) setSlot(wb, ICONS.warp, 'สกิลบิน', 'Z', p.warpCd, 'ปาลูกแก้วที่หมุนกลางอากาศ แล้ววาร์ปไปยังจุดที่ลูกแก้วตก ไม่ทำดาเมจ และใช้แทนการยิงของตานั้น', WARP_CD, p.armed === 'z');
+  if (p) setSlot(wb, ICONS.warp, 'สกิลบิน', 'F', p.warpCd, 'ปาลูกแก้วที่หมุนกลางอากาศ แล้ววาร์ปไปยังจุดที่ลูกแก้วตก ไม่ทำดาเมจ และใช้แทนการยิงของตานั้น', WARP_CD, p.armed === 'z');
   wb.disabled = !human || !p || p.warpCd > 0 || !!p.armed || S.state !== 'aim';
   const sk2 = document.getElementById('b-skill2');
   sk2.hidden = !(p && p.c.skill2);
