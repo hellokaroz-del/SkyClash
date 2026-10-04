@@ -456,7 +456,7 @@ const DEFAULT_DATA = {
     mc_termination: { name: 'Cart Termination', type: 'shot', base: 'atk', dmg: 220, size: 160, weight: 112, proj: 'cart', short: '220% ATK วงกว้าง' },
     // Priest
     pr_holy: { name: 'Holy Light', cd: 2, type: 'shot', base: 'matk', dmg: 110, short: '110% MATK' },
-    pr_heal: { name: 'Heal', cd: 3, type: 'self', healMatk: 100, short: 'ฟื้น HP 100% MATK' },
+    pr_heal: { name: 'Heal', cd: 3, type: 'self', healMatk: 85, short: 'ฟื้น HP 85% MATK' },
     pr_bless: { name: 'Blessing', cd: 4, type: 'self', team: true, bAtk: 15, bMatk: 15, bTurns: 2, short: 'ATK และ MATK +15% 2 เทิร์น (ทั้งทีม)' },
     pr_angelus: { name: 'Angelus', cd: 4, type: 'self', team: true, bDef: 20, bMdef: 20, bTurns: 2, short: 'DEF และ MDEF +20% 2 เทิร์น (ทั้งทีม)' },
     pr_barrier: { name: 'Holy Barrier', cd: 4, type: 'self', shieldMatk: 100, short: 'ได้โล่ 100% MATK' },
@@ -483,7 +483,7 @@ const DEFAULT_DATA = {
     pa_elem: { name: 'Elemental Mastery', kind: 'none', tip: 'โจมตีธาตุที่เป้าแพ้ ดาเมจ +12% (ระบบธาตุของเป้ายังไม่ได้ทำ จึงยังไม่มีผล)' },
     pa_overcharge: { name: 'Overcharge', kind: 'consumable', v: 15, tip: 'ยาและโล่จากสกิลแรงขึ้น 15%' },
     pa_lucky: { name: 'Lucky Merchant', kind: 'luckMul', v: 50, tip: 'LUK มีผลกับโอกาสคริติคอลมากกว่าอาชีพอื่น 50%' },
-    pa_grace: { name: 'Divine Grace', kind: 'healBonus', v: 12, tip: 'การฟื้น HP แรงขึ้น 12%' },
+    pa_grace: { name: 'Divine Grace', kind: 'healBonus', v: 10, tip: 'การฟื้น HP แรงขึ้น 10%' },
     pa_guardian: { name: 'Guardian Angel', kind: 'guardian', v: 15, hp: 30, tip: 'ครั้งแรกที่ HP ต่ำกว่า 30% ได้โล่ 15% ของ HP สูงสุด' },
     pa_bond: { name: 'Spirit Bond', kind: 'spiritBond', v: 8, tip: 'ทำปฏิกิริยาธาตุสำเร็จ MATK +8% ในตาถัดไป' },
     pa_nine: { name: 'Nine Lives', kind: 'nineLives', v: 30, hp: 30, tip: 'ครั้งแรกที่ HP ต่ำกว่า 30% ดาเมจครั้งถัดไปที่รับ -30%' },
@@ -605,6 +605,7 @@ const DOT_NAME = { poison: 'พิษ', bleed: 'เลือดไหล', burn:
 function addDot(t, kind, amt, turns, o) {
   t.dots = t.dots.filter(d => d.kind !== kind);
   t.dots.push({ kind, amt: Math.max(1, Math.round(amt)), t: turns, by: o.i });
+  stAdd(o.i, kind + 'Ap', 1);
   say(t, DOT_NAME[kind] + '!', DOT_COL[kind], 80, 88);
 }
 function addDeb(t, sk, o) {
@@ -639,6 +640,7 @@ function reactionOf(t, o) {
   return ms.length < 2 ? null : REACTIONS[ms.slice(-2).sort().join('+')] || null;
 }
 function applyReaction(o, t, rx) {
+  stAdd(o.i, 'react', 1);
   say(t, rx.name + '!', '#ffe9a8', 90, 104);
   if (rx.stun) applyCC(t, 'stun', rx.stun, o);
   if (rx.bind) { t.bind = Math.max(t.bind, rx.bind); stAdd(o.i, 'cc', 1); say(t, 'ตรึง!', '#7fd98a', 80, 88); }
@@ -668,7 +670,7 @@ function lowHp(pl) {
 function hurtRaw(pl, amt, label, col, by) {
   if (!pl.alive || (ADMIN.god && !NET.on && !pl.bot)) return;
   let d = Math.round(amt);
-  if (pl.shield > 0) { const s = Math.min(pl.shield, d); pl.shield -= s; d -= s; }
+  if (pl.shield > 0) { const s = Math.min(pl.shield, d); pl.shield -= s; d -= s; stAdd(pl.i, 'shieldAbs', s); }
   pl.hp = Math.max(0, pl.hp - d);
   if (by != null && by !== pl.i) stAdd(by, 'dmg', d); stAdd(pl.i, 'taken', d);
   say(pl, `${label} -${d}`, col, 80, 50);
@@ -990,7 +992,9 @@ function startTurn(first) {
   if (!S.demo) turnStartEffects(q);
   if (first && !S.demo) say(q, `เริ่มก่อน! Energy ${q.maxEn}`, '#ffe9a8', 110, 96);
   if (!q.alive) { S.bot = null; S.state = 'settle'; S.settle = 70; updatePad(); return; } // poison or a fire wall finished them
+  stAdd(q.i, 'myTurns', 1);
   if (q.frozen > 0) {
+    stAdd(q.i, 'ccTurns', 1);
     q.thawNext = true;
     const word = q.cck === 'stun' ? 'มึนอยู่!' : 'แข็งอยู่!';
     // Priest: a ready Purge can still be used while frozen or stunned (nothing else can)
@@ -1103,7 +1107,7 @@ function explode(q) {
     if (ADMIN.god && !NET.on && !pl.bot) { fx.texts.push({ x: pl.x, y: pl.y - 50, s: 'อมตะ', col: '#9fe0ff', t: 60 }); continue; }
     dmg = Math.round(dmg);
     let soak = 0;
-    if (pl.shield > 0 && dmg > 0) { soak = Math.min(pl.shield, dmg); pl.shield -= soak; dmg -= soak; }
+    if (pl.shield > 0 && dmg > 0) { soak = Math.min(pl.shield, dmg); pl.shield -= soak; dmg -= soak; stAdd(pl.i, 'shieldAbs', soak); }
     // your own shots (on yourself or a teammate) hurt but never kill: they leave at least 1 HP
     dmg = Math.min(!foe ? Math.max(0, pl.hp - 1) : pl.hp, dmg);
     pl.hp = Math.max(0, pl.hp - dmg);
@@ -1164,7 +1168,7 @@ function useSkill2() { useSlot('s2'); }
 
 function payEnergy(p) {
   if (p.energy < SKILL_COST) { fx.texts.push({ x: p.x, y: p.y - 50, s: 'Energy ไม่พอ', col: '#7fe9ff', t: 60 }); return false; }
-  p.energy -= SKILL_COST; return true;
+  p.energy -= SKILL_COST; stAdd(p.i, 'enSkill', SKILL_COST); return true;
 }
 function useUlt() { useSlot('b'); }
 // the bolt orb marks a spot; lightning then drops on the enemy if within 3 slots of it, else on the spot
@@ -1212,6 +1216,67 @@ function botPlan(p) {
   const err = (Math.random() - 0.5) * (SIM ? 8 : 40), aerr = Math.round((Math.random() - 0.5) * (SIM ? 4 : 14)); // the test bots aim much better
   return { ang: Math.max(5, Math.min(85, best.ang + aerr)), pow: Math.max(10, Math.min(100, best.pow + err)) };
 }
+// test bots (auto battle test): pick skills by what they do instead of at random.
+// Reads skill fields, not class names, so skills made in the game maker get sensible use too.
+function botSmart(p) {
+  const e = other(p), K = s => p.c.sk[s];
+  const readyS = s => { const i = SLOT_IDS.indexOf(s); return K(s) && p.cds[i] <= 0; };
+  const hpF = p.hp / p.maxHp, eHpF = e.hp / e.maxHp, danger = e.rage >= POW_MAX - 15, exec = eHpF <= 0.3;
+  const hasBuff = k => p.buffs.some(b => b[k] > 0), hasDeb = k => e.debs.some(d => d[k] > 0);
+  const eDot = e.dots.length > 0, marks = e.marks.filter(m => m.by === p.i).map(m => m.e);
+  const rxOf = (a, b) => a && b && a !== b ? REACTIONS[[a, b].sort().join('+')] || null : null;
+  const stunV = () => e.frozen > 0 ? 10 : e.ccRes > 0 ? 70 : 190;
+  const rxV = rx => !rx ? 0 : (rx.bonus || 0) + (rx.stun ? stunV() : 0) + (rx.bind ? 45 : 0) + (rx.burn ? rx.burn * (rx.burnTurns || 2) * 0.8 : 0);
+  const burstReady = SLOT_IDS.some(s => readyS(s) && K(s).burst);
+  const raw = k => (k.vsDot && eDot ? k.vsDot : k.dmg || 0) * (k.count || 1);
+  // value of a shot skill, in % of the main stat
+  const shotV = k => {
+    let v = raw(k);
+    if (exec) return k.burst ? (marks.length >= 2 ? v + rxV(rxOf(marks[marks.length - 2], marks[marks.length - 1])) : -1) : v;
+    if (k.dotKind) v += e.dots.some(d => d.kind === k.dotKind) ? 0 : (k.dotPct || 0) * (k.dotTurns || 2) * 0.8;
+    if (k.freeze) v = e.frozen > 0 ? -1 : v + (e.ccRes > 0 ? 40 : 170);
+    if (k.zone) v += k.zone * (k.zoneTurns || 2) * 0.5;
+    if ((k.debDef && !hasDeb('def')) || (k.debMdef && !hasDeb('mdef'))) v += 30;
+    if (k.mark) {
+      const last = marks[marks.length - 1];
+      if (!last) v += k.mark === 'water' ? 40 : k.mark === 'fire' ? 35 : 20; // opener: water (stun) or fire (explosion)
+      else if (k.mark === last) v -= 15;
+      else { const rx = rxOf(last, k.mark); v += rx ? rxV(rx) * 0.5 + 20 : -10; }
+    }
+    if (k.burst) { const rx = marks.length >= 2 ? rxOf(marks[marks.length - 2], marks[marks.length - 1]) : null; v = rx ? v + rxV(rx) + 60 : -1; } // never Burst without a combo
+    return v;
+  };
+  // the attack: ultimate if full, else the best ready shot skill if it beats the normal shot
+  const ultK = p.c.ult && p.rage >= POW_MAX ? K('b') : null;
+  let plan = null, planV = p.c.nPct || 100;
+  if (ultK && ultK.type === 'shot') { plan = 'b'; planV = raw(ultK) + 100; }
+  else for (const s of SLOT_IDS) { const k = K(s); if (!readyS(s) || k.type !== 'shot') continue; const v = shotV(k); if (v > planV + 5) { plan = s; planV = v; } }
+  const big = plan && (plan === 'b' || raw(K(plan)) >= 120);
+  const planMagic = plan ? K(plan).base === 'matk' : p.c.nBase === 'matk';
+  // set-ups / defence used instantly
+  const instV = k => {
+    if (k.purge) return (p.bind > 0 || p.bindNow ? 80 : 0) + (p.debs.length ? 55 : 0) + (p.dots.reduce((a, d) => a + d.amt * d.t, 0) >= 60 ? 50 : 0) + (hpF < 0.5 && (p.debs.length || p.dots.length) ? 20 : 0);
+    if (k.hide) return p.hidden > 0 ? 0 : hpF < 0.35 ? 70 : danger && hpF < 0.7 ? 55 : 0;
+    if (k.heal || k.healMatk) return hpF >= 0.65 ? 0 : 100 + (0.65 - hpF) * 200;
+    if (k.shieldPct || k.shieldMatk) return p.shield > 0 ? 0 : (hpF < 0.75 ? 60 : 0) + (danger ? 50 : 0);
+    if (k.shift) { if (!burstReady || marks.length < 2) return 0; const a = marks[marks.length - 2], l = marks[marks.length - 1], n = ELEM_ORDER[(ELEM_ORDER.indexOf(l) + 1) % ELEM_ORDER.length];
+      return rxV(rxOf(a, n)) > rxV(rxOf(a, l)) + 20 ? 90 : 0; }
+    if (k.bTaken) return hasBuff('taken') ? 0 : hpF < 0.5 || danger ? 80 : 0;
+    if (k.debDeal) return hasDeb('deal') ? 0 : danger ? 60 : hpF < 0.6 ? 45 : 25;
+    if (k.debTaken) return hasDeb('taken') || exec ? 0 : 40 + (big ? 40 : 0);
+    if (k.bNext) return hasBuff('next') ? 0 : big ? 75 : 20;
+    if (k.bNextMagic) return hasBuff('nextMagic') || !planMagic ? 0 : big ? 75 : 15;
+    if (k.bAtk || k.bMatk) { const mine = planMagic ? k.bMatk : k.bAtk; return !mine || hasBuff(planMagic ? 'matk' : 'atk') ? 0 : 50 + (big ? 20 : 0); }
+    if (k.bDef || k.bMdef) return hasBuff('def') || hasBuff('mdef') ? 0 : hpF < 0.8 || danger ? 50 : 15;
+    return 10;
+  };
+  if (ultK && ultK.type === 'self' && (hpF < 0.6 || (ultK.team && hpF < 0.75))) useSlot('b');
+  const inst = SLOT_IDS.filter(s => readyS(s) && K(s).type !== 'shot').map(s => [s, instV(K(s))]).filter(x => x[1] >= 20).sort((x, y) => y[1] - x[1]);
+  const reserve = plan && plan !== 'b' ? SKILL_COST : 0;
+  for (const [s] of inst) { if (p.energy - reserve < SKILL_COST || S.state !== 'aim') break; useSlot(s); }
+  if (plan && S.state === 'aim' && !p.armed) useSlot(plan);
+  if (window.__botLog) window.__botLog(p, plan, marks); // test hook
+}
 function botTick(p) {
   const b = S.bot;
   if (b.phase === 'think') {
@@ -1222,6 +1287,7 @@ function botTick(p) {
       if (p.frozen > 0) { S.state = 'settle'; S.settle = SIM ? 1 : 40; S.bot = null; return; }
       if (S.state !== 'aim') return; // Purge ended the turn
     }
+    if (SIM) { botSmart(p); Object.assign(b, botPlan(p), { phase: 'aim' }); return; }
     const mend = sk => sk.type === 'self' && (sk.heal || sk.healMatk || sk.shieldPct || sk.shieldMatk);
     if (p.c.ult && p.rage >= POW_MAX && Math.random() < 0.3) useUlt();
     if (p.hp < p.maxHp * 0.6 && Math.random() < 0.7) { const l = avail(mend); if (l.length) useSlot(any(l)); }
@@ -1289,7 +1355,7 @@ function update() {
           const nx = p.x + dir * 1.3; p.walk++;
           let ny = p.y, k = 0;
           while (solid(nx, ny - 1) && k < 6) { ny--; k++; }
-          if (!solid(nx, ny - 1)) { p.y = ny; p.energy = Math.max(0, p.energy - Math.abs(nx - p.x) * WALK_COST); p.x = Math.max(0, Math.min(WW - 1, nx)); }
+          if (!solid(nx, ny - 1)) { p.y = ny; { const c = Math.min(p.energy, Math.abs(nx - p.x) * WALK_COST); p.energy -= c; stAdd(p.i, 'enMove', c); } p.x = Math.max(0, Math.min(WW - 1, nx)); }
         }
       }
       if (pin.fire) { S.state = 'charging'; S.power = 0; S.chargeDir = 1; }
@@ -3580,7 +3646,7 @@ $m('maker-btn').onclick = () => { openMaker(); };
 // Runs whole matches at full speed (no drawing, no waits, no sound) with sharper bots than the easy one you play against:
 // they read the wind right, aim with only a little error and hit at full strength. Sides swap every match.
 const SIM_MAX_TURNS = 200;
-function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, cc: 0, ult: 0, skills: {} }; }
+function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, shieldAbs: 0, cc: 0, ccTurns: 0, poisonAp: 0, bleedAp: 0, burnAp: 0, react: 0, ult: 0, enSkill: 0, enMove: 0, myTurns: 0, skills: {} }; }
 function simPairs(a, b) {
   const keys = Object.keys(CLASSES), out = [];
   if (a && b) out.push([a, b]);
@@ -3595,7 +3661,7 @@ function simMatch(a, b, swap) {
   newMatch(false);
   for (const p of S.players) { p.bot = true; p.name = p.c.name; }
   const first = S.turn;
-  for (let f = 0; S.state !== 'over' && f < 600000; f++) {
+  for (let f = 0; S.state !== 'over' && f < 250000; f++) {
     update();
     if (S.turnCount > SIM_MAX_TURNS && S.state !== 'over') { S.state = 'over'; S.winIdx = -1; }
   }
@@ -3625,6 +3691,9 @@ async function runSim(pairs, n, prog) {
   return rows;
 }
 // averages per matchup and per class
+// extra numbers averaged per class; sustain = healing received / damage taken in a match, flagged when it stays high
+const SIM_EXTRA = ['healRecv', 'shield', 'shieldAbs', 'ccTurns', 'poisonAp', 'bleedAp', 'burnAp', 'react', 'enSkill', 'enMove', 'myTurns'];
+const SUSTAIN_FLAG = 0.4;
 function simSummary(rows) {
   const mu = new Map(), cl = {};
   const avg = (l, f) => l.length ? l.reduce((s, r) => s + f(r), 0) / l.length : 0;
@@ -3636,18 +3705,25 @@ function simSummary(rows) {
     dmgA: avg(l, r => r.A.dmg), dmgB: avg(l, r => r.B.dmg), takenA: avg(l, r => r.A.taken), takenB: avg(l, r => r.B.taken),
     healA: avg(l, r => r.A.heal), healB: avg(l, r => r.B.heal), recvA: avg(l, r => r.A.healRecv), recvB: avg(l, r => r.B.healRecv),
     hpA: avg(l, r => r.hpA), hpB: avg(l, r => r.hpB), ultA: avg(l, r => r.A.ult), ultB: avg(l, r => r.B.ult), ccA: avg(l, r => r.A.cc), ccB: avg(l, r => r.B.cc),
-    topA: top(l, 'A'), topB: top(l, 'B'), firstWin: avg(l, r => r.win !== 'draw' && r.win === r.first) }));
+    topA: top(l, 'A'), topB: top(l, 'B'), firstWin: avg(l, r => r.win !== 'draw' && r.win === r.first),
+    ccTurnsA: avg(l, r => r.A.ccTurns || 0), ccTurnsB: avg(l, r => r.B.ccTurns || 0), reactA: avg(l, r => r.A.react || 0), reactB: avg(l, r => r.B.react || 0),
+    sustainA: avg(l, r => r.A.taken ? r.A.healRecv / r.A.taken : 0), sustainB: avg(l, r => r.B.taken ? r.B.healRecv / r.B.taken : 0) }));
   for (const r of rows) for (const [side, k] of [['A', r.a], ['B', r.b]]) {
-    const c = cl[k] || (cl[k] = { k, n: 0, win: 0, dmg: 0, taken: 0, heal: 0, turns: 0, cc: 0, ult: 0 }), st = r[side];
+    const c = cl[k] || (cl[k] = { k, n: 0, win: 0, dmg: 0, taken: 0, heal: 0, turns: 0, cc: 0, ult: 0, x: {}, sus: 0, susHi: 0 }), st = r[side];
     c.n++; c.win += r.win === side ? 1 : 0; c.dmg += st.dmg; c.taken += st.taken; c.heal += st.heal; c.turns += r.turns; c.cc += st.cc; c.ult += st.ult;
+    for (const f of SIM_EXTRA) c.x[f] = (c.x[f] || 0) + (st[f] || 0);
+    const su = st.taken ? st.healRecv / st.taken : 0; c.sus += su; if (su >= SUSTAIN_FLAG) c.susHi++;
   }
-  const classes = Object.values(cl).map(c => ({ k: c.k, n: c.n, win: c.win / c.n, dmg: c.dmg / c.n, taken: c.taken / c.n, heal: c.heal / c.n, turns: c.turns / c.n, cc: c.cc / c.n, ult: c.ult / c.n }))
+  const classes = Object.values(cl).map(c => { const o = { k: c.k, n: c.n, win: c.win / c.n, dmg: c.dmg / c.n, taken: c.taken / c.n, heal: c.heal / c.n, turns: c.turns / c.n, cc: c.cc / c.n, ult: c.ult / c.n,
+      sustain: c.sus / c.n, sustainHi: c.susHi / c.n };
+    for (const f of SIM_EXTRA) o[f] = (c.x[f] || 0) / c.n;
+    o.enTurn = o.myTurns ? (o.enSkill + o.enMove) / o.myTurns : 0; o.flag = o.sustain >= SUSTAIN_FLAG || o.sustainHi >= 0.5; return o; })
     .sort((x, y) => y.win - x.win);
   return { matchups, classes };
 }
 function simCSV(rows) {
   const head = ['matchup', 'class_A', 'class_B', 'A_on_right', 'first_turn', 'winner', 'turns', 'A_hp_left', 'B_hp_left'];
-  const f = ['dmg', 'taken', 'heal', 'healRecv', 'shield', 'ult', 'cc'];
+  const f = ['dmg', 'taken', 'heal', 'healRecv', 'shield', 'shieldAbs', 'ult', 'cc', 'ccTurns', 'poisonAp', 'bleedAp', 'burnAp', 'react', 'enSkill', 'enMove', 'myTurns'];
   for (const s of ['A', 'B']) for (const k of f) head.push(`${s}_${k}`);
   head.push('A_skills', 'B_skills');
   const cn = k => (CLASSES[k] || { name: k }).name, sk = o => Object.entries(o).map(([k, v]) => `${(SKILLS[k] || { name: k }).name}:${v}`).join('; ');
@@ -3676,8 +3752,9 @@ async function saveText(name, text, type) {
   const show = () => {
     if (!rows.length) { $m('sim-out').innerHTML = ''; return; }
     const sm = simSummary(rows);
-    let h = '<h3 class="mk-sec">สรุปต่ออาชีพ</h3><div class="sim-scroll"><table class="sim-t"><thead><tr><th>อาชีพ</th><th>แมตช์</th><th>ชนะ</th><th>ดาเมจที่ทำ/แมตช์</th><th>ดาเมจที่รับ/แมตช์</th><th>ฮีล/แมตช์</th><th>CC/แมตช์</th><th>Ultimate/แมตช์</th><th>เทิร์นรวมเฉลี่ย</th></tr></thead><tbody>';
-    for (const c of sm.classes) h += `<tr><td>${cn(c.k)}</td><td>${c.n}</td><td${hot(c.win)}>${pct(c.win)}</td><td>${n0(c.dmg)}</td><td>${n0(c.taken)}</td><td>${n0(c.heal)}</td><td>${n1(c.cc)}</td><td>${n1(c.ult)}</td><td>${n1(c.turns)}</td></tr>`;
+    let h = '<h3 class="mk-sec">สรุปต่ออาชีพ</h3><div class="sim-scroll"><table class="sim-t"><thead><tr><th>อาชีพ</th><th>แมตช์</th><th>ชนะ</th><th>ดาเมจที่ทำ/แมตช์</th><th>ดาเมจที่รับ/แมตช์</th><th>ฮีล/แมตช์</th><th>CC/แมตช์</th><th>Ultimate/แมตช์</th><th>เทิร์นรวมเฉลี่ย</th><th>ฮีลที่ได้รับ/ดาเมจที่รับ</th><th>โล่สร้าง</th><th>โล่ดูดซับ</th><th>เทิร์นที่โดน CC</th><th>พิษ/เลือดไหล/ไหม้</th><th>ปฏิกิริยาธาตุ</th><th>Energy/เทิร์น (สกิล+เดิน)</th></tr></thead><tbody>';
+    for (const c of sm.classes) h += `<tr><td>${cn(c.k)}</td><td>${c.n}</td><td${hot(c.win)}>${pct(c.win)}</td><td>${n0(c.dmg)}</td><td>${n0(c.taken)}</td><td>${n0(c.heal)}</td><td>${n1(c.cc)}</td><td>${n1(c.ult)}</td><td>${n1(c.turns)}</td>` +
+      `<td${c.flag ? ' class="sim-hi" title="Sustain อาจสูงเกินไป"' : ''}>${pct(c.sustain)}${c.flag ? ' ⚠' : ''}</td><td>${n0(c.shield)}</td><td>${n0(c.shieldAbs)}</td><td>${n1(c.ccTurns)}</td><td>${n1(c.poisonAp)}/${n1(c.bleedAp)}/${n1(c.burnAp)}</td><td>${n1(c.react)}</td><td>${n0(c.enTurn)} (${n0(c.myTurns ? c.enSkill / c.myTurns : 0)}+${n0(c.myTurns ? c.enMove / c.myTurns : 0)})</td></tr>`;
     h += '</tbody></table></div><h3 class="mk-sec">ต่อคู่อาชีพ (A ปะทะ B)</h3><div class="sim-scroll"><table class="sim-t"><thead><tr><th>A</th><th>B</th><th>แมตช์</th><th>A ชนะ</th><th>B ชนะ</th><th>เสมอ</th><th>ฝั่งเริ่มก่อนชนะ</th><th>เทิร์นรวม</th>' +
       '<th>ดาเมจ A</th><th>ดาเมจ B</th><th>ฮีล A</th><th>ฮีล B</th><th>HP เหลือ A</th><th>HP เหลือ B</th><th>Ult A</th><th>Ult B</th><th>CC A</th><th>CC B</th><th>สกิลที่ใช้บ่อย A</th><th>สกิลที่ใช้บ่อย B</th></tr></thead><tbody>';
     for (const m of sm.matchups) h += `<tr><td>${cn(m.a)}</td><td>${cn(m.b)}</td><td>${m.n}</td><td${hot(m.winA)}>${pct(m.winA)}</td><td${hot(m.winB)}>${pct(m.winB)}</td><td>${pct(m.draw)}</td><td>${pct(m.firstWin)}</td><td>${n1(m.turns)}</td>` +
