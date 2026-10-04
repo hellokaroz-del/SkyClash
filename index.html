@@ -410,7 +410,7 @@ const DEFAULT_DATA = {
     cleric: { name: 'Priest', hp: 1000, atk: 15, matk: 75, def: 45, mdef: 80, spd: 40, luk: 50, nBase: 'matk', nPct: 80, color: '#e0a43a', r: 34, gf: 1, vel: 1, shot: 'orb',
               desc: 'ฮีลดีที่สุด บัฟ โล่ และล้างสถานะ', s1: 'pr_holy', s2: 'pr_heal', s3: 'pr_bless', s4: 'pr_angelus', s5: 'pr_barrier', s6: 'pr_purge', b: 'pr_sanct', p1: 'pa_grace', p2: 'pa_guardian' },
     doram:  { name: 'Doram', hp: 900, atk: 20, matk: 70, def: 35, mdef: 55, spd: 65, luk: 65, nBase: 'matk', nPct: 85, color: '#c98f2e', r: 34, gf: 1, vel: 1.02, shot: 'spirit',
-              desc: 'คอมโบธาตุ ติดมาร์ค 2 ธาตุแล้วจุดปฏิกิริยา', s1: 'dr_flame', s2: 'dr_water', s3: 'dr_thunder', s4: 'dr_nature', s5: 'dr_burst', s6: 'dr_shift', b: '', p1: 'pa_bond', p2: 'pa_nine' },
+              desc: 'คอมโบธาตุ ติดมาร์ค 2 ธาตุแล้วจุดปฏิกิริยา', s1: 'dr_flame', s2: 'dr_water', s3: 'dr_thunder', s4: 'dr_nature', s5: 'dr_burst', s6: 'dr_shift', b: 'dr_golem', p1: 'pa_bond', p2: 'pa_nine' },
   },
   skills: {
     // Assassin
@@ -469,6 +469,8 @@ const DEFAULT_DATA = {
     dr_nature: { name: 'Nature Spirit', cd: 2, type: 'shot', base: 'matk', dmg: 70, mark: 'nature', proj: 'spirit', short: '70% MATK และติดมาร์คธรรมชาติ' },
     dr_burst: { name: 'Spirit Burst', cd: 2, type: 'shot', base: 'matk', dmg: 90, burst: true, proj: 'spirit', short: '90% MATK จุดปฏิกิริยาจากมาร์ค 2 ธาตุบนตัวเป้า',
                 tip: '90% MATK ถ้าเป้ามีมาร์ค 2 ธาตุจากเรา: ไฟ+สายฟ้า ระเบิด +70% MATK · น้ำ+สายฟ้า +15% และมึน 2 เทิร์น · น้ำ+ธรรมชาติ +35% และตรึง 1 เทิร์น · ไฟ+ธรรมชาติ ไหม้ 25% MATK 2 เทิร์น มาร์คหายถ้าไม่ต่อคอมโบในตาถัดไป' },
+    dr_golem: { name: 'Four Element Golem', type: 'summon', gTurns: 5, gHp: 150, gStat: 150, gAcc: 85, gMelee: 2, gWarp: 4, gGuard: 15, gShare: 50, short: 'อัญเชิญ Golem 4 ธาตุ อยู่ 5 เทิร์น',
+      tip: 'อัญเชิญ Golem 4 ธาตุที่ AI ควบคุมเอง อยู่ 5 เทิร์น HP ATK MATK DEF MDEF เท่ากับ 150% ของเรา ณ ตอนอัญเชิญ เล่นต่อจากเราทุกเทิร์น ทำได้ 1 อย่างต่อเทิร์น: ต่อยประชิด (ระยะ 2 ช่อง) ยิง Spirit ธาตุ ร่ายโล่ (15% HP ของ Golem และแบ่งให้เรา 50%) หรือวาร์ปเข้าหาศัตรู (ไกลสุด 4 ช่อง) เมื่อ Spirit ของ Golem ทำให้เป้ามีมาร์ค 2 ธาตุที่เข้ากัน จะเกิดปฏิกิริยาทันทีโดยไม่ต้องใช้ Spirit Burst' },
     dr_shift: { name: 'Spirit Shift', cd: 4, type: 'foe', shift: true, short: 'ใช้ทันที: เปลี่ยนมาร์คล่าสุดบนศัตรูเป็นธาตุถัดไป (ไฟ > น้ำ > สายฟ้า > ธรรมชาติ)' },
   },
   // passives work by kind: crit / critDmg / atk / matk (+%), execute and ironBody (+% below hp%), healBonus, guardian, nineLives, spiritBond, consumable, luckMul, none
@@ -934,7 +936,7 @@ let S = null; // match state
 const input = { left: false, right: false, up: false, down: false, fire: false };
 let cam = { x: 0, y: WH - VH, manual: false };
 let ruler = false;
-const fx = { booms: [], parts: [], texts: [], warps: [], bolts: [] };
+const fx = { booms: [], parts: [], texts: [], warps: [], bolts: [], gfx: [] };
 const NET = { on: false, mode: false, role: null, me: 0, rin: {}, acts: [], ev: [] };
 
 // power marks the player pins on the bar (display only, kept on this screen); PBAR is the bar's track for clicks
@@ -959,7 +961,8 @@ function newMatch(demo) {
     turn: e0 === e1 ? (Math.random() < 0.5 ? 0 : 1) : e0 > e1 ? 0 : 1, state: 'aim', power: 0, timer: TURN_TIME, wind: 0, projs: [], settle: 0, zones: [],
     banner: 0, bot: null, frame: 0, turnCount: 0,
   };
-  fx.booms.length = fx.parts.length = fx.texts.length = 0;
+  fx.booms.length = fx.parts.length = fx.texts.length = fx.gfx.length = 0;
+  S.golem = null; S.golemDone = false;
   startTurn(true);
 }
 function cur() { return S.players[S.turn]; }
@@ -1027,8 +1030,11 @@ function stepProj(q, players, wind) {
     if (q.y >= 0 && solid(q.x, q.y)) return 1;
     for (const pl of players) {
       if (!pl.alive || (pl.i === q.owner && q.age < 12)) continue;
+      if (q.golem && teamOf(pl.i) === teamOf(q.owner)) continue;
       if (boxDist(pl, q.x, q.y) === 0) return 1;
     }
+    const gm = S.golem;
+    if (gm && gm.alive && !q.golem && teamOf(q.owner) !== teamOf(gm.owner) && golemDist(gm, q.x, q.y) === 0) return 1;
   }
   return 0;
 }
@@ -1086,6 +1092,7 @@ function useWarp() {
   updatePad();
 }
 function explode(q) {
+  if (q.golem) { golemExplode(q); return; }
   const owner = S.players[q.owner], c = owner.c, sk = q.skill ? SKILLS[q.skill] : null;
   const r = c.r * (q.scale || 1);
   carve(q.x, q.y, r * ((sk && sk.dig) || 100) / 100);
@@ -1139,6 +1146,13 @@ function explode(q) {
     } else if (foe && q.ice) applyCC(pl, 'freeze', q.freeze || ICE_TURNS, owner);
     lowHp(pl);
   }
+  // an enemy blast that reaches the Golem
+  const gm = S.golem;
+  if (gm && gm.alive && pct > 0 && teamOf(gm.owner) !== teamOf(owner.i) && golemDist(gm, q.x, q.y) <= r) {
+    let dmg = hitDamage(owner, gm, base, pct, sk ? sk.ignoreDef : 0, q.up); const crit = Math.random() < critChance(owner);
+    if (crit) dmg *= critMul(owner);
+    hurtGolem(gm, owner, dmg * botSoft(owner), crit);
+  }
 }
 
 // ---------- actions ----------
@@ -1158,6 +1172,7 @@ function useSlot(slot) {
   else if (p.cds[i] > 0 || !payEnergy(p)) return;
   if (sk.type === 'self') selfSkill(p, sk);
   else if (sk.type === 'foe') foeSkill(p, sk);
+  else if (sk.type === 'summon') summonGolem(p, sk);
   else { p.armed = slot; fx.texts.push({ x: p.x, y: p.y - 50, s: sk.name + '!', col: slot === 'b' ? '#ffe066' : SLOT_COL[i], t: slot === 'b' ? 80 : 70 }); }
   if (ST) { const st = ST.p[p.i]; st.skills[sk.id] = (st.skills[sk.id] || 0) + 1; if (slot === 'b') st.ult++; }
   if (slot !== 'b' && !sk.hide) p.cds[i] = Math.max(2, sk.cd) + 1; // ticks down at the start of own next turn; no active skill is under 2 turns
@@ -1271,6 +1286,7 @@ function botSmart(p) {
     return 10;
   };
   if (ultK && ultK.type === 'self' && (hpF < 0.6 || (ultK.team && hpF < 0.75))) useSlot('b');
+  if (ultK && ultK.type === 'summon' && !(S.golem && S.golem.alive && S.golem.turns > 1)) useSlot('b');
   const inst = SLOT_IDS.filter(s => readyS(s) && K(s).type !== 'shot').map(s => [s, instV(K(s))]).filter(x => x[1] >= 20).sort((x, y) => y[1] - x[1]);
   const reserve = plan && plan !== 'b' ? SKILL_COST : 0;
   for (const [s] of inst) { if (p.energy - reserve < SKILL_COST || S.state !== 'aim') break; useSlot(s); }
@@ -1302,6 +1318,365 @@ function botTick(p) {
   }
 }
 
+const GOLEM_SRC = {"walk": {"f": ["assets/a184.webp", "assets/a185.webp", "assets/a186.webp", "assets/a187.webp", "assets/a188.webp", "assets/a189.webp", "assets/a190.webp", "assets/a191.webp", "assets/a192.webp", "assets/a193.webp", "assets/a194.webp", "assets/a195.webp"], "w": 61.2, "h": 88.0}, "atk": {"f": ["assets/a196.webp", "assets/a197.webp", "assets/a198.webp", "assets/a199.webp", "assets/a200.webp", "assets/a201.webp"], "w": 122.8, "h": 92.0}, "guard": {"f": ["assets/a202.webp", "assets/a203.webp", "assets/a204.webp", "assets/a205.webp", "assets/a206.webp", "assets/a207.webp", "assets/a208.webp", "assets/a209.webp", "assets/a210.webp", "assets/a211.webp"], "w": 73.6, "h": 91.2}};
+// ---------- Doram ultimate: Four Element Golem (a summon with its own turn) ----------
+// Karoz's spec: stats are 150% of the Doram's at the moment of summoning, it stays 5 of its own turns, acts once per
+// turn right after its owner (melee punch, element spirit, elemental guard or warp), and sets off an element reaction
+// by itself as soon as its spirit lands a mark that reacts with one already on the target (no Spirit Burst needed).
+// Its marks are the owner's marks, so the Doram and the Golem can finish each other's combos.
+const GOLEM_IMG = {};
+for (const [k, d] of Object.entries(GOLEM_SRC)) GOLEM_IMG[k] = d.f.map(src => { const im = new Image(); im.src = src; return im; });
+const GOLEM_BOX = { w: 62, h: 104 }, GS = 1.3; // GS: drawn 1.3x the art's base size
+const golemBox = g => ({ l: g.x - GOLEM_BOX.w / 2, r: g.x + GOLEM_BOX.w / 2, t: g.y - GOLEM_BOX.h, b: g.y });
+function golemDist(g, x, y) { const b = golemBox(g), nx = Math.max(b.l, Math.min(b.r, x)), ny = Math.max(b.t, Math.min(b.b, y)); return Math.hypot(x - nx, y - ny); }
+const SLOT_PX = VW / 10; // the ruler: one screen is 10 slots
+const ELEM_KEYS = ['fire', 'water', 'thunder', 'nature'];
+function gfx(o) { fx.gfx.push(Object.assign({ t: 0 }, o)); }
+// a spot on the ground near x (searching outward), clear of the players
+function golemSpot(x0, dir) {
+  for (let d = 0; d < 400; d += 6) for (const s of [dir, -dir]) {
+    const x = Math.round(x0 + s * d); if (x < 30 || x > WW - 30) continue;
+    const y = surfaceY(x); if (y > WH - 30) continue;
+    if (S.players.some(pl => pl.alive && Math.abs(pl.x - x) < 34)) continue;
+    return { x, y };
+  }
+  return null;
+}
+function summonGolem(p, sk) {
+  const sp = golemSpot(p.x + p.face * 70, p.face) || { x: p.x, y: p.y };
+  const k = (sk.gStat || 150) / 100, hp = Math.round(p.maxHp * (sk.gHp || 150) / 100);
+  if (S.golem && S.golem.alive) gfx({ k: 'ring', x: S.golem.x, y: S.golem.y, dur: 30 });
+  S.golem = { golem: true, owner: p.i, i: p.i, k: 'golem', x: sp.x, y: sp.y, vy: 0, face: p.face, hp, maxHp: hp, shield: 0, alive: true, bot: p.bot,
+    turns: sk.gTurns || 5, acc: (sk.gAcc || 85) / 100, melee: (sk.gMelee || 2) * SLOT_PX, warpMax: (sk.gWarp || 4) * SLOT_PX,
+    guardPct: sk.gGuard || 15, share: sk.gShare || 50, guardCd: 0, warpCd: 0, born: 0, anim: { k: 'spawn', t: 0 },
+    buffs: [], debs: [], dots: [], marks: [], rage: 0, dmgAcc: 0, lossAcc: 0,
+    // a snapshot: later buffs on the Doram don't change it
+    c: { atk: statOf(p, 'atk') * k, matk: statOf(p, 'matk') * k, def: statOf(p, 'def') * k, mdef: statOf(p, 'mdef') * k, luk: statOf(p, 'luk'),
+      pv: {}, r: 40, color: '#ffd36a', nBase: 'matk', vel: 1, gf: 1, shot: 'spirit', name: 'Golem' } };
+  stAdd(p.i, 'gSummon', 1);
+  gfx({ k: 'summon', x: sp.x, y: sp.y, dur: 70 });
+  say(S.golem, 'Four Element Golem!', '#ffd36a', 100, 110);
+  if (!SIM) cam.shake = Math.max(cam.shake, 8);
+}
+function golemTurnDue() { const g = S.golem; return g && g.alive && g.owner === S.turn && !S.golemDone; }
+function beginGolemTurn() {
+  const g = S.golem; S.golemDone = true;
+  if (g.guardCd > 0) g.guardCd--; if (g.warpCd > 0) g.warpCd--;
+  S.state = 'golem'; S.gp = { phase: 'think', t: SIM ? 0 : 26 }; cam.manual = false;
+}
+function endGolemTurn() { S.state = 'settle'; S.settle = SIM ? 1 : 34; if (S.golem) S.golem.anim = { k: 'idle', t: 0 }; }
+// after the Golem's turn: it leaves once its turns are used up
+function golemAfterTurn() {
+  const g = S.golem; if (!g) return;
+  if (!g.alive) { S.golem = null; return; }
+  if (g.turns <= 0) {
+    gfx({ k: 'fade', x: g.x, y: g.y, dur: 40 }); say(g, 'Golem กลับสู่ธรรมชาติ', '#ffe9a8', 90, 100);
+    S.golem = null;
+  }
+}
+function golemDie(g, by) {
+  if (!g.alive) return;
+  g.alive = false; g.hp = 0; stAdd(g.owner, 'gDeath', 1);
+  gfx({ k: 'crumble', x: g.x, y: g.y, dur: 50 });
+  for (let n = 0; n < 26; n++) fx.parts.push({ x: g.x + (Math.random() - 0.5) * 40, y: g.y - Math.random() * 70, vx: (Math.random() - 0.5) * 5, vy: -Math.random() * 5, t: 40 + Math.random() * 30, col: n % 3 ? '#8a6a3a' : '#ffd36a' });
+  say(g, 'Golem พังแล้ว!', '#ffb08a', 90, 100);
+  if (S.state !== 'golem') S.golem = null; // its own turn tidies up afterwards
+}
+// damage to the Golem from an enemy blast
+function hurtGolem(g, o, dmg, crit) {
+  dmg = Math.round(dmg);
+  let soak = 0; if (g.shield > 0 && dmg > 0) { soak = Math.min(g.shield, dmg); g.shield -= soak; dmg -= soak; }
+  dmg = Math.min(g.hp, dmg); g.hp -= dmg; g.hitT = 10;
+  stAdd(g.owner, 'gTaken', dmg + soak);
+  fx.texts.push({ x: g.x, y: g.y - 60, s: (crit ? 'คริติคอล! -' : '-') + dmg + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff8a6a', t: 70 });
+  if (g.hp <= 0) golemDie(g, o);
+}
+// the Golem hits a player (melee or spirit); returns the damage dealt
+function golemHit(g, pl, dmg, crit, tag) {
+  if (!pl.alive) return 0;
+  if (pl.iron) dmg *= 1 - (pl.guard != null ? pl.guard : 50) / 100;
+  if (pl.nineNext && dmg > 0) { dmg *= 1 - (pl.c.pv.nineLives || 30) / 100; pl.nineNext = false; }
+  if (ADMIN.god && !NET.on && !pl.bot) { fx.texts.push({ x: pl.x, y: pl.y - 50, s: 'อมตะ', col: '#9fe0ff', t: 60 }); return 0; }
+  dmg = Math.round(dmg * botSoft(g));
+  let soak = 0; if (pl.shield > 0 && dmg > 0) { soak = Math.min(pl.shield, dmg); pl.shield -= soak; dmg -= soak; stAdd(pl.i, 'shieldAbs', soak); }
+  dmg = Math.min(pl.hp, dmg); pl.hp -= dmg;
+  stAdd(g.owner, 'dmg', dmg); stAdd(g.owner, 'gDmg', dmg); stAdd(g.owner, tag, dmg); stAdd(pl.i, 'taken', dmg);
+  fx.texts.push({ x: pl.x, y: pl.y - 50, s: (crit ? 'คริติคอล! -' : '-') + dmg + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff5a4a', t: 70 });
+  if (dmg > 0 || soak > 0) unhide(pl, false);
+  pl.lossAcc += dmg / pl.maxHp * 10; addRage(pl, 4 * Math.floor(pl.lossAcc)); pl.lossAcc %= 1;
+  if (pl.hp <= 0) { pl.alive = false; stAdd(g.owner, 'gKills', 1); }
+  else lowHp(pl);
+  return dmg;
+}
+const golemRx = (a, b) => a && b && a !== b ? REACTIONS[[a, b].sort().join('+')] || null : null;
+// how much a reaction is worth right now (in rough damage points)
+function golemRxValue(rx, e) {
+  if (!rx) return 0;
+  let v = (rx.bonus || 0) * 1.4;
+  if (rx.stun) v += e.frozen > 0 ? 0 : e.ccRes > 0 ? 60 : 220;
+  if (rx.bind) v += 55;
+  if (rx.burn) v += rx.burn * (rx.burnTurns || 2) * 1.1;
+  if (rx.bonus && e.hp < e.maxHp * 0.35) v += 70; // finish them
+  return v;
+}
+// a spirit landed on the target: auto reaction if the new element reacts with the last mark, else leave the mark
+function golemSpiritLands(g, pl, el, q) {
+  const mine = pl.marks.filter(m => m.by === g.i).map(m => m.e), last = mine[mine.length - 1], rx = golemRx(last, el);
+  let dmg = hitDamage(g, pl, 'matk', 70, 0, q.up), rxd = 0;
+  if (rx && rx.bonus) rxd = hitDamage(g, pl, 'matk', rx.bonus, 0, q.up);
+  const crit = Math.random() < critChance(g); if (crit) { dmg *= critMul(g); rxd *= critMul(g); }
+  stAdd(g.owner, 'gHits', 1);
+  const total = golemHit(g, pl, dmg + rxd, crit, 'gSpirit');
+  if (rxd > 0 && total > 0) { const share = Math.round(total * rxd / (dmg + rxd)); stAdd(g.owner, 'gReactDmg', share); stAdd(g.owner, 'gSpirit', -share); }
+  if (!pl.alive) return;
+  if (rx) {
+    pl.marks = pl.marks.filter(m => m.by !== g.i); // the reaction uses the marks up
+    stAdd(g.owner, 'gReact', 1); if (rx.stun) stAdd(g.owner, 'gStun', 1);
+    gfx({ k: 'rx', x: pl.x, y: pl.y - 20, dur: 46, c: [last, el].join('+') });
+    applyReaction(g, pl, rx);
+  } else addMark(pl, el, g);
+}
+function golemExplode(q) {
+  const g = S.golem;
+  fx.booms.push({ x: q.x, y: q.y, r: 34, t: 0, col: ELEM[q.gel] ? ELEM[q.gel].col : '#ffd36a' });
+  boomParts(q.x, q.y, false);
+  if (!g) return;
+  for (const pl of S.players) {
+    if (!pl.alive || teamOf(pl.i) === teamOf(g.owner) || boxDist(pl, q.x, q.y) > 34) continue;
+    golemSpiritLands(g, pl, q.gel, q);
+  }
+}
+// the target the Golem goes after: the nearest living enemy (a hidden one where it was last seen)
+function golemTarget(g) {
+  let best = null, bd = 1e9;
+  for (const pl of S.players) if (pl.alive && teamOf(pl.i) !== teamOf(g.owner)) {
+    const x = pl.hidden > 0 ? pl.seenX : pl.x, d = Math.abs(x - g.x); if (d < bd) { bd = d; best = pl; }
+  }
+  return best;
+}
+// aim like the test bots, but 85% of shots are clean and the rest go wide
+function golemAim(g, e) {
+  const tx = e.hidden > 0 ? e.seenX : e.x, ty = (e.hidden > 0 ? surfaceY(e.seenX) : e.y) - 14;
+  g.face = tx > g.x ? 1 : -1;
+  const sh = { x: g.x, y: g.y - 40, face: g.face, c: g.c, i: g.i, k: 'golem' };
+  let best = null;
+  const tryShot = (ang, pow) => {
+    const q = makeProj(sh, ang, pow, { golem: true });
+    for (let n = 0; n < 900; n++) {
+      const r = stepProj(q, S.players, S.wind);
+      if (r === 2) return 1e9;
+      if (r === 1) return Math.hypot(q.x - tx, q.y - ty);
+    }
+    return 1e9;
+  };
+  for (let ang = 20; ang <= 80; ang += 6) for (let pow = 30; pow <= 100; pow += 4) { const sc = tryShot(ang, pow); if (!best || sc < best.sc) best = { ang, pow, sc }; }
+  const c0 = best;
+  for (let ang = Math.max(20, c0.ang - 6); ang <= Math.min(80, c0.ang + 6); ang += 2) for (let pow = Math.max(30, c0.pow - 4); pow <= Math.min(100, c0.pow + 4); pow++) {
+    const sc = tryShot(ang, pow); if (sc < best.sc) best = { ang, pow, sc };
+  }
+  const clean = Math.random() < g.acc;
+  const perr = clean ? (Math.random() - 0.5) * 2 : (Math.random() < 0.5 ? -1 : 1) * (7 + Math.random() * 8);
+  return { sh, ang: best.ang + (clean ? 0 : (Math.random() - 0.5) * 6), pow: Math.max(10, Math.min(100, best.pow + perr)) };
+}
+// the best spot to warp to: up to 4 slots towards the target, on the ground, not on top of anyone
+function golemWarpSpot(g, e) {
+  const tx = e.hidden > 0 ? e.seenX : e.x, dir = Math.sign(tx - g.x) || 1;
+  let best = null;
+  for (let d = 12; d <= g.warpMax; d += 6) {
+    const x = Math.round(g.x + dir * d); if (x < 30 || x > WW - 30) break;
+    const y = surfaceY(x); if (y > WH - 30) continue;
+    if (S.players.some(pl => pl.alive && Math.abs(pl.x - x) < 40 && Math.abs(pl.y - y) < 60)) continue;
+    if (Math.abs(y - g.y) > 260) continue;
+    const sc = Math.abs(tx - x) + Math.abs(y - (e.y || y)) * 0.3;
+    if (!best || sc < best.sc) best = { x, y, sc };
+  }
+  return best;
+}
+// one decision per Golem turn
+function golemDecide(g) {
+  const e = golemTarget(g), gp = S.gp, own = S.players[g.owner];
+  g.turns--; stAdd(g.owner, 'gLife', 1);
+  if (!e) { endGolemTurn(); return; }
+  const tx = e.hidden > 0 ? e.seenX : e.x, dist = Math.abs(tx - g.x);
+  g.face = tx > g.x ? 1 : -1;
+  const mine = e.marks.filter(m => m.by === g.i).map(m => m.e), last = mine[mine.length - 1];
+  const danger = e.rage >= POW_MAX - 15;
+  // 1-2: a reaction is ready (water + thunder stun scores highest while the target can be stunned)
+  let el = null, ev = 0;
+  if (last) for (const k of ELEM_KEYS) { const v = golemRxValue(golemRx(last, k), e); if (v > ev) { ev = v; el = k; } }
+  // 5: defence when the Golem or its owner is in trouble
+  const hurt = g.hp < g.maxHp * 0.45 || (own.alive && own.hp < own.maxHp * 0.4 && !(own.shield > 0)) || danger;
+  let act;
+  if (el && ev >= 40) act = 'spirit';
+  else if (hurt && g.guardCd <= 0 && !(g.shield > 0)) act = 'guard';
+  else if (dist <= g.melee && !(e.hidden > 0)) act = 'melee';
+  else if (dist > g.melee + SLOT_PX && g.warpCd <= 0 && golemWarpSpot(g, e)) act = 'warp'; // far: close in for the punch
+  else act = 'spirit';
+  if (act === 'spirit' && !el) // open a combo: water if the target can be stunned next, fire when it is low or can't be
+    el = e.frozen > 0 || e.ccRes > 0 || e.hp < e.maxHp * 0.35 ? 'fire' : 'water';
+  gp.act = act; gp.el = el; gp.e = e; gp.t = 0; gp.phase = 'act';
+  if (act === 'warp') gp.to = golemWarpSpot(g, e);
+  if (act === 'spirit') { gp.aim = golemAim(g, e); stAdd(g.owner, 'gShots', 1); }
+  if (act === 'melee') stAdd(g.owner, 'gShots', 1);
+  const nm = { spirit: (ELEM[el] ? ELEM[el].n : '') + ' Spirit', melee: 'Golem Smash', guard: 'Elemental Guard', warp: 'Elemental Warp' }[act];
+  say(g, nm + '!', act === 'spirit' ? ELEM[el].col : '#ffd36a', 70, 104);
+  g.anim = { k: act === 'melee' ? 'atk' : act === 'guard' ? 'guard' : act === 'warp' ? 'walk' : 'cast', t: 0 };
+}
+function golemMelee(g, e) {
+  gfx({ k: 'shock', x: g.x + g.face * 34, y: g.y, dur: 34 });
+  for (let n = 0; n < 18; n++) fx.parts.push({ x: g.x + g.face * 34 + (Math.random() - 0.5) * 30, y: g.y - 4, vx: (Math.random() - 0.5) * 6, vy: -2 - Math.random() * 5, t: 30 + Math.random() * 20, col: n % 2 ? '#8a6a3a' : '#ffcf5a' });
+  if (!SIM) cam.shake = Math.max(cam.shake, 12);
+  if (!e.alive || Math.abs(e.x - g.x) > g.melee + 10) { say(g, 'พลาด!', '#c8d0e0', 60, 90); return; }
+  if (Math.random() >= g.acc) { say(e, 'หลบได้!', '#c8d0e0', 60, 90); return; }
+  stAdd(g.owner, 'gHits', 1);
+  let dmg = hitDamage(g, e, 'atk', 100); const crit = Math.random() < critChance(g); if (crit) dmg *= critMul(g);
+  golemHit(g, e, dmg, crit, 'gMelee');
+}
+function golemGuard(g) {
+  const s = Math.round(g.maxHp * g.guardPct / 100), own = S.players[g.owner], os = Math.round(s * g.share / 100);
+  g.shield += s; stAdd(g.owner, 'gShield', s); say(g, 'โล่ +' + s, '#ffe9a8', 80, 96);
+  if (own.alive) { own.shield = (own.shield || 0) + os; stAdd(g.owner, 'gOwnerShield', os); stAdd(g.owner, 'shield', os); say(own, 'โล่จาก Golem +' + os, '#ffe9a8', 80, 64); gfx({ k: 'link', x: g.x, y: g.y, x2: own.x, y2: own.y, dur: 40 }); }
+  g.guardCd = 3;
+}
+function golemWarp(g, to) {
+  if (!to) return;
+  gfx({ k: 'ring', x: g.x, y: g.y, dur: 34 });
+  g.x = to.x; g.y = to.y; g.vy = 0; g.warpCd = 2; stAdd(g.owner, 'gWarp', 1);
+  gfx({ k: 'ring', x: g.x, y: g.y, dur: 34, inw: 1 });
+}
+// timings in frames (all 1 in the auto battle test)
+const GT = { melee: [21, 44], guard: [36, 50], warp: [24, 50], cast: 18 };
+function golemTick() {
+  const g = S.golem, gp = S.gp;
+  if (!g || !g.alive) { endGolemTurn(); return; }
+  if (gp.phase === 'think') { if (--gp.t > 0) return; golemDecide(g); if (S.state !== 'golem') return; }
+  gp.t++; g.anim.t = gp.t;
+  const at = k => SIM ? 1 : GT[gp.act][k];
+  if (gp.act === 'melee') { if (gp.t === at(0)) golemMelee(g, gp.e); if (gp.t >= at(1)) endGolemTurn(); }
+  else if (gp.act === 'guard') { if (gp.t === at(0)) golemGuard(g); if (gp.t >= at(1)) endGolemTurn(); }
+  else if (gp.act === 'warp') {
+    if (!SIM && gp.t < at(0)) { const nx = g.x + g.face * 0.8, y = surfaceY(nx); if (Math.abs(y - g.y) < 6) { g.x = nx; g.y = y; } } // a few heavy steps first
+    if (gp.t === at(0)) { gp.to = golemWarpSpot(g, gp.e) || gp.to; golemWarp(g, gp.to); g.anim = { k: 'idle', t: 0 }; }
+    if (gp.t >= at(1)) endGolemTurn();
+  } else if (gp.act === 'spirit') {
+    if (gp.t >= (SIM ? 1 : GT.cast)) {
+      const a = gp.aim, q = makeProj(a.sh, a.ang, a.pow, { golem: true, gel: gp.el, kind: 'spirit', elem: ELEM[gp.el].i });
+      S.shot = { hit: new Set(), hurt: new Set() }; S.projs = [q]; S.state = 'flying'; g.anim = { k: 'idle', t: 0 };
+    }
+  }
+}
+// the Golem falls when the ground goes, and is lost if it drops into the mist
+function settleGolem() {
+  const g = S.golem; if (!g || !g.alive) return false;
+  if (!solid(g.x, g.y)) { g.vy = Math.min(8, g.vy + 0.35); g.y += g.vy; if (g.y > WH + 40) golemDie(g, -1); return true; }
+  g.vy = 0; while (solid(g.x, g.y - 1) && g.y > 0) g.y--;
+  return false;
+}
+
+// ---------- drawing ----------
+const ELEM_DRAW = ['fire', 'water', 'thunder', 'nature'].map(k => ELEM[k].col);
+function drawGolem() {
+  const g = S.golem; if (!g) return;
+  g.born++;
+  const x = g.x - cam.x, y = g.y - cam.y, f = S.frame, a = g.anim || { k: 'idle', t: 0 };
+  const spawn = Math.min(1, g.born / 46);
+  ctx.save();
+  // ground glow and the four element spirits circling it
+  const gl = ctx.createRadialGradient(x, y - 4, 4, x, y - 4, 70);
+  gl.addColorStop(0, `rgba(255,214,110,${0.38 * spawn})`); gl.addColorStop(1, 'rgba(255,214,110,0)');
+  ctx.fillStyle = gl; ctx.beginPath(); ctx.ellipse(x, y - 4, 70, 20, 0, 0, 7); ctx.fill();
+  const orbs = [];
+  for (let i = 0; i < 4; i++) {
+    const t = f * 0.035 + i * Math.PI / 2, ox = Math.cos(t) * 44 * GS, oy = (Math.sin(t) * 12 - 46) * GS;
+    orbs.push({ ox, oy, back: Math.sin(t) < 0, col: ELEM_DRAW[i] });
+  }
+  const orb = o => { ctx.globalAlpha = spawn * (o.back ? 0.55 : 1); const r = o.back ? 3.2 : 4.4;
+    const og = ctx.createRadialGradient(x + o.ox, y + o.oy, 0, x + o.ox, y + o.oy, r * 3); og.addColorStop(0, '#fff'); og.addColorStop(0.3, o.col); og.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = og; ctx.beginPath(); ctx.arc(x + o.ox, y + o.oy, r * 3, 0, 7); ctx.fill(); ctx.globalAlpha = 1; };
+  orbs.filter(o => o.back).forEach(orb);
+  // the body
+  let set = 'walk', fi = g.face < 0 ? 0 : 6, flip = false;
+  if (a.k === 'atk') { set = 'atk'; fi = Math.min(5, Math.floor(a.t / 7.5)); flip = g.face > 0; }
+  else if (a.k === 'guard') { set = 'guard'; fi = Math.min(9, Math.floor(a.t / 3.6)); }
+  else if (a.k === 'cast') { set = 'guard'; fi = 1 + (Math.floor(a.t / 6) % 2); }
+  else if (a.k === 'walk') fi = (g.face < 0 ? 0 : 6) + Math.floor(a.t / 4) % 6;
+  const d = GOLEM_SRC[set], im = GOLEM_IMG[set][fi];
+  if (im && ready(im)) {
+    const breathe = a.k === 'idle' || a.k === 'spawn' ? 1 + Math.sin(f * 0.06) * 0.012 : 1;
+    const w = d.w * GS, h = d.h * breathe * GS, rise = (1 - spawn) * 30;
+    ctx.save(); ctx.globalAlpha = spawn; ctx.translate(x, y + 2 + rise);
+    if (flip) ctx.scale(-1, 1);
+    if (g.hitT > 0) ctx.filter = 'brightness(1.8)';
+    ctx.drawImage(im, -w / 2, -h, w, h);
+    ctx.restore();
+  }
+  orbs.filter(o => !o.back).forEach(orb);
+  // Elemental Guard: a golden rune sphere while the shield lasts
+  if (g.shield > 0 && a.k !== 'guard') {
+    const cy = y - 44 * GS, R = (52 + Math.sin(f * 0.08) * 1.5) * GS;
+    const sg = ctx.createRadialGradient(x, cy, R * 0.55, x, cy, R);
+    sg.addColorStop(0, 'rgba(255,220,120,0)'); sg.addColorStop(0.85, 'rgba(255,214,110,.22)'); sg.addColorStop(1, 'rgba(255,240,190,.55)');
+    ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(x, cy, R, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,230,150,.75)'; ctx.lineWidth = 1.4;
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(x, cy, R, R * (0.25 + i * 0.3), 0, 0, 7); ctx.stroke(); }
+    ctx.save(); ctx.translate(x, cy); ctx.rotate(f * 0.02); ctx.setLineDash([3, 5]); ctx.beginPath(); ctx.arc(0, 0, R - 5, 0, 7); ctx.stroke(); ctx.restore();
+  }
+  // name, HP, shield and turns left
+  const top = y - 100 * GS - 6, bw = 64;
+  ctx.font = `600 11px ${FONT}`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,24,48,.85)';
+  const lbl = `Golem · ${Math.max(0, g.turns)} เทิร์น`;
+  ctx.globalAlpha = spawn; ctx.strokeText(lbl, x, top - 6); ctx.fillStyle = '#ffe9a8'; ctx.fillText(lbl, x, top - 6);
+  ctx.fillStyle = 'rgba(10,24,48,.75)'; ctx.fillRect(x - bw / 2 - 1, top, bw + 2, 6);
+  ctx.fillStyle = '#e8b84a'; ctx.fillRect(x - bw / 2, top + 1, bw * Math.max(0, g.hp) / g.maxHp, 4);
+  if (g.shield > 0) { ctx.fillStyle = '#fff1b8'; ctx.fillRect(x - bw / 2, top + 1, bw * Math.min(1, g.shield / g.maxHp), 2); }
+  ctx.restore();
+  if (g.hitT > 0) g.hitT--;
+}
+// summon circle, warp rings, punch shockwave, reaction burst, shield link, fading away
+function drawGfx() {
+  for (const o of fx.gfx) {
+    const x = o.x - cam.x, y = o.y - cam.y, k = o.t / o.dur;
+    ctx.save();
+    if (o.k === 'summon') {
+      const r = 20 + 50 * Math.min(1, k * 2), al = k < 0.7 ? 1 : (1 - k) / 0.3;
+      ctx.globalAlpha = al; ctx.save(); ctx.translate(x, y - 2); ctx.scale(1, 0.32);
+      for (let i = 0; i < 4; i++) { ctx.strokeStyle = ELEM_DRAW[i]; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r - i * 6, o.t * 0.08 + i * 1.57, o.t * 0.08 + i * 1.57 + 4.2); ctx.stroke(); }
+      ctx.strokeStyle = '#ffe9a8'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, r + 6, 0, 7); ctx.stroke();
+      for (let i = 0; i < 8; i++) { const t = i * 0.785 - o.t * 0.05; ctx.fillStyle = '#ffe9a8'; ctx.fillRect(Math.cos(t) * (r + 6) - 2, Math.sin(t) * (r + 6) - 2, 4, 4); }
+      ctx.restore();
+      const pw = 34 * (k < 0.5 ? k * 2 : 1) * al, pg = ctx.createLinearGradient(x - pw, 0, x + pw, 0);
+      pg.addColorStop(0, 'rgba(255,220,120,0)'); pg.addColorStop(0.5, `rgba(255,248,214,${0.75 * al})`); pg.addColorStop(1, 'rgba(255,220,120,0)');
+      ctx.fillStyle = pg; ctx.fillRect(x - pw, 0, pw * 2, y);
+    } else if (o.k === 'ring') {
+      const r = o.inw ? 60 * (1 - k) + 8 : 8 + 60 * k;
+      ctx.globalAlpha = 1 - k;
+      for (let i = 0; i < 4; i++) { ctx.strokeStyle = ELEM_DRAW[i]; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y - 40, r * (1 - i * 0.12), r * 1.3 * (1 - i * 0.12), 0, i, i + 4.5); ctx.stroke(); }
+      for (let i = 0; i < 10; i++) { const t = i * 0.63 + o.t * 0.1, rr = r * 0.9; ctx.fillStyle = ELEM_DRAW[i % 4]; ctx.beginPath(); ctx.arc(x + Math.cos(t) * rr, y - 40 + Math.sin(t) * rr * 1.2, 2.6, 0, 7); ctx.fill(); }
+    } else if (o.k === 'shock') {
+      ctx.globalAlpha = 1 - k; ctx.translate(x, y); ctx.scale(1, 0.3);
+      ctx.strokeStyle = '#ffd36a'; ctx.lineWidth = 6 * (1 - k) + 1; ctx.beginPath(); ctx.arc(0, 0, 10 + 70 * k, 0, 7); ctx.stroke();
+      ctx.strokeStyle = '#fff3c4'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 6 + 46 * k, 0, 7); ctx.stroke();
+    } else if (o.k === 'rx') {
+      const [a, b] = String(o.c).split('+'), ca = ELEM[a] ? ELEM[a].col : '#fff', cb = ELEM[b] ? ELEM[b].col : '#fff';
+      ctx.globalAlpha = 1 - k;
+      const r = 10 + 46 * Math.sqrt(k), rg = ctx.createRadialGradient(x, y, 0, x, y, r);
+      rg.addColorStop(0, 'rgba(255,255,255,.95)'); rg.addColorStop(0.35, ca); rg.addColorStop(0.75, cb); rg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+      for (let i = 0; i < 8; i++) { const t = i * 0.785 + k; ctx.beginPath(); ctx.moveTo(x + Math.cos(t) * r * 0.6, y + Math.sin(t) * r * 0.6); ctx.lineTo(x + Math.cos(t) * r * 1.25, y + Math.sin(t) * r * 1.25); ctx.stroke(); }
+    } else if (o.k === 'link') {
+      const x2 = o.x2 - cam.x, y2 = o.y2 - cam.y;
+      ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#ffe9a8'; ctx.lineWidth = 3; ctx.setLineDash([6, 6]); ctx.lineDashOffset = -o.t;
+      ctx.beginPath(); ctx.moveTo(x, y - 50); ctx.quadraticCurveTo((x + x2) / 2, Math.min(y, y2) - 90, x2, y2 - 24); ctx.stroke();
+    } else if (o.k === 'fade' || o.k === 'crumble') {
+      ctx.globalAlpha = 1 - k;
+      for (let i = 0; i < 14; i++) { const t = i * 2.4, rr = 10 + k * 50 + (i % 3) * 6; ctx.fillStyle = o.k === 'fade' ? ELEM_DRAW[i % 4] : '#a07a42';
+        ctx.beginPath(); ctx.arc(x + Math.cos(t) * rr, y - 40 - k * 40 + Math.sin(t) * rr * 0.8, 3, 0, 7); ctx.fill(); }
+    }
+    ctx.restore();
+  }
+}
+
 // ---------- update ----------
 function settlePlayers() {
   let moving = false;
@@ -1329,7 +1704,7 @@ function update() {
   S.frame++;
   for (const c of clouds) { c.x += 0.15 * c.s + S.wind * 0.02; if (c.x > WW + 300) c.x = -300; if (c.x < -300) c.x = WW + 300; }
   const p = cur(), pin = p.remote ? NET.rin : input;
-  const settling = settlePlayers();
+  const settling = settlePlayers() | settleGolem();
   if (S.banner > 0) S.banner--;
 
   if (!S.demo && !NET.on) for (const pl of S.players) if (!pl.bot && pl.alive) {
@@ -1387,11 +1762,14 @@ function update() {
       else alive++;
     }
     if (!alive) { S.state = 'settle'; S.settle = SIM ? 1 : 50; }
+  } else if (S.state === 'golem') {
+    golemTick();
   } else if (S.state === 'settle') {
     if (!settling && --S.settle <= 0) {
       const living = S.players.filter(x => x.alive);
       if (living.length < 2) endMatch(living[0]);
-      else startTurn(false);
+      else if (golemTurnDue()) beginGolemTurn(); // the Golem acts right after its owner
+      else { if (S.golemDone) golemAfterTurn(); S.golemDone = false; startTurn(false); }
     }
   }
 
@@ -1418,6 +1796,8 @@ function tickFx(p) {
   for (const b of fx.bolts) b.t++;
   fx.bolts = fx.bolts.filter(b => b.t < 36);
   if (cam.shake > 0) cam.shake--;
+  for (const o of fx.gfx) o.t++;
+  fx.gfx = fx.gfx.filter(o => o.t < o.dur);
   for (const w of fx.warps) w.t++;
   fx.warps = fx.warps.filter(w => w.t < 36);
   for (const q of fx.parts) { q.vy += 0.25; q.x += q.vx; q.y += q.vy; q.t--; }
@@ -1429,6 +1809,7 @@ function tickFx(p) {
   if (cam.manual) return;
   let tx = p.x, ty = p.y;
   if (p.hidden > 0 && teamOf(p.i) !== myTeam()) { tx = p.seenX; ty = surfaceY(p.seenX); } // don't lead the enemy's camera to a hidden player
+  if (S.state === 'golem' && S.golem) { tx = S.golem.x; ty = S.golem.y; }
   const fly = S.projs.find(q => !q.done && q.delay <= 0);
   if (S.state === 'flying' && fly) { tx = fly.x; ty = fly.y; }
   const stk = S.projs.find(q => q.strike && !q.done);
@@ -2532,6 +2913,7 @@ function draw() {
   drawMist();
   if (!S) return;
   drawZones();
+  drawGolem();
   // Hiding: the other side sees nothing; your own side sees a faint figure
   S.players.forEach(p => {
     const h = p.alive && p.hidden > 0;
@@ -2540,6 +2922,7 @@ function draw() {
   });
   if (ADMIN.hitbox) for (const p of S.players) if (p.alive) { const b = hitBox(p); ctx.strokeStyle = 'rgba(255,60,60,.9)'; ctx.lineWidth = 1.5; ctx.strokeRect(b.l - cam.x, b.t - cam.y, HB.w, HB.h); }
   S.projs.forEach(drawProj);
+  drawGfx();
   drawFx();
   ctx.restore();
   if (!S.demo && ruler) drawRuler();
@@ -3050,6 +3433,7 @@ function captureFx() {
   for (const o of fx.texts) if (!o._n) { o._n = 1; netEv(['t', nr(o.x), nr(o.y), o.s, o.col, o.t]); }
   for (const o of fx.bolts) if (!o._n) { o._n = 1; netEv(['l', nr(o.x), nr(o.y), nr(o.gy), o.t]); }
   for (const o of fx.warps) if (!o._n) { o._n = 1; netEv(['w', nr(o.x), nr(o.y), o.t]); }
+  for (const o of fx.gfx) if (!o._n) { o._n = 1; netEv(['g', o.k, nr(o.x), nr(o.y), o.dur, o.c || '', nr(o.x2 || 0), nr(o.y2 || 0), o.inw ? 1 : 0]); }
 }
 function hostReadGuest() {
   const g = NET.gpres || {}, i = g.in || {};
@@ -3061,6 +3445,7 @@ function hostSnap() {
   NET.ev = NET.ev.filter(e => e[0] > ack);
   const sn = { n: ++NET.sn, m: NET.m, mt: NET.mt, f: S.frame, st: S.state, t: S.turn, tc: S.turnCount, pw: nr(S.power), tm: nr(S.timer), w: S.wind,
     bn: S.banner, cs: Math.round(cam.shake || 0), wn: S.state === 'over' ? S.winIdx : -1, aa: NET.lastAct, zn: (S.zones || []).map(z => [nr(z.x), nr(z.y), nr(z.r), z.t]),
+    gm: S.golem ? [S.golem.owner, nr(S.golem.x), nr(S.golem.y), S.golem.face, Math.round(S.golem.hp), S.golem.maxHp, Math.round(S.golem.shield), S.golem.turns, S.golem.anim.k, Math.round(S.golem.anim.t), S.golem.hitT || 0] : 0,
     pl: S.players.map(p => PK.map(k => nr(p[k]))),
     pj: S.projs.filter(q => !q.done).map(q => PJK.map(k => nr(k === 'kind' ? q.src || q.kind : q[k]))), ev: [] };
   const enc = new TextEncoder(), base = enc.encode(JSON.stringify(sn)).length + 80;
@@ -3095,6 +3480,7 @@ function applyEv(e) {
   else if (k === 't') fx.texts.push({ x: e[2], y: e[3], s: String(e[4]), col: e[5], t: e[6] });
   else if (k === 'l') fx.bolts.push({ x: e[2], y: e[3], gy: e[4], t: e[5] });
   else if (k === 'w') fx.warps.push({ x: e[2], y: e[3], t: e[4] });
+  else if (k === 'g') fx.gfx.push({ k: String(e[2]), x: e[3], y: e[4], dur: e[5], c: e[6], x2: e[7], y2: e[8], inw: !!e[9], t: 0 });
   else if (k === 's') sfx(String(e[2]));
 }
 function applySnap(sn) {
@@ -3106,6 +3492,9 @@ function applySnap(sn) {
   NET.aa = sn.aa;
   Object.assign(S, { turn: sn.t, turnCount: sn.tc, power: sn.pw, timer: sn.tm, wind: sn.w, banner: sn.bn, zones: (sn.zn || []).map(z => ({ x: z[0], y: z[1], r: z[2], t: z[3] })) });
   if (!NET.ended) S.state = sn.st;
+  if (Array.isArray(sn.gm)) { const r = sn.gm, g = S.golem && S.golem.guest ? S.golem : (S.golem = { guest: true, golem: true, born: 0, alive: true, anim: { k: 'spawn', t: 0 } });
+    Object.assign(g, { owner: r[0], i: r[0], x: r[1], y: r[2], face: r[3], hp: r[4], maxHp: r[5], shield: r[6], turns: r[7], anim: { k: r[8], t: r[9] }, hitT: r[10] }); }
+  else S.golem = null;
   if (sn.cs) cam.shake = Math.max(cam.shake || 0, sn.cs);
   (sn.pl || []).forEach((row, i) => {
     const p = S.players[i]; if (!p) return;
@@ -3509,7 +3898,7 @@ function skillForm(f, s) {
   f.append(fieldRow('ชื่อสกิล', inText(s, 'name')));
   f.append(fieldRow('คำอธิบายสั้น (บนการ์ด)', inText(s, 'short')));
   f.append(fieldRow('คำอธิบายเต็ม (ตอนชี้เมาส์)', inText(s, 'tip', true)));
-  f.append(fieldRow('ชนิด', inSelect(s, 'type', [['shot', 'ยิง (เปลี่ยนนัดถัดไป)'], ['self', 'ใช้กับตัวเองหรือทีมทันที'], ['foe', 'ใช้กับศัตรูทันที (ไม่ต้องยิง)']], redo)));
+  f.append(fieldRow('ชนิด', inSelect(s, 'type', [['shot', 'ยิง (เปลี่ยนนัดถัดไป)'], ['self', 'ใช้กับตัวเองหรือทีมทันที'], ['foe', 'ใช้กับศัตรูทันที (ไม่ต้องยิง)'], ['summon', 'อัญเชิญ Golem 4 ธาตุ']], redo)));
   f.append(fieldRow('คูลดาวน์ (เทิร์น)', inNum(s, 'cd', 2, 10, 1, 3), 'ขั้นต่ำ 2 เทิร์น ไม่มีผลกับท่าไม้ตาย'));
   f.append(fieldRow('ไอคอน', inAsset(s, 'icon', 'image', ICON_OPTS, { exact: [128, 128], builtinURL: v => ICONS[v] || '' })));
   f.append(fieldRow('เสียง', inAsset(s, 'sound', 'audio', SOUND_OPTS)));
@@ -3646,7 +4035,7 @@ $m('maker-btn').onclick = () => { openMaker(); };
 // Runs whole matches at full speed (no drawing, no waits, no sound) with sharper bots than the easy one you play against:
 // they read the wind right, aim with only a little error and hit at full strength. Sides swap every match.
 const SIM_MAX_TURNS = 200;
-function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, shieldAbs: 0, cc: 0, ccTurns: 0, poisonAp: 0, bleedAp: 0, burnAp: 0, react: 0, ult: 0, enSkill: 0, enMove: 0, myTurns: 0, skills: {} }; }
+function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, shieldAbs: 0, cc: 0, ccTurns: 0, poisonAp: 0, bleedAp: 0, burnAp: 0, react: 0, ult: 0, enSkill: 0, enMove: 0, myTurns: 0, gSummon: 0, gLife: 0, gDmg: 0, gMelee: 0, gSpirit: 0, gReactDmg: 0, gReact: 0, gStun: 0, gShield: 0, gOwnerShield: 0, gWarp: 0, gKills: 0, gShots: 0, gHits: 0, gTaken: 0, gDeath: 0, skills: {} }; }
 function simPairs(a, b) {
   const keys = Object.keys(CLASSES), out = [];
   if (a && b) out.push([a, b]);
@@ -3692,7 +4081,7 @@ async function runSim(pairs, n, prog) {
 }
 // averages per matchup and per class
 // extra numbers averaged per class; sustain = healing received / damage taken in a match, flagged when it stays high
-const SIM_EXTRA = ['healRecv', 'shield', 'shieldAbs', 'ccTurns', 'poisonAp', 'bleedAp', 'burnAp', 'react', 'enSkill', 'enMove', 'myTurns'];
+const SIM_EXTRA = ['healRecv', 'shield', 'shieldAbs', 'ccTurns', 'poisonAp', 'bleedAp', 'burnAp', 'react', 'enSkill', 'enMove', 'myTurns', 'gSummon', 'gLife', 'gDmg', 'gMelee', 'gSpirit', 'gReactDmg', 'gReact', 'gStun', 'gShield', 'gOwnerShield', 'gWarp', 'gKills', 'gShots', 'gHits', 'gTaken', 'gDeath'];
 const SUSTAIN_FLAG = 0.4;
 function simSummary(rows) {
   const mu = new Map(), cl = {};
@@ -3723,7 +4112,7 @@ function simSummary(rows) {
 }
 function simCSV(rows) {
   const head = ['matchup', 'class_A', 'class_B', 'A_on_right', 'first_turn', 'winner', 'turns', 'A_hp_left', 'B_hp_left'];
-  const f = ['dmg', 'taken', 'heal', 'healRecv', 'shield', 'shieldAbs', 'ult', 'cc', 'ccTurns', 'poisonAp', 'bleedAp', 'burnAp', 'react', 'enSkill', 'enMove', 'myTurns'];
+  const f = ['dmg', 'taken', 'heal', 'healRecv', 'shield', 'shieldAbs', 'ult', 'cc', 'ccTurns', 'poisonAp', 'bleedAp', 'burnAp', 'react', 'enSkill', 'enMove', 'myTurns', 'gSummon', 'gLife', 'gDmg', 'gMelee', 'gSpirit', 'gReactDmg', 'gReact', 'gStun', 'gShield', 'gOwnerShield', 'gWarp', 'gKills', 'gShots', 'gHits', 'gTaken', 'gDeath'];
   for (const s of ['A', 'B']) for (const k of f) head.push(`${s}_${k}`);
   head.push('A_skills', 'B_skills');
   const cn = k => (CLASSES[k] || { name: k }).name, sk = o => Object.entries(o).map(([k, v]) => `${(SKILLS[k] || { name: k }).name}:${v}`).join('; ');
