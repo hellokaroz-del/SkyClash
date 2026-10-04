@@ -187,6 +187,7 @@ button.mk-prev { appearance: none; font: inherit; color: var(--fg); background: 
           <label><input type="checkbox" data-k="god"> อมตะ</label>
           <label><input type="checkbox" data-k="pow"> เกจเต็ม</label>
           <label><input type="checkbox" data-k="nocd"> สกิลไม่คูลดาวน์</label>
+          <label><input type="checkbox" data-k="hitbox"> แสดงกรอบโดน (hit box)</label>
           <button type="button" class="admin-btn" id="maker-btn">ตัวสร้างเกม</button>
         </div>
       </div>
@@ -319,7 +320,12 @@ const ULT_FX = ["assets/a059.webp", "assets/a060.webp", "assets/a061.webp", "ass
 // POW gauge: fills from hits taken and dealt; full at 120 unlocks the class ultimate on B
 const POW_MAX = 120, BOLT_R = SEG; // homing circle around the enemy: 2 slots across
 // Admin test switches (human players only): immortal, POW always full, no skill cooldown
-const ADMIN = { god: false, pow: false, nocd: false };
+const ADMIN = { god: false, pow: false, nocd: false, hitbox: false };
+// a character's hit box: the crawling body, centred on its feet point (x) and standing on the ground (y)
+const HB = { w: 56, h: 36 };
+const hitBox = pl => ({ l: pl.x - HB.w / 2, r: pl.x + HB.w / 2, t: pl.y - HB.h, b: pl.y });
+// distance from a point to the box (0 when inside it)
+function boxDist(pl, x, y) { const b = hitBox(pl), nx = Math.max(b.l, Math.min(b.r, x)), ny = Math.max(b.t, Math.min(b.b, y)); return Math.hypot(x - nx, y - ny); }
 // Karoz's Ultimate button: 10 frames, 10%..100% of the POW gauge
 const ULT_SRC = ["assets/a066.png", "assets/a067.png", "assets/a068.png", "assets/a069.png", "assets/a070.png", "assets/a071.png", "assets/a072.png", "assets/a073.png", "assets/a074.png", "assets/a075.png"];
 const ULT_IMG = ULT_SRC.map(src => { const im = new Image(); im.src = src; return im; });
@@ -649,7 +655,7 @@ function stepProj(q, players, wind) {
     if (q.y >= 0 && solid(q.x, q.y)) return 1;
     for (const pl of players) {
       if (!pl.alive || (pl.i === q.owner && q.age < 12)) continue;
-      if (Math.hypot(q.x - pl.x, q.y - (pl.y - 14)) < 15) return 1;
+      if (boxDist(pl, q.x, q.y) === 0) return 1;
     }
   }
   return 0;
@@ -709,9 +715,8 @@ function explode(q) {
   boomParts(q.x, q.y, q.ice);
   for (const pl of S.players) {
     if (!pl.alive) continue;
-    const d = Math.hypot(q.x - pl.x, q.y - (pl.y - 14));
-    if (d < r + 16) {
-      let dmg = base * (1 - 0.55 * d / (r + 16));
+    if (boxDist(pl, q.x, q.y) <= r) {
+      let dmg = base;
       const foe = pl !== owner, crit = foe && Math.random() < 0.12;
       if (crit) dmg *= 1.5;
       if (pl.iron) dmg *= 1 - (pl.guard != null ? pl.guard : 50) / 100;
@@ -1507,7 +1512,12 @@ function drawHUD() {
   ctx.textAlign = 'center'; ctx.font = `600 9px ${FONT}`; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(8,14,40,.9)';
   for (let v = 0; v <= 100; v += 10) {
     const tx = tx0 + tw * v / 100;
-    if (v > 0 && v < 100) { ctx.strokeStyle = 'rgba(160,190,255,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(tx, ty0); ctx.lineTo(tx, ty1); ctx.stroke(); }
+    if (v < 100) for (let m = 1; m < 10; m++) { // minor ticks hang from the top edge
+      const mx = tx + tw * m / 100, len = m === 5 ? th * 0.55 : th * 0.3;
+      ctx.strokeStyle = m === 5 ? 'rgba(225,235,255,.75)' : 'rgba(200,215,255,.5)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(mx, ty0); ctx.lineTo(mx, ty0 + len); ctx.stroke();
+    }
+    if (v > 0 && v < 100) { ctx.strokeStyle = 'rgba(235,242,255,.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(tx, ty0); ctx.lineTo(tx, ty0 + th * 0.8); ctx.stroke(); }
     ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(8,14,40,.9)'; ctx.strokeText(v, tx, ty0 - 9); ctx.fillStyle = '#e6eeff'; ctx.fillText(v, tx, ty0 - 9);
   }
   if (p.lastPower != null) {
@@ -2000,6 +2010,7 @@ function draw() {
   drawMist();
   if (!S) return;
   S.players.forEach(p => drawHero(p, p.i === S.turn && !S.demo));
+  if (ADMIN.hitbox) for (const p of S.players) if (p.alive) { const b = hitBox(p); ctx.strokeStyle = 'rgba(255,60,60,.9)'; ctx.lineWidth = 1.5; ctx.strokeRect(b.l - cam.x, b.t - cam.y, HB.w, HB.h); }
   S.projs.forEach(drawProj);
   drawFx();
   ctx.restore();
