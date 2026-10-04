@@ -103,6 +103,20 @@ kbd { font-family: var(--body); background: var(--panel-2); border: 1px solid va
 /* game maker: full-screen editor over the game, opened from the Admin menu */
 #maker { position: fixed; inset: 0; z-index: 50; background: var(--bg); color: var(--fg); display: grid; grid-template-rows: auto 1fr; font-family: var(--body); }
 body.mk-open { overflow: hidden; }
+#simbox { position: fixed; inset: 0; z-index: 50; background: var(--bg); color: var(--fg); display: grid; grid-template-rows: auto 1fr; font-family: var(--body); }
+#simbox[hidden] { display: none; }
+.sim-f { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.sim-f select, .sim-f input { font: inherit; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
+.sim-f input { width: 5.5em; }
+.sim-body { overflow: auto; padding: 12px 16px 32px; }
+.sim-scroll { overflow-x: auto; }
+.sim-t { border-collapse: collapse; font-size: 13px; white-space: nowrap; margin-bottom: 18px; }
+.sim-t th, .sim-t td { padding: 5px 9px; border-bottom: 1px solid var(--line); text-align: right; }
+.sim-t th:first-child, .sim-t td:first-child, .sim-t th:nth-child(2), .sim-t td:nth-child(2) { text-align: left; }
+.sim-t th { color: var(--gold); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+.sim-t .sim-sk { text-align: left; white-space: normal; min-width: 14em; font-size: 12px; }
+.sim-hi { color: #7dff9a; font-weight: 700; }
+.sim-lo { color: #ff8a7a; font-weight: 700; }
 .mk-top { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
 .mk-top h2 { font-family: var(--display); color: var(--gold); font-size: 1.25rem; margin-right: 8px; }
 .mk-tabs { display: flex; gap: 6px; }
@@ -189,6 +203,7 @@ button.mk-prev { appearance: none; font: inherit; color: var(--fg); background: 
           <label><input type="checkbox" data-k="nocd"> สกิลไม่คูลดาวน์</label>
           <label><input type="checkbox" data-k="hitbox"> แสดงกรอบโดน (hit box)</label>
           <button type="button" class="admin-btn" id="maker-btn">ตัวสร้างเกม</button>
+          <button type="button" class="admin-btn" id="sim-btn">ทดสอบบอทอัตโนมัติ</button>
         </div>
       </div>
     </div>
@@ -210,6 +225,25 @@ button.mk-prev { appearance: none; font: inherit; color: var(--fg); background: 
     </div>
   </div>
   <div class="tip" id="tip" role="tooltip" hidden></div>
+  <section id="simbox" hidden aria-label="ทดสอบบอทอัตโนมัติ">
+    <div class="mk-top">
+      <h2>ทดสอบบอทอัตโนมัติ</h2>
+      <label class="sim-f">อาชีพ A <select id="sim-a"></select></label>
+      <label class="sim-f">อาชีพ B <select id="sim-b"></select></label>
+      <label class="sim-f">แมตช์ต่อคู่ <input id="sim-n" type="number" min="10" max="500" step="10" value="100"></label>
+      <div class="mk-actions">
+        <button type="button" class="mk-btn primary" id="sim-run">เริ่มทดสอบ</button>
+        <button type="button" class="mk-btn" id="sim-stop" disabled>หยุด</button>
+        <button type="button" class="mk-btn" id="sim-csv" disabled>ดาวน์โหลด CSV</button>
+        <button type="button" class="mk-btn" id="sim-close">ปิด</button>
+      </div>
+    </div>
+    <div class="sim-body">
+      <p class="muted" id="sim-msg" role="status"></p>
+      <p class="mk-hint">บอททดสอบอ่านลมถูก เล็งคลาดเล็กน้อย และตีแรงเต็ม (ไม่ใช่บอทง่ายที่เล่นด้วย) สลับฝั่งซ้ายขวาทุกแมตช์ เกิน 200 เทิร์นนับเป็นเสมอ</p>
+      <div id="sim-out"></div>
+    </div>
+  </section>
   <section id="maker" hidden aria-label="ตัวสร้างเกม">
     <div class="mk-top">
       <h2>ตัวสร้างเกม</h2>
@@ -315,13 +349,17 @@ function fadeBgm() {
   clearInterval(bgmFade);
   bgmFade = setInterval(() => { BGM.volume = Math.max(0, BGM.volume - 0.04); if (BGM.volume <= 0) { clearInterval(bgmFade); BGM.pause(); } }, 50);
 }
-function sfx(k) { if (k && typeof netEv === 'function') netEv(['s', k]); if (MUTED || !k) return; if (k.startsWith('a:') && !SFX[k]) { const u = assetURL(k); if (!u) return; SFX[k] = new Audio(u); } if (!SFX[k]) return; const a = SFX[k].cloneNode(); a.volume = 0.9; const pr = a.play(); if (pr) pr.catch(() => {}); }
+function sfx(k) { if (SIM) return; if (k && typeof netEv === 'function') netEv(['s', k]); if (MUTED || !k) return; if (k.startsWith('a:') && !SFX[k]) { const u = assetURL(k); if (!u) return; SFX[k] = new Audio(u); } if (!SFX[k]) return; const a = SFX[k].cloneNode(); a.volume = 0.9; const pr = a.play(); if (pr) pr.catch(() => {}); }
 // Karoz's 7-frame lightning strike for the mage ultimate (frame 4 is the impact); ground ring sits at y 499 of 577, beam at x 150
 const ULT_FX = ["assets/a059.webp", "assets/a060.webp", "assets/a061.webp", "assets/a062.webp", "assets/a063.webp", "assets/a064.webp", "assets/a065.webp"].map(src => { const im = new Image(); im.src = src; return im; });
 // POW gauge: fills from hits taken and dealt; full at 120 unlocks the class ultimate on B
 const POW_MAX = 120, BOLT_R = SEG; // homing circle around the enemy: 2 slots across
 // Admin test switches (human players only): immortal, POW always full, no skill cooldown
 const ADMIN = { god: false, pow: false, nocd: false, hitbox: false };
+// auto battle test: SIM is set while bot-vs-bot matches run at full speed; ST holds that match's numbers per player
+let SIM = null, ST = null;
+function stAdd(i, k, v) { if (ST && ST.p[i]) ST.p[i][k] += v; }
+const botSoft = o => o.bot && !SIM ? 0.7 : 1; // the easy bot you play against hits softer
 // a character's hit box: the crawling body, centred on its feet point (x) and standing on the ground (y)
 const HB = { w: 56, h: 36 };
 const hitBox = pl => ({ l: pl.x - HB.w / 2, r: pl.x + HB.w / 2, t: pl.y - HB.h, b: pl.y });
@@ -338,8 +376,8 @@ const ULT_RECT = { x: 866, y: 330, w: 86, h: 86 };
 const SKILL_FRAME = new Image(); SKILL_FRAME.src = 'assets/a091.webp';
 const SF = { x: 628, y: VH - 113, w: 330, src: 2172, srcH: 600, cx: [240, 580, 918, 1255, 1593, 1930], cy: 220, win: 230, track: [360, 445, 1854, 507] };
 const ENERGY_MAX = 250, SKILL_COST = 100, WALK_COST = 0.7; // walking costs 0.7 Energy per unit moved; the Ultimate is free
-// balance spec V1: damage = stat x skill% x DMG_K x 100 / (100 + DEF or MDEF); crit chance from LUK; Energy per turn from SPD
-const DMG_K = 4, CRIT_BASE = 3, CRIT_PER_LUK = 0.12, CRIT_MUL = 1.5, CC_RES_TURNS = 2;
+// balance spec V1: damage = stat x skill% x DMG_K x 100 / (100 + DEF or MDEF); healing and MATK shields = MATK x skill% x HEAL_K; crit chance from LUK; Energy per turn from SPD
+const DMG_K = 4, HEAL_K = 3, CRIT_BASE = 3, CRIT_PER_LUK = 0.12, CRIT_MUL = 1.5, CC_RES_TURNS = 2;
 const maxEnergy = c => Math.round(235 + (+c.spd || 0) * 0.25);
 const SLOT_IDS = ['s1', 's2', 's3', 's4', 's5', 's6'];
 // Doram's four elements (i = colour index of the spirit shot) and the reactions two marks make
@@ -417,12 +455,12 @@ const DEFAULT_DATA = {
     mc_termination: { name: 'Cart Termination', type: 'shot', base: 'atk', dmg: 220, size: 160, weight: 112, proj: 'cart', short: '220% ATK วงกว้าง' },
     // Priest
     pr_holy: { name: 'Holy Light', cd: 2, type: 'shot', base: 'matk', dmg: 110, short: '110% MATK' },
-    pr_heal: { name: 'Heal', cd: 2, type: 'self', healMatk: 130, short: 'ฟื้น HP 130% MATK' },
+    pr_heal: { name: 'Heal', cd: 3, type: 'self', healMatk: 100, short: 'ฟื้น HP 100% MATK' },
     pr_bless: { name: 'Blessing', cd: 4, type: 'self', team: true, bAtk: 15, bMatk: 15, bTurns: 2, short: 'ATK และ MATK +15% 2 เทิร์น (ทั้งทีม)' },
     pr_angelus: { name: 'Angelus', cd: 4, type: 'self', team: true, bDef: 20, bMdef: 20, bTurns: 2, short: 'DEF และ MDEF +20% 2 เทิร์น (ทั้งทีม)' },
-    pr_barrier: { name: 'Holy Barrier', cd: 3, type: 'self', shieldMatk: 120, short: 'ได้โล่ 120% MATK' },
-    pr_purge: { name: 'Purge', cd: 4, type: 'self', purge: true, healMatk: 50, short: 'ล้างสถานะผิดปกติ 1 อย่าง และฟื้น 50% MATK', tip: 'ล้างสถานะผิดปกติ 1 อย่าง (แข็ง มึน ตรึง ดีบัฟ หรือพิษ) และฟื้น HP 50% MATK ใช้ได้แม้ตอนโดนแข็งหรือมึน แล้วเล่นตานั้นต่อได้' },
-    pr_sanct: { name: 'Sanctuary', type: 'self', team: true, healMatk: 160, shieldMatk: 60, short: 'ฟื้น 160% MATK และโล่ 60% MATK ทั้งทีม' },
+    pr_barrier: { name: 'Holy Barrier', cd: 4, type: 'self', shieldMatk: 100, short: 'ได้โล่ 100% MATK' },
+    pr_purge: { name: 'Purge', cd: 4, type: 'self', purge: true, healMatk: 35, short: 'ล้างสถานะผิดปกติ 1 อย่าง และฟื้น 35% MATK', tip: 'ล้างสถานะผิดปกติ 1 อย่าง (แข็ง มึน ตรึง ดีบัฟ หรือพิษ) และฟื้น HP 35% MATK ใช้ได้แม้ตอนโดนแข็งหรือมึน แต่ถ้าล้างแข็งหรือมึน เทิร์นนั้นจะจบทันที' },
+    pr_sanct: { name: 'Sanctuary', type: 'self', team: true, healMatk: 130, shieldMatk: 50, short: 'ฟื้น 130% MATK และโล่ 50% MATK ทั้งทีม' },
     // Doram
     dr_flame: { name: 'Flame Spirit', cd: 2, type: 'shot', base: 'matk', dmg: 70, mark: 'fire', proj: 'spirit', short: '70% MATK และติดมาร์คไฟ' },
     dr_water: { name: 'Water Spirit', cd: 2, type: 'shot', base: 'matk', dmg: 70, mark: 'water', proj: 'spirit', short: '70% MATK และติดมาร์คน้ำ' },
@@ -579,10 +617,11 @@ function addBuff(t, sk) {
     taken: sk.bTaken || 0, next: sk.bNext || 0, nextMagic: sk.bNextMagic || 0 });
 }
 // freeze / stun never refresh while they last; after a 2-turn one the target resists for a while (new ones last 1 turn at most)
-function applyCC(t, kind, turns) {
+function applyCC(t, kind, turns, o) {
   if (t.frozen > 0 || turns <= 0) return;
   if (t.ccRes > 0) turns = Math.min(1, turns);
   t.frozen = turns; t.cck = kind; t.ccLen = turns;
+  if (o) stAdd(o.i, 'cc', 1);
   say(t, kind === 'stun' ? 'มึน!' : 'แข็ง!', kind === 'stun' ? '#ffe14a' : '#bfeaff');
 }
 // Doram: the two newest marks on a target; each new mark keeps that caster's marks alive one more turn
@@ -600,9 +639,9 @@ function reactionOf(t, o) {
 }
 function applyReaction(o, t, rx) {
   say(t, rx.name + '!', '#ffe9a8', 90, 104);
-  if (rx.stun) applyCC(t, 'stun', rx.stun);
-  if (rx.bind) { t.bind = Math.max(t.bind, rx.bind); say(t, 'ตรึง!', '#7fd98a', 80, 88); }
-  if (rx.burn) addDot(t, 'burn', hitDamage(o, t, 'matk', rx.burn) * (o.bot ? 0.7 : 1), rx.burnTurns || 2, o);
+  if (rx.stun) applyCC(t, 'stun', rx.stun, o);
+  if (rx.bind) { t.bind = Math.max(t.bind, rx.bind); stAdd(o.i, 'cc', 1); say(t, 'ตรึง!', '#7fd98a', 80, 88); }
+  if (rx.burn) addDot(t, 'burn', hitDamage(o, t, 'matk', rx.burn) * botSoft(o), rx.burnTurns || 2, o);
   if (o.c.pv.spiritBond) addBuff(o, { id: 'bond', name: 'Spirit Bond', bTurns: 2, bMatk: o.c.pv.spiritBond });
 }
 // knockback: slide along the ground (climbing small steps like walking) until a wall stops it; gravity does the rest
@@ -620,16 +659,17 @@ function lowHp(pl) {
   const pv = pl.c.pv || {};
   if (!pl.alive) return;
   if (pv.guardian && !pl.once.guardian && pl.hp < pl.maxHp * pv.guardianHp / 100) {
-    pl.once.guardian = true; const s = Math.round(pl.maxHp * pv.guardian / 100); pl.shield += s; say(pl, 'Guardian Angel โล่ +' + s, '#9fe0ff', 90, 104);
+    pl.once.guardian = true; const s = Math.round(pl.maxHp * pv.guardian / 100); pl.shield += s; stAdd(pl.i, 'shield', s); say(pl, 'Guardian Angel โล่ +' + s, '#9fe0ff', 90, 104);
   }
   if (pv.nineLives && !pl.once.nine && pl.hp < pl.maxHp * pv.nineLivesHp / 100) { pl.once.nine = true; pl.nineNext = true; say(pl, 'Nine Lives!', '#ffd36a', 90, 104); }
 }
 // HP lost outside a blast (poison, burn, fire wall): shields soak it first
-function hurtRaw(pl, amt, label, col) {
+function hurtRaw(pl, amt, label, col, by) {
   if (!pl.alive || (ADMIN.god && !NET.on && !pl.bot)) return;
   let d = Math.round(amt);
   if (pl.shield > 0) { const s = Math.min(pl.shield, d); pl.shield -= s; d -= s; }
   pl.hp = Math.max(0, pl.hp - d);
+  if (by != null && by !== pl.i) stAdd(by, 'dmg', d); stAdd(pl.i, 'taken', d);
   say(pl, `${label} -${d}`, col, 80, 50);
   if (pl.hp <= 0) pl.alive = false; else lowHp(pl);
 }
@@ -643,10 +683,10 @@ function unhide(p, early) {
 }
 // start of a player's own turn: their poisons and burns tick, fire walls burn them, and every timer they own counts down
 function turnStartEffects(q) {
-  for (const d of q.dots) { hurtRaw(q, d.amt, DOT_NAME[d.kind], DOT_COL[d.kind]); d.t--; }
+  for (const d of q.dots) { hurtRaw(q, d.amt, DOT_NAME[d.kind], DOT_COL[d.kind], d.by); d.t--; }
   q.dots = q.dots.filter(d => d.t > 0);
   for (const z of S.zones) if (z.owner !== q.i && q.alive && boxDist(q, z.x, z.y) <= z.r) {
-    const o = S.players[z.owner]; hurtRaw(q, hitDamage(o, q, z.base, z.pct) * (o.bot ? 0.7 : 1), 'กำแพงไฟ', '#ff9a3a');
+    const o = S.players[z.owner]; hurtRaw(q, hitDamage(o, q, z.base, z.pct) * botSoft(o), 'กำแพงไฟ', '#ff9a3a', z.owner);
   }
   for (const z of S.zones) if (z.owner === q.i) z.t--;
   S.zones = S.zones.filter(z => z.t > 0);
@@ -665,20 +705,22 @@ function purge(t) {
 }
 // self skills: heals, shields and buffs on yourself (or the whole team), Hiding, Purge
 function selfSkill(p, sk) {
+  const wasCC = p.frozen > 0;
   const pv = p.c.pv || {}, more = 1 + ((sk.consumable && pv.consumable) || 0) / 100;
   const team = sk.team ? S.players.filter(x => x.alive && teamOf(x.i) === teamOf(p.i)) : [p];
   fx.texts.push({ x: p.x, y: p.y - 80, s: sk.name + '!', col: '#ffd36a', t: 70 });
   for (const t of team) {
     if (sk.purge) purge(t);
-    const h = Math.round((t.maxHp * (sk.heal || 0) / 100 + statOf(p, 'matk') * (sk.healMatk || 0) / 100 * DMG_K) * more * (1 + (pv.healBonus || 0) / 100));
-    if (h > 0) { t.hp = Math.min(t.maxHp, t.hp + h); fx.texts.push({ x: t.x, y: t.y - 50, s: '+' + h, col: '#7dff9a', t: 70 }); }
-    const s = Math.round((t.maxHp * (sk.shieldPct || 0) / 100 + statOf(p, 'matk') * (sk.shieldMatk || 0) / 100 * DMG_K) * more);
-    if (s > 0) { t.shield = (t.shield || 0) + s; say(t, 'โล่ +' + s, '#7fd8ff', 70, 64); }
+    const h = Math.round((t.maxHp * (sk.heal || 0) / 100 + statOf(p, 'matk') * (sk.healMatk || 0) / 100 * HEAL_K) * more * (1 + (pv.healBonus || 0) / 100));
+    if (h > 0) { const got = Math.min(t.maxHp - t.hp, h); stAdd(p.i, 'heal', got); stAdd(t.i, 'healRecv', got); t.hp += got; fx.texts.push({ x: t.x, y: t.y - 50, s: '+' + h, col: '#7dff9a', t: 70 }); }
+    const s = Math.round((t.maxHp * (sk.shieldPct || 0) / 100 + statOf(p, 'matk') * (sk.shieldMatk || 0) / 100 * HEAL_K) * more);
+    if (s > 0) { t.shield = (t.shield || 0) + s; stAdd(p.i, 'shield', s); say(t, 'โล่ +' + s, '#7fd8ff', 70, 64); }
     if (sk.bAtk || sk.bMatk || sk.bDef || sk.bMdef || sk.bTaken || sk.bNext || sk.bNextMagic) addBuff(t, sk);
   }
   if (sk.guard > 0) { p.iron = true; p.guard = sk.guard; }
   if (sk.hide > 0) { p.hidden = sk.hide; p.seenX = p.x; say(p, 'ล่องหน!', '#d9c8ff', 70, 60); }
   sfx(sk.sound);
+  if (sk.purge && wasCC && !(p.frozen > 0) && p === cur()) { say(p, 'ใช้ Purge แล้ว จบเทิร์น', '#fff3a8', 80, 96); S.bot = null; S.state = 'settle'; S.settle = SIM ? 1 : 40; }
 }
 // foe skills land at once on the nearest enemy, no shot needed (Provoke, Hunter's Mark, Spirit Shift)
 function foeSkill(p, sk) {
@@ -940,8 +982,8 @@ function startTurn(first) {
   if (first || !S.windDir) S.windDir = Math.random() < 0.5 ? -1 : 1;
   else if (Math.random() < 0.3) S.windDir = -S.windDir;
   S.wind = Math.round((lo + Math.random() * (hi - lo)) * 10) / 10 * S.windDir || 0;
-  S.state = 'aim'; S.power = 0; S.timer = TURN_TIME; S.banner = 90; S.turnCount++;
-  S.bot = q.bot ? { phase: 'think', t: 40 } : null;
+  S.state = 'aim'; S.power = 0; S.timer = TURN_TIME; S.banner = SIM ? 0 : 90; S.turnCount++;
+  S.bot = q.bot ? { phase: 'think', t: SIM ? 0 : 40 } : null;
   cam.manual = false;
   if (!S.demo) turnStartEffects(q);
   if (first && !S.demo) say(q, `เริ่มก่อน! Energy ${q.maxEn}`, '#ffe9a8', 110, 96);
@@ -953,7 +995,7 @@ function startTurn(first) {
     const pi = SLOT_IDS.findIndex(x => q.c.sk[x] && q.c.sk[x].purge);
     if (pi >= 0 && q.cds[pi] <= 0 && q.energy >= SKILL_COST) { q.ccTurn = true; say(q, word + ' ใช้ Purge ได้', '#bfeaff', 110, 60); }
     else {
-      S.bot = null; S.state = 'settle'; S.settle = 80;
+      S.bot = null; S.state = 'settle'; S.settle = SIM ? 1 : 80;
       fx.texts.push({ x: q.x, y: q.y - 60, s: q.frozen > 1 ? word + ' ข้ามเทิร์น (อีก ' + q.frozen + ')' : word + ' ข้ามเทิร์น', col: q.cck === 'stun' ? '#ffe14a' : '#bfeaff', t: 90 });
     }
   }
@@ -1053,7 +1095,7 @@ function explode(q) {
     if (foe && sk && sk.burst) { rx = reactionOf(pl, owner); if (rx && rx.bonus) dmg += hitDamage(owner, pl, 'matk', rx.bonus, 0, q.up); }
     const crit = foe && dmg > 0 && Math.random() < critChance(owner);
     if (crit) dmg *= critMul(owner);
-    if (owner.bot) dmg *= 0.7; // easy bot hits softer
+    dmg *= botSoft(owner);
     if (pl.iron) dmg *= 1 - (pl.guard != null ? pl.guard : 50) / 100;
     if (pl.nineNext && dmg > 0) { dmg *= 1 - (pl.c.pv.nineLives || 30) / 100; pl.nineNext = false; }
     if (ADMIN.god && !NET.on && !pl.bot) { fx.texts.push({ x: pl.x, y: pl.y - 50, s: 'อมตะ', col: '#9fe0ff', t: 60 }); continue; }
@@ -1063,6 +1105,7 @@ function explode(q) {
     // your own shots (on yourself or a teammate) hurt but never kill: they leave at least 1 HP
     dmg = Math.min(!foe ? Math.max(0, pl.hp - 1) : pl.hp, dmg);
     pl.hp = Math.max(0, pl.hp - dmg);
+    if (foe) stAdd(owner.i, 'dmg', dmg); stAdd(pl.i, 'taken', dmg);
     if (pct > 0 || dmg > 0) fx.texts.push({ x: pl.x, y: pl.y - 50, s: (crit ? 'คริติคอล! -' : '-') + dmg + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff5a4a', t: 70 });
     const sh = S.shot || (S.shot = { hit: new Set(), hurt: new Set() });
     pl.lossAcc += dmg / pl.maxHp * 10; addRage(pl, 4 * Math.floor(pl.lossAcc)); pl.lossAcc %= 1;
@@ -1080,13 +1123,13 @@ function explode(q) {
     }
     if (pl.hp <= 0) { pl.alive = false; continue; }
     if (foe && sk) { // what the skill leaves on the target
-      if (sk.dotKind && sk.dotPct > 0) addDot(pl, sk.dotKind, hitDamage(owner, pl, base, sk.dotPct) * (owner.bot ? 0.7 : 1), sk.dotTurns || 2, owner);
+      if (sk.dotKind && sk.dotPct > 0) addDot(pl, sk.dotKind, hitDamage(owner, pl, base, sk.dotPct) * botSoft(owner), sk.dotTurns || 2, owner);
       if (sk.debDef || sk.debMdef || sk.debTaken || sk.debDeal) addDeb(pl, sk, owner);
-      if (sk.freeze > 0) applyCC(pl, 'freeze', sk.freeze);
+      if (sk.freeze > 0) applyCC(pl, 'freeze', sk.freeze, owner);
       if (sk.knock > 0) pushPlayer(pl, (Math.sign(pl.x - q.x) || owner.face) * sk.knock);
       if (sk.mark && ELEM[sk.mark]) addMark(pl, sk.mark, owner);
       if (rx) applyReaction(owner, pl, rx); else if (sk.burst) say(pl, 'ไม่มีปฏิกิริยา', '#c8d0e0', 60, 104);
-    } else if (foe && q.ice) applyCC(pl, 'freeze', q.freeze || ICE_TURNS);
+    } else if (foe && q.ice) applyCC(pl, 'freeze', q.freeze || ICE_TURNS, owner);
     lowHp(pl);
   }
 }
@@ -1109,6 +1152,7 @@ function useSlot(slot) {
   if (sk.type === 'self') selfSkill(p, sk);
   else if (sk.type === 'foe') foeSkill(p, sk);
   else { p.armed = slot; fx.texts.push({ x: p.x, y: p.y - 50, s: sk.name + '!', col: slot === 'b' ? '#ffe066' : SLOT_COL[i], t: slot === 'b' ? 80 : 70 }); }
+  if (ST) { const st = ST.p[p.i]; st.skills[sk.id] = (st.skills[sk.id] || 0) + 1; if (slot === 'b') st.ult++; }
   if (slot !== 'b' && !sk.hide) p.cds[i] = Math.max(2, sk.cd) + 1; // ticks down at the start of own next turn; no active skill is under 2 turns
   updatePad();
 }
@@ -1137,7 +1181,7 @@ function botPlan(p) {
   p.face = e.x > p.x ? 1 : -1;
   let best = null;
   // easy bot: often misjudges the wind (reads it at half strength or ignores it)
-  const wind = S.wind * [0, 0, 0.5, 1.6][Math.floor(Math.random() * 4)];
+  const wind = SIM ? S.wind : S.wind * [0, 0, 0.5, 1.6][Math.floor(Math.random() * 4)];
   const tryShot = (ang, pow) => {
     const q = makeProj(p, ang, pow);
     for (let n = 0; n < 900; n++) {
@@ -1151,12 +1195,18 @@ function botPlan(p) {
     }
     return 1e9;
   };
-  for (let ang = 20; ang <= 80; ang += 3) for (let pow = 30; pow <= 100; pow += 2) {
+  // coarse grid first, then a fine one around the best spot (about a third of the work of one fine grid)
+  for (let ang = 20; ang <= 80; ang += 6) for (let pow = 30; pow <= 100; pow += 4) {
     const sc = tryShot(ang, pow);
     if (!best || sc < best.sc) best = { ang, pow, sc };
   }
+  const c0 = best;
+  for (let ang = Math.max(20, c0.ang - 6); ang <= Math.min(80, c0.ang + 6); ang += 2) for (let pow = Math.max(30, c0.pow - 4); pow <= Math.min(100, c0.pow + 4); pow += 1) {
+    const sc = tryShot(ang, pow);
+    if (sc < best.sc) best = { ang, pow, sc };
+  }
   // slight human-like error
-  const err = (Math.random() - 0.5) * 40, aerr = Math.round((Math.random() - 0.5) * 14);
+  const err = (Math.random() - 0.5) * (SIM ? 8 : 40), aerr = Math.round((Math.random() - 0.5) * (SIM ? 4 : 14)); // the test bots aim much better
   return { ang: Math.max(5, Math.min(85, best.ang + aerr)), pow: Math.max(10, Math.min(100, best.pow + err)) };
 }
 function botTick(p) {
@@ -1166,7 +1216,8 @@ function botTick(p) {
     const avail = f => SLOT_IDS.filter((x, i) => p.c.sk[x] && p.cds[i] <= 0 && f(p.c.sk[x])), any = l => l[Math.floor(Math.random() * l.length)];
     if (p.frozen > 0) { // frozen / stunned: Purge if it can, else the turn goes by
       const pg = avail(sk => sk.purge); if (pg.length) useSlot(pg[0]);
-      if (p.frozen > 0) { S.state = 'settle'; S.settle = 40; S.bot = null; return; }
+      if (p.frozen > 0) { S.state = 'settle'; S.settle = SIM ? 1 : 40; S.bot = null; return; }
+      if (S.state !== 'aim') return; // Purge ended the turn
     }
     const mend = sk => sk.type === 'self' && (sk.heal || sk.healMatk || sk.shieldPct || sk.shieldMatk);
     if (p.c.ult && p.rage >= POW_MAX && Math.random() < 0.3) useUlt();
@@ -1177,7 +1228,8 @@ function botTick(p) {
     Object.assign(b, botPlan(p), { phase: 'aim' });
   } else if (b.phase === 'aim') {
     const d = b.ang - p.angle;
-    if (Math.abs(d) > 0.6) p.angle += Math.sign(d) * 0.6; else { p.angle = b.ang; b.phase = 'charge'; S.state = 'charging'; S.power = 0; }
+    if (SIM) { p.angle = b.ang; S.power = b.pow; fire(); }
+    else if (Math.abs(d) > 0.6) p.angle += Math.sign(d) * 0.6; else { p.angle = b.ang; b.phase = 'charge'; S.state = 'charging'; S.power = 0; }
   }
 }
 
@@ -1223,7 +1275,7 @@ function update() {
     if (S.timer <= 0) { fx.texts.push({ x: p.x, y: p.y - 50, s: 'หมดเวลา', col: '#fff', t: 60 }); S.state = 'settle'; S.settle = 30; }
   }
   if (S.state === 'aim') {
-    if (p.bot) botTick(p);
+    if (p.bot) { if (!S.bot) S.bot = { phase: 'think', t: SIM ? 0 : 40 }; botTick(p); }
     else if (!(p.frozen > 0)) { // frozen / stunned (waiting to Purge): no walking, no shot
       if (pin.up) p.angle = Math.min(90, p.angle + 0.5);
       if (pin.down) p.angle = Math.max(0, p.angle - 0.5);
@@ -1265,7 +1317,7 @@ function update() {
       else if (r === 2) { q.done = true; if (q.bolt) { boltStrike(q); alive++; } if (q.warp) fx.texts.push({ x: S.players[q.owner].x, y: S.players[q.owner].y - 60, s: 'ลูกแก้วตกนอกสนาม', col: '#d9c8ff', t: 80 }); }
       else alive++;
     }
-    if (!alive) { S.state = 'settle'; S.settle = 50; }
+    if (!alive) { S.state = 'settle'; S.settle = SIM ? 1 : 50; }
   } else if (S.state === 'settle') {
     if (!settling && --S.settle <= 0) {
       const living = S.players.filter(x => x.alive);
@@ -1317,6 +1369,7 @@ function tickFx(p) {
 
 function endMatch(winner) {
   S.state = 'over';
+  if (SIM) { S.winIdx = winner ? winner.i : -1; return; }
   fadeBgm();
   updatePad();
   const res = document.getElementById('result');
@@ -2612,6 +2665,7 @@ function drawResult() {
 // ---------- loop ----------
 let last = performance.now(), acc = 0;
 function loop(now) {
+  if (SIM) { last = now; acc = 0; requestAnimationFrame(loop); return; } // the auto battle test runs the matches itself
   acc += Math.min(100, now - last); last = now;
   while (acc >= 1000 / 60) { if (NET.role === 'guest' && NET.inMatch && S && !S.demo) guestTick(); else update(); netTick(); acc -= 1000 / 60; }
   draw();
@@ -2773,6 +2827,7 @@ document.addEventListener('pointermove', e => {
   if (b && b !== tipFor) showTip(b); else if (!b && tipFor && document.activeElement !== tipFor) hideTip();
 });
 function updatePad() {
+  if (SIM) return;
   const p = S && cur();
   const human = playing() && p && ctl(p);
   for (const id of ['b-up', 'b-down', 'b-fire']) document.getElementById(id).disabled = !human;
@@ -3418,9 +3473,9 @@ function skillForm(f, s) {
   } else if (t === 'self') {
     f.append(section('ฟื้นฟูและโล่'));
     f.append(fieldRow('ฟื้น HP (% ของ HP สูงสุด)', inNum(s, 'heal', 0, 100, 1, 0)));
-    f.append(fieldRow('ฟื้น HP (% MATK)', inNum(s, 'healMatk', 0, 400, 5, 0)));
+    f.append(fieldRow('ฟื้น HP (% MATK)', inNum(s, 'healMatk', 0, 400, 5, 0), 'ฟื้น = MATK × % × 3'));
     f.append(fieldRow('โล่ (% ของ HP สูงสุด)', inNum(s, 'shieldPct', 0, 100, 1, 0)));
-    f.append(fieldRow('โล่ (% MATK)', inNum(s, 'shieldMatk', 0, 400, 5, 0)));
+    f.append(fieldRow('โล่ (% MATK)', inNum(s, 'shieldMatk', 0, 400, 5, 0), 'โล่ = MATK × % × 3'));
     f.append(fieldRow('', inCheck(s, 'consumable', 'นับเป็นไอเทม (พาสซีฟ Overcharge เพิ่มผล)')));
     f.append(fieldRow('', inCheck(s, 'purge', 'ล้างสถานะผิดปกติ 1 อย่าง ใช้ได้แม้ตอนแข็งหรือมึน')));
     f.append(fieldRow('', inCheck(s, 'team', 'ใช้กับทั้งทีม')));
@@ -3514,6 +3569,139 @@ $m('mk-import-file').onchange = e => { if (e.target.files[0]) importData(e.targe
 $m('mk-reset').onclick = () => { if (!confirm('คืนค่าเกมเป็นแบบเดิมทั้งหมด? (ยังไม่บันทึกจนกว่าจะกดบันทึก)')) return; GD = JSON.parse(JSON.stringify(DEFAULT_DATA)); touched(); renderMaker(); };
 $m('maker-btn').onclick = () => { openMaker(); };
 
+// ---------- auto battle test: bot vs bot, many matches, numbers per match ----------
+// Runs whole matches at full speed (no drawing, no waits, no sound) with sharper bots than the easy one you play against:
+// they read the wind right, aim with only a little error and hit at full strength. Sides swap every match.
+const SIM_MAX_TURNS = 200;
+function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, cc: 0, ult: 0, skills: {} }; }
+function simPairs(a, b) {
+  const keys = Object.keys(CLASSES), out = [];
+  if (a && b) out.push([a, b]);
+  else if (a || b) for (const k of keys) { if (k !== (a || b)) out.push([a || b, k]); }
+  else for (let i = 0; i < keys.length; i++) for (let j = i + 1; j < keys.length; j++) out.push([keys[i], keys[j]]);
+  return out;
+}
+// one match; A and B are class keys, swap puts A on the right
+function simMatch(a, b, swap) {
+  picks[0] = swap ? b : a; picks[1] = swap ? a : b;
+  ST = { p: [newStat(), newStat()] };
+  newMatch(false);
+  for (const p of S.players) { p.bot = true; p.name = p.c.name; }
+  const first = S.turn;
+  for (let f = 0; S.state !== 'over' && f < 600000; f++) {
+    update();
+    if (S.turnCount > SIM_MAX_TURNS && S.state !== 'over') { S.state = 'over'; S.winIdx = -1; }
+  }
+  const ia = swap ? 1 : 0, ib = 1 - ia, A = S.players[ia], B = S.players[ib], sa = ST.p[ia], sb = ST.p[ib];
+  const win = S.winIdx === ia ? 'A' : S.winIdx === ib ? 'B' : 'draw';
+  ST = null;
+  return { a, b, swap, first: first === ia ? 'A' : 'B', win, turns: S.turnCount, hpA: Math.max(0, A.hp), hpB: Math.max(0, B.hp), A: sa, B: sb };
+}
+async function runSim(pairs, n, prog) {
+  const keep = { picks: picks.slice(), vsBot };
+  SIM = { stop: false }; vsBot = true;
+  const rows = [], total = pairs.length * n; let done = 0;
+  try {
+    await stageReady(STAGES[stageKey] || Object.values(STAGES)[0]);
+    for (const [a, b] of pairs) {
+      for (let m = 0; m < n && !SIM.stop; m++) {
+        rows.push(simMatch(a, b, m % 2 === 1)); done++;
+        if (done % 2 === 0 || done === total) { prog(done, total, a, b, m + 1); await new Promise(r => setTimeout(r, 0)); }
+      }
+      if (SIM.stop) break;
+    }
+  } finally {
+    SIM = null; ST = null; picks[0] = keep.picks[0]; picks[1] = keep.picks[1]; vsBot = keep.vsBot;
+    for (const k in input) input[k] = false;
+    startDemo(); updatePad();
+  }
+  return rows;
+}
+// averages per matchup and per class
+function simSummary(rows) {
+  const mu = new Map(), cl = {};
+  const avg = (l, f) => l.length ? l.reduce((s, r) => s + f(r), 0) / l.length : 0;
+  for (const r of rows) { const k = r.a + '|' + r.b; if (!mu.has(k)) mu.set(k, []); mu.get(k).push(r); }
+  const top = (l, side) => { const c = {}; for (const r of l) for (const [k, v] of Object.entries(r[side].skills)) c[k] = (c[k] || 0) + v;
+    return Object.entries(c).sort((x, y) => y[1] - x[1]).slice(0, 3).map(([k, v]) => `${(SKILLS[k] || { name: k }).name} ${(v / l.length).toFixed(1)}`).join(', '); };
+  const matchups = [...mu.values()].map(l => ({ a: l[0].a, b: l[0].b, n: l.length,
+    winA: avg(l, r => r.win === 'A'), winB: avg(l, r => r.win === 'B'), draw: avg(l, r => r.win === 'draw'), turns: avg(l, r => r.turns),
+    dmgA: avg(l, r => r.A.dmg), dmgB: avg(l, r => r.B.dmg), takenA: avg(l, r => r.A.taken), takenB: avg(l, r => r.B.taken),
+    healA: avg(l, r => r.A.heal), healB: avg(l, r => r.B.heal), recvA: avg(l, r => r.A.healRecv), recvB: avg(l, r => r.B.healRecv),
+    hpA: avg(l, r => r.hpA), hpB: avg(l, r => r.hpB), ultA: avg(l, r => r.A.ult), ultB: avg(l, r => r.B.ult), ccA: avg(l, r => r.A.cc), ccB: avg(l, r => r.B.cc),
+    topA: top(l, 'A'), topB: top(l, 'B'), firstWin: avg(l, r => r.win !== 'draw' && r.win === r.first) }));
+  for (const r of rows) for (const [side, k] of [['A', r.a], ['B', r.b]]) {
+    const c = cl[k] || (cl[k] = { k, n: 0, win: 0, dmg: 0, taken: 0, heal: 0, turns: 0, cc: 0, ult: 0 }), st = r[side];
+    c.n++; c.win += r.win === side ? 1 : 0; c.dmg += st.dmg; c.taken += st.taken; c.heal += st.heal; c.turns += r.turns; c.cc += st.cc; c.ult += st.ult;
+  }
+  const classes = Object.values(cl).map(c => ({ k: c.k, n: c.n, win: c.win / c.n, dmg: c.dmg / c.n, taken: c.taken / c.n, heal: c.heal / c.n, turns: c.turns / c.n, cc: c.cc / c.n, ult: c.ult / c.n }))
+    .sort((x, y) => y.win - x.win);
+  return { matchups, classes };
+}
+function simCSV(rows) {
+  const head = ['matchup', 'class_A', 'class_B', 'A_on_right', 'first_turn', 'winner', 'turns', 'A_hp_left', 'B_hp_left'];
+  const f = ['dmg', 'taken', 'heal', 'healRecv', 'shield', 'ult', 'cc'];
+  for (const s of ['A', 'B']) for (const k of f) head.push(`${s}_${k}`);
+  head.push('A_skills', 'B_skills');
+  const cn = k => (CLASSES[k] || { name: k }).name, sk = o => Object.entries(o).map(([k, v]) => `${(SKILLS[k] || { name: k }).name}:${v}`).join('; ');
+  const q = v => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v;
+  const lines = [head.join(',')];
+  for (const r of rows) {
+    const row = [`${cn(r.a)} vs ${cn(r.b)}`, cn(r.a), cn(r.b), r.swap ? 1 : 0, r.first, r.win, r.turns, r.hpA, r.hpB];
+    for (const s of ['A', 'B']) for (const k of f) row.push(Math.round(r[s][k]));
+    row.push(sk(r.A.skills), sk(r.B.skills));
+    lines.push(row.map(q).join(','));
+  }
+  return '﻿' + lines.join('\n'); // BOM so Excel reads the Thai names
+}
+async function saveText(name, text, type) {
+  let dl = null; try { dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (_) {}
+  if (dl) { try { await dl.save({ filename: name, data: new Blob([text], { type }) }); return; } catch (_) { return; } }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click();
+}
+{ // the test page, opened from the Admin menu
+  const box = $m('simbox'), selA = $m('sim-a'), selB = $m('sim-b');
+  let rows = [];
+  const fill = sel => { const v = sel.value; sel.innerHTML = '<option value="">ทุกอาชีพ</option>' + Object.entries(CLASSES).map(([k, c]) => `<option value="${esc(k)}">${esc(c.name)}</option>`).join(''); sel.value = v; };
+  const pct = v => Math.round(v * 100) + '%', n0 = v => Math.round(v), n1 = v => v.toFixed(1);
+  const cn = k => esc((CLASSES[k] || { name: k }).name);
+  const hot = v => v >= 0.6 ? ' class="sim-hi"' : v <= 0.4 ? ' class="sim-lo"' : '';
+  const show = () => {
+    if (!rows.length) { $m('sim-out').innerHTML = ''; return; }
+    const sm = simSummary(rows);
+    let h = '<h3 class="mk-sec">สรุปต่ออาชีพ</h3><div class="sim-scroll"><table class="sim-t"><thead><tr><th>อาชีพ</th><th>แมตช์</th><th>ชนะ</th><th>ดาเมจที่ทำ/แมตช์</th><th>ดาเมจที่รับ/แมตช์</th><th>ฮีล/แมตช์</th><th>CC/แมตช์</th><th>Ultimate/แมตช์</th><th>เทิร์นรวมเฉลี่ย</th></tr></thead><tbody>';
+    for (const c of sm.classes) h += `<tr><td>${cn(c.k)}</td><td>${c.n}</td><td${hot(c.win)}>${pct(c.win)}</td><td>${n0(c.dmg)}</td><td>${n0(c.taken)}</td><td>${n0(c.heal)}</td><td>${n1(c.cc)}</td><td>${n1(c.ult)}</td><td>${n1(c.turns)}</td></tr>`;
+    h += '</tbody></table></div><h3 class="mk-sec">ต่อคู่อาชีพ (A ปะทะ B)</h3><div class="sim-scroll"><table class="sim-t"><thead><tr><th>A</th><th>B</th><th>แมตช์</th><th>A ชนะ</th><th>B ชนะ</th><th>เสมอ</th><th>ฝั่งเริ่มก่อนชนะ</th><th>เทิร์นรวม</th>' +
+      '<th>ดาเมจ A</th><th>ดาเมจ B</th><th>ฮีล A</th><th>ฮีล B</th><th>HP เหลือ A</th><th>HP เหลือ B</th><th>Ult A</th><th>Ult B</th><th>CC A</th><th>CC B</th><th>สกิลที่ใช้บ่อย A</th><th>สกิลที่ใช้บ่อย B</th></tr></thead><tbody>';
+    for (const m of sm.matchups) h += `<tr><td>${cn(m.a)}</td><td>${cn(m.b)}</td><td>${m.n}</td><td${hot(m.winA)}>${pct(m.winA)}</td><td${hot(m.winB)}>${pct(m.winB)}</td><td>${pct(m.draw)}</td><td>${pct(m.firstWin)}</td><td>${n1(m.turns)}</td>` +
+      `<td>${n0(m.dmgA)}</td><td>${n0(m.dmgB)}</td><td>${n0(m.healA)}</td><td>${n0(m.healB)}</td><td>${n0(m.hpA)}</td><td>${n0(m.hpB)}</td><td>${n1(m.ultA)}</td><td>${n1(m.ultB)}</td><td>${n1(m.ccA)}</td><td>${n1(m.ccB)}</td><td class="sim-sk">${esc(m.topA)}</td><td class="sim-sk">${esc(m.topB)}</td></tr>`;
+    $m('sim-out').innerHTML = h + '</tbody></table></div>';
+  };
+  const busy = on => { $m('sim-run').disabled = on; $m('sim-stop').disabled = !on; $m('sim-close').disabled = on; $m('sim-csv').disabled = on || !rows.length; selA.disabled = selB.disabled = $m('sim-n').disabled = on; };
+  $m('sim-btn').onclick = () => {
+    if (playing() && !confirm('การทดสอบจะจบแมตช์ที่เล่นอยู่ ต้องการทดสอบต่อไหม')) return;
+    if (S && !S.demo) S.state = 'over';
+    fill(selA); fill(selB); box.hidden = false; document.body.classList.add('mk-open');
+    const pairs = simPairs(selA.value, selB.value);
+    $m('sim-msg').textContent = `เลือกคู่อาชีพแล้วกดเริ่มทดสอบ (ตอนนี้ ${pairs.length} คู่) ด่านที่ใช้: ${(STAGES[stageKey] || {}).name || ''}`;
+  };
+  const note = () => { $m('sim-msg').textContent = `จะทดสอบ ${simPairs(selA.value, selB.value).length} คู่ คู่ละ ${Math.max(10, Math.min(500, +$m('sim-n').value || 100))} แมตช์`; };
+  selA.onchange = selB.onchange = $m('sim-n').oninput = note;
+  $m('sim-close').onclick = () => { box.hidden = true; document.body.classList.remove('mk-open'); };
+  $m('sim-stop').onclick = () => { if (SIM) SIM.stop = true; };
+  $m('sim-csv').onclick = () => saveText('skyclash-bot-test.csv', simCSV(rows), 'text/csv');
+  $m('sim-run').onclick = async () => {
+    const n = Math.max(10, Math.min(500, +$m('sim-n').value || 100)), pairs = simPairs(selA.value, selB.value);
+    rows = []; show(); busy(true); const t0 = performance.now();
+    rows = await runSim(pairs, n, (d, t, a, b, m) => {
+      const left = (performance.now() - t0) / d * (t - d) / 1000;
+      $m('sim-msg').textContent = `กำลังทดสอบ ${(CLASSES[a] || {}).name} ปะทะ ${(CLASSES[b] || {}).name} แมตช์ ${m}/${n} · รวม ${d}/${t} แมตช์ · เหลืออีกประมาณ ${left < 90 ? Math.ceil(left) + ' วินาที' : Math.ceil(left / 60) + ' นาที'}`;
+    });
+    $m('sim-msg').textContent = `เสร็จแล้ว ${rows.length} แมตช์ ใช้เวลา ${Math.round((performance.now() - t0) / 1000)} วินาที`;
+    busy(false); show();
+  };
+}
+
 // the saved game data published next to the page, then any unsaved draft from this browser
 async function loadSavedData() {
   let base = null;
@@ -3528,7 +3716,7 @@ loadSavedData();
 cam.x = 0;
 fitCanvas(); drawStripResize();
 requestAnimationFrame(loop);
-window.__game = { NET, get S() { return S; }, get cam() { return cam; }, input, fire, useSkill, botPlan, useUlt, useSlot, statOf, hitDamage, critChance, get SKILLS() { return SKILLS; } };
+window.__game = { NET, get S() { return S; }, get cam() { return cam; }, input, fire, useSkill, botPlan, useUlt, useSlot, runSim, simPairs, simSummary, simCSV, statOf, hitDamage, critChance, get SKILLS() { return SKILLS; } };
 })();
 </script>
 
