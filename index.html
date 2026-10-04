@@ -262,8 +262,8 @@ fitCanvas();
 addEventListener('resize', fitCanvas);
 const FONT = '"Mitr", "Noto Sans Thai", sans-serif';
 
-// Karoz's mage art: standing pose + 4-frame crawl facing right (r) and left (l)
-const SPRITE_SRC = { mage: {"stand": "assets/a000.png", "r": ["assets/a001.png", "assets/a002.png", "assets/a003.png", "assets/a004.png"], "l": ["assets/a005.png", "assets/a006.png", "assets/a007.png", "assets/a008.png"]} };
+// Karoz's crawl art: frames facing right (r) and left (l); h = drawn height on the field (the swordsman's is sized so his body matches the mage's)
+const SPRITE_SRC = { blade: { "r": ["assets/a114.webp", "assets/a115.webp", "assets/a116.webp", "assets/a117.webp", "assets/a118.webp"], "l": ["assets/a119.webp", "assets/a120.webp", "assets/a121.webp", "assets/a122.webp", "assets/a123.webp"], "h": 47 }, mage: {"stand": "assets/a000.png", "r": ["assets/a001.png", "assets/a002.png", "assets/a003.png", "assets/a004.png"], "l": ["assets/a005.png", "assets/a006.png", "assets/a007.png", "assets/a008.png"]} };
 // Karoz's pixel-art show pictures, one per class: the portrait everywhere, and the field figure for classes
 // without crawl frames. SHOW_FACE is the way each picture faces (its weapon side); SHOW_CX where the body sits.
 const SHOW_SRC = {"blade": "assets/a009.webp", "mage": "assets/a010.webp", "archer": "assets/a011.webp", "cleric": "assets/a012.webp", "thief": "assets/a013.webp", "merchant": "assets/a014.webp", "doram": "assets/a015.webp"};
@@ -273,7 +273,7 @@ const SHOW_CX = { merchant: 0.36 };
 const SPR = {};
 for (const [k, d] of Object.entries(SPRITE_SRC)) {
   const ld = src => { const im = new Image(); im.src = src; return im; };
-  SPR[k] = { stand: ld(d.stand), r: d.r.map(ld), l: d.l.map(ld) };
+  SPR[k] = { stand: d.stand ? ld(d.stand) : null, r: d.r.map(ld), l: d.l.map(ld), h: d.h || 40 };
 }
 // Karoz's mage cast art: frames 1-5 while the fire button is held, frame 6 on release.
 // ax/ay = feet anchor, tx/ty = staff orb, both in the frame's own pixels (art faces right)
@@ -1026,9 +1026,9 @@ function drawAvatar(p, pose) {
     return;
   }
   if (spr) {
-    const im = prone ? (f === 1 ? spr.r : spr.l)[Math.floor(p.walk / 7) % 4] : spr.stand;
-    if (ready(im)) {
-      const h = prone ? 40 : 60, w = im.naturalWidth * h / im.naturalHeight;
+    const set = f === 1 ? spr.r : spr.l, im = prone ? set[Math.floor(p.walk / 7) % set.length] : spr.stand;
+    if (im && ready(im)) {
+      const h = prone ? spr.h : 60, w = im.naturalWidth * h / im.naturalHeight;
       ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0, 0, w * 0.4, 3.5, 0, 0, 7); ctx.fill();
       if (p.iron) { ctx.strokeStyle = 'rgba(255,211,106,.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, -16, 26, 0, 7); ctx.stroke(); }
       ctx.imageSmoothingQuality = 'high';
