@@ -1116,10 +1116,11 @@ function explode(q) {
     let soak = 0;
     if (pl.shield > 0 && dmg > 0) { soak = Math.min(pl.shield, dmg); pl.shield -= soak; dmg -= soak; stAdd(pl.i, 'shieldAbs', soak); }
     // your own shots (on yourself or a teammate) hurt but never kill: they leave at least 1 HP
+    const shown = foe ? dmg : null; // a finishing blow still shows its full damage, not just the HP that was left
     dmg = Math.min(!foe ? Math.max(0, pl.hp - 1) : pl.hp, dmg);
     pl.hp = Math.max(0, pl.hp - dmg);
     if (foe) stAdd(owner.i, 'dmg', dmg); stAdd(pl.i, 'taken', dmg);
-    if (pct > 0 || dmg > 0) fx.texts.push({ x: pl.x, y: pl.y - 50, s: (crit ? 'คริติคอล! -' : '-') + dmg + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff5a4a', t: 70 });
+    if (pct > 0 || dmg > 0) fx.texts.push({ x: pl.x, y: pl.y - 50, s: (crit ? 'คริติคอล! -' : '-') + (shown != null ? shown : dmg) + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff5a4a', t: 70 });
     if (foe && (dmg > 0 || soak > 0)) unhide(pl, S.turn === pl.i); // getting hit breaks Hiding
     const sh = S.shot || (S.shot = { hit: new Set(), hurt: new Set() });
     pl.lossAcc += dmg / pl.maxHp * 10; addRage(pl, 4 * Math.floor(pl.lossAcc)); pl.lossAcc %= 1;
@@ -1386,9 +1387,9 @@ function golemDie(g, by) {
 function hurtGolem(g, o, dmg, crit) {
   dmg = Math.round(dmg);
   let soak = 0; if (g.shield > 0 && dmg > 0) { soak = Math.min(g.shield, dmg); g.shield -= soak; dmg -= soak; }
-  dmg = Math.min(g.hp, dmg); g.hp -= dmg; g.hitT = 10;
+  const shown = dmg; dmg = Math.min(g.hp, dmg); g.hp -= dmg; g.hitT = 10;
   stAdd(g.owner, 'gTaken', dmg + soak);
-  fx.texts.push({ x: g.x, y: g.y - 60, s: (crit ? 'คริติคอล! -' : '-') + dmg + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff8a6a', t: 70 });
+  fx.texts.push({ x: g.x, y: g.y - 60, s: (crit ? 'คริติคอล! -' : '-') + shown + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff8a6a', t: 70 });
   if (g.hp <= 0) golemDie(g, o);
 }
 // the Golem hits a player (melee or spirit); returns the damage dealt
@@ -1399,9 +1400,9 @@ function golemHit(g, pl, dmg, crit, tag) {
   if (ADMIN.god && !NET.on && !pl.bot) { fx.texts.push({ x: pl.x, y: pl.y - 50, s: 'อมตะ', col: '#9fe0ff', t: 60 }); return 0; }
   dmg = Math.round(dmg * botSoft(g));
   let soak = 0; if (pl.shield > 0 && dmg > 0) { soak = Math.min(pl.shield, dmg); pl.shield -= soak; dmg -= soak; stAdd(pl.i, 'shieldAbs', soak); }
-  dmg = Math.min(pl.hp, dmg); pl.hp -= dmg;
+  const shown = dmg; dmg = Math.min(pl.hp, dmg); pl.hp -= dmg;
   stAdd(g.owner, 'dmg', dmg); stAdd(g.owner, 'gDmg', dmg); stAdd(g.owner, tag, dmg); stAdd(pl.i, 'taken', dmg);
-  fx.texts.push({ x: pl.x, y: pl.y - 50, s: (crit ? 'คริติคอล! -' : '-') + dmg + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff5a4a', t: 70 });
+  fx.texts.push({ x: pl.x, y: pl.y - 50, s: (crit ? 'คริติคอล! -' : '-') + shown + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff5a4a', t: 70 });
   if (dmg > 0 || soak > 0) unhide(pl, false);
   pl.lossAcc += dmg / pl.maxHp * 10; addRage(pl, 4 * Math.floor(pl.lossAcc)); pl.lossAcc %= 1;
   if (pl.hp <= 0) { pl.alive = false; stAdd(g.owner, 'gKills', 1); }
