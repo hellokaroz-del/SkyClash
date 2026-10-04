@@ -247,7 +247,7 @@ button.mk-prev { appearance: none; font: inherit; color: var(--fg); background: 
 (() => {
 const VW = 960, VH = 540, WW = 1800, WH = 760;
 const SEG = VW / 10; // 1 screen = 10 distance slots, as players count them
-const G = 0.18, MAXV = 20, WINDK = 0.008, TURN_TIME = 15, CHARGE_SPD = 0.6; // power per frame: 0 to 100 in ~2.8 s
+const G = 0.18, MAXV = 20, WINDK = 0.008, TURN_TIME = 15, CHARGE_SPD = 0.48; // power per frame: 0 to 100 in ~3.5 s (20% slower than 0.6)
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
 const DPR = Math.min(2, window.devicePixelRatio || 1);
