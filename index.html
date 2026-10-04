@@ -583,7 +583,10 @@ let ruler = false;
 const fx = { booms: [], parts: [], texts: [], warps: [], bolts: [] };
 const NET = { on: false, mode: false, role: null, me: 0, rin: {}, acts: [], ev: [] };
 
+// power marks the player pins on the bar (display only, kept on this screen); PBAR is the bar's track for clicks
+const MARKS = {}; let PBAR = null;
 function newMatch(demo) {
+  for (const k in MARKS) delete MARKS[k];
   STAGE = STAGES[stageKey] || Object.values(STAGES)[0];
   loadStage();
   const mk = (i, k, x, bot) => {
@@ -1497,11 +1500,17 @@ function drawHUD() {
   const BS = 0.36, TC = VH - 22, X0 = 100, LW = 360 * BS, MW = 298, BTOP = TC - 205 * BS, BH = 370 * BS;
   const tx0 = X0 + 273 * BS, tx1 = X0 + LW + MW + 95 * BS, ty0 = TC - 28 * BS, ty1 = TC + 29 * BS, tw = tx1 - tx0, th = ty1 - ty0;
   const pw = live ? Math.min(100, S.power) / 100 : 0;
+  PBAR = { x0: tx0, x1: tx1, y0: ty0, y1: ty1 };
   if (ready(HUD.barL) && ready(HUD.barM) && ready(HUD.barR)) {
     ctx.drawImage(HUD.barL, X0, BTOP, LW, BH);
     ctx.drawImage(HUD.barM, X0 + LW, BTOP, MW, BH);
     ctx.drawImage(HUD.barR, X0 + LW + MW, BTOP, 260 * BS, BH);
   } else { panel(tx0 - 6, ty0 - 6, tw + 12, th + 12, 8); }
+  if (p.lastPower != null) { // the last shot's power stays in the track as a faint red band
+    const lw = tw * Math.min(100, p.lastPower) / 100;
+    ctx.fillStyle = 'rgba(230,50,60,.38)'; ctx.fillRect(tx0, ty0, lw, th);
+    ctx.fillStyle = 'rgba(255,150,150,.22)'; ctx.fillRect(tx0, ty0 + 1, lw, th * 0.3);
+  }
   if (pw > 0) {
     const g = ctx.createLinearGradient(tx0, 0, tx1, 0);
     g.addColorStop(0, '#7fe9ff'); g.addColorStop(0.55, '#3a8bff'); g.addColorStop(1, '#b06bff');
@@ -1535,11 +1544,16 @@ function drawHUD() {
     }
     ctx.textAlign = 'center';
   }
-  if (p.lastPower != null) {
-    const tx = tx0 + tw * p.lastPower / 100;
-    ctx.fillStyle = '#ffd36a'; ctx.strokeStyle = 'rgba(8,14,40,.9)'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(tx - 5, ty1 + 8); ctx.lineTo(tx + 5, ty1 + 8); ctx.lineTo(tx, ty1 + 1); ctx.closePath(); ctx.fill(); ctx.stroke();
-  }
+  // pointer that hangs from the top edge down through the track
+  const pin = (v, col, dash) => {
+    const tx = tx0 + tw * Math.min(100, v) / 100;
+    ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 2; if (dash) ctx.setLineDash([3, 2]);
+    ctx.beginPath(); ctx.moveTo(tx, ty0 + 2); ctx.lineTo(tx, ty1); ctx.stroke(); ctx.restore();
+    ctx.fillStyle = col; ctx.strokeStyle = 'rgba(8,14,40,.9)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(tx - 6, ty0 - 7); ctx.lineTo(tx + 6, ty0 - 7); ctx.lineTo(tx, ty0 + 3); ctx.closePath(); ctx.fill(); ctx.stroke();
+  };
+  if (p.lastPower != null) pin(p.lastPower, '#ff3b4a', false);
+  if (MARKS[p.i] != null) pin(MARKS[p.i], '#ffd36a', true);
 
   // angle dial: Karoz's compass frame, needle and number drawn on top
   // dial art's centre star sits at (336, 331) in the cropped image; ring inner radius ~215
@@ -2335,6 +2349,10 @@ function mmLook(e) {
 }
 cv.addEventListener('pointerdown', e => {
   if (playing()) { const r = cv.getBoundingClientRect(), ux = (e.clientX - r.left) / r.width * VW, uy = (e.clientY - r.top) / r.height * VH;
+    if (PBAR && ux >= PBAR.x0 - 3 && ux <= PBAR.x1 + 3 && uy >= PBAR.y0 - 9 && uy <= PBAR.y1 + 4) {
+      const o = ultOwner(), v = Math.round(Math.max(0, Math.min(100, (ux - PBAR.x0) / (PBAR.x1 - PBAR.x0) * 100)));
+      if (o && !o.bot) { if (MARKS[o.i] != null && Math.abs(MARKS[o.i] - v) <= 1) delete MARKS[o.i]; else MARKS[o.i] = v; }
+      return; }
     if (inRect(ULT_RECT, ux, uy)) { if (ultUsable(cur())) useUlt(); return; }
     if (inRect(WARP_RECT, ux, uy)) { if (slotUsable(cur(), warpDef(cur()))) useWarp(); return; }
     if (inRect(PASS_RECT, ux, uy) && passUsable()) { passTurn(); return; } }
