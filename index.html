@@ -446,7 +446,7 @@ function buildSetup() {
       b.className = 'cls'; b.id = `pick-${i}-${k}`;
       const th = showURL(k) ? `<img class="thumb" alt="" src="${showURL(k)}">` : `<span class="thumb" style="background:${c.color};border-radius:50%;width:40px;height:40px;align-self:center"></span>`;
       b.innerHTML = `${th}<b><span class="sw" style="background:${c.color}"></span>${esc(c.name)}</b><small>${esc(c.desc)}</small>` +
-        (c.skill ? `<small>ทักษะ: ${esc(c.skill.name)} (${esc(c.sdesc)})</small>` : '') + (c.skill2 ? `<small>ทักษะ W: ${esc(c.skill2.name)} (${esc(c.sdesc2)})</small>` : '');
+        (c.skill ? `<small>ทักษะ 1: ${esc(c.skill.name)} (${esc(c.sdesc)})</small>` : '') + (c.skill2 ? `<small>ทักษะ 2: ${esc(c.skill2.name)} (${esc(c.sdesc2)})</small>` : '');
       b.setAttribute('aria-pressed', String(picks[i] === k));
       b.onclick = () => { if (NET.on && i !== NET.me) return; picks[i] = k; box.querySelectorAll('.cls').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
       box.appendChild(b);
@@ -1553,12 +1553,12 @@ function warpDef(p) {
 }
 function slotDefs(p) {
   const sl = [];
-  if (p.c.skill) sl.push({ key: 'X', name: p.c.skill.name, icon: p.c.icon, cd: p.skillCd, max: p.c.skill.cd, on: p.armed === 'x', use: useSkill, desc: p.c.tip || p.c.sdesc });
-  if (p.c.skill2) sl.push({ key: 'C', name: p.c.skill2.name, icon: p.c.icon2, cd: p.skill2Cd, max: p.c.skill2.cd, on: p.armed === 'c', use: useSkill2, desc: p.c.tip2 || p.c.sdesc2 });
+  if (p.c.skill) sl.push({ key: '1', name: p.c.skill.name, icon: p.c.icon, cd: p.skillCd, max: p.c.skill.cd, on: p.armed === 'x', use: useSkill, desc: p.c.tip || p.c.sdesc });
+  if (p.c.skill2) sl.push({ key: '2', name: p.c.skill2.name, icon: p.c.icon2, cd: p.skill2Cd, max: p.c.skill2.cd, on: p.armed === 'c', use: useSkill2, desc: p.c.tip2 || p.c.sdesc2 });
   while (sl.length < SLOTS) sl.push({ key: SLOT_KEYS[sl.length], empty: true });
   return sl;
 }
-const SLOTS = 6, SLOT_KEYS = ['X', 'C', 'V', 'B', 'N', 'M'];
+const SLOTS = 6, SLOT_KEYS = ['1', '2', '3', '4', '5', '6'];
 const WARP_RECT = { x: 209, y: 432, w: 48, h: 48 };
 const PASSIVE_RECTS = [{ x: 748, y: 384, w: 40, h: 40 }, { x: 796, y: 384, w: 40, h: 40 }];
 function slotRect(i) {
@@ -2215,6 +2215,7 @@ function keyOf(e) {
   if (c.startsWith('Key')) return c.slice(3).toLowerCase();
   if (c === 'Space') return ' ';
   if (c.startsWith('Arrow')) return c;
+  if (/^(Digit|Numpad)[0-9]$/.test(c)) return c.slice(-1); // number row and numpad both give the digit
   return e.key && e.key.length === 1 ? e.key.toLowerCase() : e.key;
 }
 window.addEventListener('keydown', e => {
@@ -2225,8 +2226,7 @@ window.addEventListener('keydown', e => {
   if (KEY[k]) { input[KEY[k]] = true; e.preventDefault(); }
   if (e.repeat) return;
   if (k === 'f') useWarp();
-  if (k === 'x' || k === 'q') useSkill();
-  if (k === 'c' || k === 'w') useSkill2();
+  if (/^[1-6]$/.test(k)) { const d = slotDefs(cur())[+k - 1]; if (d && !d.empty) d.use(); } // skill row: keys 1-6
   if (k === 'b') useUlt();
   if (k === 'p') passTurn();
   if (k === 'r') toggleRuler();
@@ -2362,14 +2362,14 @@ function updatePad() {
   for (const id of ['b-left', 'b-right']) document.getElementById(id).disabled = !(human || (playing() && (vsBot || NET.on)));
   const sk = document.getElementById('b-skill');
   sk.hidden = !(p && p.c.skill);
-  if (p && p.c.skill) setSlot(sk, ICONS[p.c.icon], p.c.skill.name, 'X', p.skillCd, p.c.tip || p.c.sdesc, p.c.skill.cd, p.armed === 'x');
+  if (p && p.c.skill) setSlot(sk, ICONS[p.c.icon], p.c.skill.name, '1', p.skillCd, p.c.tip || p.c.sdesc, p.c.skill.cd, p.armed === 'x');
   sk.disabled = !human || !p || !p.c.skill || p.skillCd > 0 || !!p.armed || S.state !== 'aim';
   const wb = document.getElementById('b-warp');
   if (p) setSlot(wb, ICONS.warp, 'สกิลบิน', 'F', p.warpCd, 'ปาลูกแก้วที่หมุนกลางอากาศ แล้ววาร์ปไปยังจุดที่ลูกแก้วตก ไม่ทำดาเมจ และใช้แทนการยิงของตานั้น', WARP_CD, p.armed === 'z');
   wb.disabled = !human || !p || p.warpCd > 0 || !!p.armed || S.state !== 'aim';
   const sk2 = document.getElementById('b-skill2');
   sk2.hidden = !(p && p.c.skill2);
-  if (p && p.c.skill2) setSlot(sk2, ICONS[p.c.icon2], p.c.skill2.name, 'C', p.skill2Cd, p.c.tip2 || p.c.sdesc2, p.c.skill2.cd, p.armed === 'c');
+  if (p && p.c.skill2) setSlot(sk2, ICONS[p.c.icon2], p.c.skill2.name, '2', p.skill2Cd, p.c.tip2 || p.c.sdesc2, p.c.skill2.cd, p.armed === 'c');
   sk2.disabled = !human || !p || !p.c.skill2 || p.skill2Cd > 0 || !!p.armed || S.state !== 'aim';
 }
 
@@ -2934,8 +2934,8 @@ function classForm(f, c) {
   f.append(fieldRow('ความแรงยิง', inNum(c, 'spd', 0.6, 1.5, 0.01, 1), 'มากกว่า 1 = ยิงได้ไกลขึ้น'));
   f.append(fieldRow('กระสุนปกติ', inAsset(c, 'shot', 'image', PROJ_OPTS, { maxW: 96, maxH: 96 }), 'รูปที่อัปโหลดควรหันหัวไปทางขวา'));
   f.append(section('สกิล'));
-  f.append(fieldRow('ปุ่ม X', inSelect(c, 'x', skillOpts('ไม่มี'))));
-  f.append(fieldRow('ปุ่ม C', inSelect(c, 'c', skillOpts('ไม่มี'))));
+  f.append(fieldRow('ช่องสกิล 1', inSelect(c, 'x', skillOpts('ไม่มี'))));
+  f.append(fieldRow('ช่องสกิล 2', inSelect(c, 'c', skillOpts('ไม่มี'))));
   f.append(fieldRow('ท่าไม้ตาย (B)', inSelect(c, 'b', skillOpts('ไม่มี')), 'ใช้ได้เมื่อเกจ POW เต็ม ไม่ใช้ Energy'));
 }
 function skillForm(f, s) {
