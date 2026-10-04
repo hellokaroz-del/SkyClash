@@ -1521,11 +1521,17 @@ function drawHUD() {
       ctx.beginPath(); ctx.moveTo(x, ty1); ctx.lineTo(x, ty1 - th * (major ? 0.62 : mid ? 0.4 : 0.22)); ctx.stroke();
     }
     ctx.font = `700 9px ${FONT}`; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(8,14,40,.9)'; ctx.fillStyle = '#f2f6ff';
-    for (let v = 0; v <= 100; v += 10) {
-      const x = tx0 + tw * v / 100, end = v === 100;
-      ctx.textAlign = end ? 'right' : 'left';
-      const lx = end ? x - 2 : x + 2;
+    ctx.textAlign = 'left';
+    for (let v = 0; v < 100; v += 10) {
+      const lx = tx0 + tw * v / 100 + 2;
       ctx.strokeText(v, lx, ty0 + 9); ctx.fillText(v, lx, ty0 + 9);
+    }
+    // 100 sits outside the right end of the bar, on a small badge over the end ornament
+    {
+      const cx = tx1 + 31, cy = ty0 + th / 2;
+      ctx.fillStyle = 'rgba(10,18,52,.92)'; ctx.strokeStyle = 'rgba(240,200,110,.95)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(cx - 15, cy - 8, 30, 16, 8); ctx.fill(); ctx.stroke();
+      ctx.font = `700 10px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = '#f2f6ff'; ctx.fillText(100, cx, cy + 3.5);
     }
     ctx.textAlign = 'center';
   }
