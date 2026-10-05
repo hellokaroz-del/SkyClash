@@ -29,8 +29,10 @@ button, input { font: inherit; color: inherit; }
 
 /* character creation (new players) */
 #create { position: absolute; inset: 0; z-index: 30; overflow: hidden; color: #fff;
-  background: radial-gradient(ellipse at 50% 55%, rgba(60, 40, 110, .35), rgba(8, 6, 16, .92) 70%), url("img/login-bg.webp") center / cover; }
-#create::before { content: ""; position: absolute; inset: 0; backdrop-filter: blur(6px) brightness(.55); }
+  /* dungeon hall: 1800x874 art scaled to the 1080 height, shifted so its round platform sits at x 960 (platform centre is art px 920,675) */
+  background: #0b0812 url("img/create-bg.webp?v=1") -177px 0 / auto 1080px no-repeat; }
+#create::before { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(6, 4, 12, .72), rgba(6, 4, 12, .1) 32%, rgba(6, 4, 12, .1) 68%, rgba(6, 4, 12, .72)), linear-gradient(rgba(6, 4, 12, .55), transparent 22%); }
 #create > * { position: absolute; }
 #create h1 { left: 0; right: 0; top: 34px; margin: 0; text-align: center; font-size: 60px; font-weight: 800; letter-spacing: 1px;
   background: linear-gradient(#fff6cf, #f5c64a 55%, #b9861b); -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -50,14 +52,13 @@ button, input { font: inherit; color: inherit; }
 .cr-job b { display: block; font-size: 28px; line-height: 1.1; color: #ffe7a0; }
 .cr-job small { display: block; font-size: 20px; color: #d8cfe6; }
 .cr-stage { left: 560px; top: 150px; width: 800px; height: 760px; }
-.cr-stage .ring { position: absolute; left: 150px; bottom: 40px; width: 500px; height: 120px; border-radius: 50%;
+.cr-stage .ring { position: absolute; left: 210px; bottom: 25px; width: 380px; height: 90px; border-radius: 50%;
   background: radial-gradient(ellipse, rgba(245, 198, 74, .55), rgba(245, 198, 74, .12) 55%, transparent 70%); animation: crRing 3s ease-in-out infinite; }
-.cr-stage img { position: absolute; left: 50%; bottom: 90px; height: 600px; transform: translateX(-50%); filter: drop-shadow(0 12px 18px rgba(0, 0, 0, .6));
-  animation: crFloat 3s ease-in-out infinite; }
-.cr-stage img.in { animation: crIn .35s ease-out, crFloat 3s ease-in-out .35s infinite; }
-@keyframes crFloat { 50% { transform: translateX(-50%) translateY(-12px); } }
+/* feet stand on the platform centre (world y 840) */
+.cr-stage img { position: absolute; left: 50%; bottom: 70px; height: 600px; transform: translateX(var(--fx, -50%)); filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .7)); }
+.cr-stage img.in { animation: crIn .35s ease-out; }
 @keyframes crRing { 50% { opacity: .65; transform: scale(.94); } }
-@keyframes crIn { from { opacity: 0; transform: translateX(-50%) scale(.9); } }
+@keyframes crIn { from { opacity: 0; transform: translateX(var(--fx, -50%)) scale(.9); } }
 .cr-info { left: 1380px; top: 180px; width: 470px; padding: 26px 30px; border-radius: 20px; background: rgba(20, 16, 30, .85); border: 2px solid rgba(245, 198, 74, .5); }
 .cr-info h2 { margin: 0; font-size: 44px; color: #f5c64a; line-height: 1.1; }
 .cr-info h2 small { font-size: 24px; color: #d8cfe6; font-weight: 600; margin-left: 8px; }
@@ -612,21 +613,21 @@ $('nameform').onsubmit = async e => {
 renderProf();
 
 // ---------- character creation: new players pick a job and a name ----------
-// diff = how hard the job is to play (1-5 stars); pros = its strong points
+// diff = how hard the job is to play (1-5 stars); pros = its strong points; foot = where the feet are across the picture (0-1), put on the platform centre
 const JOBS = [
-  { k: 'blade', th: 'นักดาบ', name: 'Swordman', diff: 1, desc: 'นักสู้แนวหน้า ยืนรับดาเมจแทนทีม',
+  { k: 'blade', foot: 0.69, th: 'นักดาบ', name: 'Swordman', diff: 1, desc: 'นักสู้แนวหน้า ยืนรับดาเมจแทนทีม',
     pros: ['HP และ DEF สูงที่สุด ตายยาก', 'ตีกายภาพแรงสม่ำเสมอ', 'เล่นง่าย เหมาะกับมือใหม่'] },
-  { k: 'mage', th: 'นักเวท', name: 'Mage', diff: 3, desc: 'จอมเวทพลังทำลายล้างสูง',
+  { k: 'mage', foot: 0.555, th: 'นักเวท', name: 'Mage', diff: 3, desc: 'จอมเวทพลังทำลายล้างสูง',
     pros: ['MATK แรงที่สุดในเกม', 'แช่แข็งศัตรูให้เสียเทิร์น', 'ระเบิดวงกว้าง โดนหลายคนพร้อมกัน'] },
-  { k: 'archer', th: 'นักธนู', name: 'Archer', diff: 2, desc: 'มือแม่นระยะไกล',
+  { k: 'archer', foot: 0.42, th: 'นักธนู', name: 'Archer', diff: 2, desc: 'มือแม่นระยะไกล',
     pros: ['ยิงธรรมดาแรงที่สุด', 'ลูกธนูเร็ว เล็งง่าย ยิงได้ไกล', 'กดดันศัตรูได้ทุกเทิร์น'] },
-  { k: 'cleric', th: 'นักบวช', name: 'Priest', diff: 3, desc: 'ผู้ช่วยสายศักดิ์สิทธิ์',
+  { k: 'cleric', foot: 0.545, th: 'นักบวช', name: 'Priest', diff: 3, desc: 'ผู้ช่วยสายศักดิ์สิทธิ์',
     pros: ['ฮีลเก่งที่สุด อยู่รอดได้นาน', 'สร้างโล่และบัฟให้ตัวเอง', 'ล้างสถานะผิดปกติได้'] },
-  { k: 'thief', th: 'นักฆ่า', name: 'Assassin', diff: 4, desc: 'นักล่าเงียบ ปิดเกมไว',
+  { k: 'thief', foot: 0.46, th: 'นักฆ่า', name: 'Assassin', diff: 4, desc: 'นักล่าเงียบ ปิดเกมไว',
     pros: ['ดาเมจระเบิดและคริติคอลสูง', 'ล่องหน ศัตรูมองไม่เห็นตัว', 'พิษและเลือดไหลกัดกินทีละเทิร์น'] },
-  { k: 'merchant', th: 'พ่อค้า', name: 'Merchant', diff: 2, desc: 'สายถึก ของครบ ยืนระยะเก่ง',
+  { k: 'merchant', foot: 0.43, th: 'พ่อค้า', name: 'Merchant', diff: 2, desc: 'สายถึก ของครบ ยืนระยะเก่ง',
     pros: ['ถึกพอตัว HP และ DEF ดี', 'มียาและโล่ช่วยให้อยู่รอด', 'บัฟตัวเองให้ตีแรงขึ้น'] },
-  { k: 'doram', admin: true, th: 'โดรัม', name: 'Doram', diff: 5, desc: 'นักเวทแมวสายคอมโบธาตุ',
+  { k: 'doram', admin: true, foot: 0.52, th: 'โดรัม', name: 'Doram', diff: 5, desc: 'นักเวทแมวสายคอมโบธาตุ',
     pros: ['ติดมาร์ค 2 ธาตุแล้วจุดปฏิกิริยา', 'อัญเชิญโกเลมสี่ธาตุ', 'คอมโบแรงมากเมื่อวางแผนดี'] },
 ];
 const JOB = Object.fromEntries(JOBS.map(j => [j.k, j]));
@@ -642,7 +643,7 @@ for (const j of JOBS) {
 function pickJob(k) {
   const j = JOB[k], img = $('cr-img'), changed = crJob !== k; crJob = k;
   for (const b of $('cr-list').children) b.setAttribute('aria-checked', String(b.dataset.k === k));
-  if (changed) { img.src = `img/cls-${k}.webp?v=${ART_V}`; img.classList.remove('in'); void img.offsetWidth; img.classList.add('in'); }
+  if (changed) { img.style.setProperty('--fx', `-${j.foot * 100}%`); img.src = `img/cls-${k}.webp?v=${ART_V}`; img.classList.remove('in'); void img.offsetWidth; img.classList.add('in'); }
   $('cr-job').innerHTML = ''; $('cr-job').append(j.th); const sm = document.createElement('small'); sm.textContent = j.name; $('cr-job').appendChild(sm);
   $('cr-desc').textContent = j.desc;
   $('cr-diff').innerHTML = '<span>ความยาก</span>' + [1, 2, 3, 4, 5].map(n => `<i class="${n <= j.diff ? 'on' : ''}">★</i>`).join('');
