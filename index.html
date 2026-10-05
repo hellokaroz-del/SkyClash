@@ -180,6 +180,11 @@ button.mk-prev { appearance: none; font: inherit; color: var(--fg); background: 
       <button class="seg" id="net-leave" hidden>ออกจากห้อง</button>
       <p class="muted" id="net-msg" role="status"></p>
     </div>
+    <div class="modes" role="group" aria-label="ความยากของบอท" id="botlv">
+      <button class="seg" data-lv="easy">บอทง่าย</button>
+      <button class="seg" data-lv="normal">บอทปกติ</button>
+      <button class="seg" data-lv="hard">บอทยาก</button>
+    </div>
     <div class="modes" role="group" aria-label="ด่าน" id="stages"></div>
     <div class="picks">
       <div class="pick"><h2 id="p1-label">ผู้เล่น 1 เลือกอาชีพ</h2><div class="cards" id="cards-0"></div></div>
@@ -360,7 +365,10 @@ const ADMIN = { god: false, pow: false, nocd: false, hitbox: false };
 // auto battle test: SIM is set while bot-vs-bot matches run at full speed; ST holds that match's numbers per player
 let SIM = null, ST = null;
 function stAdd(i, k, v) { if (ST && ST.p[i]) ST.p[i][k] += v; }
-const botSoft = o => o.bot && !SIM ? 0.7 : 1; // the easy bot you play against hits softer
+const botSoft = o => 1; // bots hit as hard as players; bot difficulty is aim accuracy only (BOT_ACC)
+// bot difficulty (Karoz): the share of the bot's shots that are aimed to hit
+const BOT_ACC = { easy: 0.40, normal: 0.60, hard: 0.83 };
+let botLv = 'normal'; try { const v = localStorage.getItem('sky-botlv'); if (BOT_ACC[v]) botLv = v; } catch (_) {}
 // a character's hit box: the crawling body, centred on its feet point (x) and standing on the ground (y)
 const HB = { w: 56, h: 36 };
 const hitBox = pl => ({ l: pl.x - HB.w / 2, r: pl.x + HB.w / 2, t: pl.y - HB.h, b: pl.y });
@@ -833,8 +841,12 @@ function setMode(m) {
   modeBot.setAttribute('aria-pressed', String(mode === 'bot')); modePvp.setAttribute('aria-pressed', String(mode === 'pvp')); modeNet.setAttribute('aria-pressed', String(mode === 'net'));
   document.getElementById('p2-label').textContent = vsBot ? 'บอท เลือกอาชีพ' : 'ผู้เล่น 2 เลือกอาชีพ';
   if (mode !== 'net') netMsg('');
+  document.getElementById('botlv').hidden = !vsBot;
   netUI();
 }
+function showBotLv() { for (const b of document.querySelectorAll('#botlv .seg')) b.setAttribute('aria-pressed', String(b.dataset.lv === botLv)); }
+for (const b of document.querySelectorAll('#botlv .seg')) b.onclick = () => { botLv = b.dataset.lv; try { localStorage.setItem('sky-botlv', botLv); } catch (_) {} showBotLv(); };
+showBotLv();
 modeBot.onclick = () => setMode('bot'); modePvp.onclick = () => setMode('pvp'); modeNet.onclick = () => setMode('net');
 
 // ---------- rng ----------
@@ -1198,20 +1210,42 @@ function boltStrike(q) {
   S.projs.push({ x: tx, y: ty, owner: q.owner, delay: 16, strike: true, scale: 1, pct: q.pct, base: q.base, up: q.up, skill: q.skill, trail: [], done: false });
 }
 
+// one walking step (players and bots); returns false when it could not move
+function walkStep(p, dir) {
+  if (!(p.energy > 0) || p.bindNow) return false; // bound: can turn but not walk
+  const nx = p.x + dir * 1.3; p.walk++;
+  let ny = p.y, k = 0;
+  while (solid(nx, ny - 1) && k < 6) { ny--; k++; }
+  if (solid(nx, ny - 1) || nx < 0 || nx > WW - 1) return false;
+  p.y = ny; { const c = Math.min(p.energy, Math.abs(nx - p.x) * WALK_COST); p.energy -= c; stAdd(p.i, 'enMove', c); } p.x = nx;
+  return true;
+}
+
 // ---------- bot ----------
+// where a bot thinks a hidden enemy is: it can't see them, so it guesses around the spot they vanished at
+// (one guess per turn, 1 to 3.5 slots off, either side)
+function botSeeX(e) {
+  if (!(e.hidden > 0)) return e.x;
+  if (e._gT !== S.turnCount) { e._gT = S.turnCount; e._gX = Math.max(20, Math.min(WW - 20, e.seenX + (Math.random() < 0.5 ? -1 : 1) * SLOT_PX * (1 + Math.random() * 2.5))); }
+  return e._gX;
+}
+const botSeeY = e => e.hidden > 0 ? surfaceY(botSeeX(e)) : e.y;
 function botPlan(p) {
-  const e = other(p);
-  p.face = e.x > p.x ? 1 : -1;
+  const e = other(p), ex = botSeeX(e);
+  p.face = ex > p.x ? 1 : -1;
   let best = null;
-  // easy bot: often misjudges the wind (reads it at half strength or ignores it)
-  const wind = SIM ? S.wind : S.wind * [0, 0, 0.5, 1.6][Math.floor(Math.random() * 4)];
+  // difficulty is accuracy: this shot is aimed at the enemy (BOT_ACC of the time) or at a spot 1.5-3.5 slots beside them.
+  // A hidden enemy can't be seen, so the bot aims at its guess. The test bots (SIM) always aim to hit.
+  const aimHit = SIM || e.hidden > 0 || Math.random() < BOT_ACC[botLv];
+  const tx = aimHit ? ex : ex + (Math.random() < 0.5 ? -1 : 1) * SLOT_PX * (1.5 + Math.random() * 2), ty = (aimHit ? botSeeY(e) : surfaceY(tx)) - 14;
+  const wind = S.wind;
   const tryShot = (ang, pow) => {
     const q = makeProj(p, ang, pow);
     for (let n = 0; n < 900; n++) {
       const r = stepProj(q, S.players, wind);
       if (r === 2) return 1e9;
       if (r === 1) {
-        let sc = Math.hypot(q.x - (e.hidden > 0 ? e.seenX : e.x), q.y - (e.y - 14)); // a hidden target: aim where it was last seen
+        let sc = Math.hypot(q.x - tx, q.y - ty);
         if (Math.hypot(q.x - p.x, q.y - (p.y - 14)) < p.c.r + 20) sc += 2000;
         return sc;
       }
@@ -1228,8 +1262,7 @@ function botPlan(p) {
     const sc = tryShot(ang, pow);
     if (sc < best.sc) best = { ang, pow, sc };
   }
-  // slight human-like error
-  const err = (Math.random() - 0.5) * (SIM ? 8 : 40), aerr = Math.round((Math.random() - 0.5) * (SIM ? 4 : 14)); // the test bots aim much better
+  const err = SIM ? (Math.random() - 0.5) * 8 : 0, aerr = SIM ? Math.round((Math.random() - 0.5) * 4) : 0; // the test bots keep their old small error
   return { ang: Math.max(5, Math.min(85, best.ang + aerr)), pow: Math.max(10, Math.min(100, best.pow + err)) };
 }
 // test bots (auto battle test): pick skills by what they do instead of at random.
@@ -1294,6 +1327,25 @@ function botSmart(p) {
   if (plan && S.state === 'aim' && !p.armed) useSlot(plan);
   if (window.__botLog) window.__botLog(p, plan, marks); // test hook
 }
+// where the bot walks before it aims (null = stay): back off when too close, close in when far,
+// slip away from where it vanished when hiding, step out of an enemy fire wall, sometimes shuffle a little.
+// It keeps the Energy an armed skill still needs, and never walks more than about 2 slots.
+function botWalkTarget(p) {
+  const e = other(p), ex = botSeeX(e), dist = Math.abs(ex - p.x), away = p.x < ex ? -1 : 1;
+  const maxPx = Math.min(SLOT_PX * 2, p.energy / WALK_COST - 5);
+  if (maxPx < 15) return null;
+  let dir = 0, len = 0;
+  const inZone = (S.zones || []).some(z => z.owner !== p.i && Math.abs(z.x - p.x) <= z.r + 20);
+  if (inZone) { const z = S.zones.find(z => z.owner !== p.i && Math.abs(z.x - p.x) <= z.r + 20); dir = p.x < z.x ? -1 : 1; len = z.r + 40 - Math.abs(z.x - p.x); }
+  else if (p.hidden > 0) { dir = Math.random() < 0.5 ? -1 : 1; len = SLOT_PX * (0.8 + Math.random()); }
+  else if (dist < SLOT_PX * 2.5) { dir = away; len = SLOT_PX * (0.8 + Math.random() * 0.8); }
+  else if (dist > SLOT_PX * 8) { dir = -away; len = SLOT_PX * (0.8 + Math.random() * 1.2); }
+  else if (Math.random() < 0.45) { dir = Math.random() < 0.5 ? -1 : 1; len = 25 + Math.random() * 70; }
+  if (!dir) return null;
+  return Math.max(30, Math.min(WW - 30, p.x + dir * Math.min(len, maxPx)));
+}
+// stop before stepping off a ledge (a drop of more than 60 px) or off the map
+function botEdge(p, dir) { const nx = p.x + dir * 8; if (nx < 30 || nx > WW - 30) return true; return surfaceY(nx) - p.y > 60; }
 function botTick(p) {
   const b = S.bot;
   if (b.phase === 'think') {
@@ -1304,13 +1356,16 @@ function botTick(p) {
       if (p.frozen > 0) { S.state = 'settle'; S.settle = SIM ? 1 : 40; S.bot = null; return; }
       if (S.state !== 'aim') return; // Purge ended the turn
     }
-    if (SIM) { botSmart(p); Object.assign(b, botPlan(p), { phase: 'aim' }); return; }
-    const mend = sk => sk.type === 'self' && (sk.heal || sk.healMatk || sk.shieldPct || sk.shieldMatk);
-    if (p.c.ult && p.rage >= POW_MAX && Math.random() < 0.3) useUlt();
-    if (p.hp < p.maxHp * 0.6 && Math.random() < 0.7) { const l = avail(mend); if (l.length) useSlot(any(l)); }
-    if (Math.random() < 0.2) { const l = avail(sk => sk.type === 'self' && !mend(sk) && !sk.purge && !sk.hide); if (l.length) useSlot(any(l)); }
-    if (Math.random() < 0.15) { const l = avail(sk => sk.type === 'foe'); if (l.length) useSlot(any(l)); }
-    if (!p.armed && Math.random() < 0.35) { const l = avail(sk => sk.type === 'shot'); if (l.length) useSlot(any(l)); }
+    botSmart(p); // skills and combos by what they do (same brain as the auto battle test)
+    if (S.state !== 'aim' || S.bot !== b) return;
+    if (SIM) { Object.assign(b, botPlan(p), { phase: 'aim' }); return; }
+    b.walkTo = botWalkTarget(p); b.phase = b.walkTo == null ? 'plan' : 'walk'; b.t = 12;
+  } else if (b.phase === 'walk') {
+    const d = b.walkTo - p.x;
+    if (Math.abs(d) < 1.5 || !walkStep(p, Math.sign(d)) || botEdge(p, Math.sign(d))) { b.phase = 'plan'; b.t = 18; }
+    else p.face = Math.sign(d);
+  } else if (b.phase === 'plan') {
+    if (--b.t > 0) return;
     Object.assign(b, botPlan(p), { phase: 'aim' });
   } else if (b.phase === 'aim') {
     const d = b.ang - p.angle;
@@ -1451,13 +1506,13 @@ function golemExplode(q) {
 function golemTarget(g) {
   let best = null, bd = 1e9;
   for (const pl of S.players) if (pl.alive && teamOf(pl.i) !== teamOf(g.owner)) {
-    const x = pl.hidden > 0 ? pl.seenX : pl.x, d = Math.abs(x - g.x); if (d < bd) { bd = d; best = pl; }
+    const x = botSeeX(pl), d = Math.abs(x - g.x); if (d < bd) { bd = d; best = pl; }
   }
   return best;
 }
 // aim like the test bots, but 85% of shots are clean and the rest go wide
 function golemAim(g, e) {
-  const tx = e.hidden > 0 ? e.seenX : e.x, ty = (e.hidden > 0 ? surfaceY(e.seenX) : e.y) - 14;
+  const tx = botSeeX(e), ty = botSeeY(e) - 14; // a hidden enemy: only a guess
   g.face = tx > g.x ? 1 : -1;
   const sh = { x: g.x, y: g.y - 40, face: g.face, c: g.c, i: g.i, k: 'golem' };
   let best = null;
@@ -1481,7 +1536,7 @@ function golemAim(g, e) {
 }
 // the best spot to warp to: up to 4 slots towards the target, on the ground, not on top of anyone
 function golemWarpSpot(g, e) {
-  const tx = e.hidden > 0 ? e.seenX : e.x, dir = Math.sign(tx - g.x) || 1;
+  const tx = botSeeX(e), dir = Math.sign(tx - g.x) || 1;
   let best = null;
   for (let d = 12; d <= g.warpMax; d += 6) {
     const x = Math.round(g.x + dir * d); if (x < 30 || x > WW - 30) break;
@@ -1498,7 +1553,7 @@ function golemDecide(g) {
   const e = golemTarget(g), gp = S.gp, own = S.players[g.owner];
   g.turns--; stAdd(g.owner, 'gLife', 1);
   if (!e) { endGolemTurn(); return; }
-  const tx = e.hidden > 0 ? e.seenX : e.x, dist = Math.abs(tx - g.x);
+  const tx = botSeeX(e), dist = Math.abs(tx - g.x);
   g.face = tx > g.x ? 1 : -1;
   const mine = e.marks.filter(m => m.by === g.i).map(m => m.e), last = mine[mine.length - 1];
   const danger = e.rage >= POW_MAX - 15;
@@ -1727,12 +1782,7 @@ function update() {
       const dir = pin.left ? -1 : pin.right ? 1 : 0;
       if (dir) {
         p.face = dir; cam.manual = false;
-        if (p.energy > 0 && !settling && !p.bindNow) { // bound: can turn but not walk
-          const nx = p.x + dir * 1.3; p.walk++;
-          let ny = p.y, k = 0;
-          while (solid(nx, ny - 1) && k < 6) { ny--; k++; }
-          if (!solid(nx, ny - 1)) { p.y = ny; { const c = Math.min(p.energy, Math.abs(nx - p.x) * WALK_COST); p.energy -= c; stAdd(p.i, 'enMove', c); } p.x = Math.max(0, Math.min(WW - 1, nx)); }
-        }
+        if (!settling) walkStep(p, dir);
       }
       if (pin.fire) { S.state = 'charging'; S.power = 0; S.chargeDir = 1; }
     }
