@@ -952,8 +952,11 @@ try { $('a-email').value = localStorage.getItem(EMAIL_KEY) || ''; } catch {}
 $('a-remember').onchange = () => store(REM_KEY, $('a-remember').checked ? null : '0');
 function busy(btn, on) { btn.disabled = on; }
 
+const isGoogle = u => (u.identities || []).some(i => i.provider === 'google') || (u.app_metadata && u.app_metadata.provider === 'google');
+function useHeld() { const s = held; held = null; holdIn = false; enterTown(s); }
 $('a-google').onclick = async () => {
-  aMsg(); busy($('a-google'), true);
+  if (held && isGoogle(held.user)) { useHeld(); return; }
+  holdIn = false; aMsg(); busy($('a-google'), true);
   const { error } = await online.sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: HERE } });
   if (error) { aMsg(authErr(error)); busy($('a-google'), false); }
 };
@@ -969,7 +972,9 @@ $('a-form').onsubmit = async e => {
     aMsg(error && authErr(error), error ? '' : 'ส่งลิงก์ไปที่อีเมลแล้ว เปิดอีเมลแล้วกดลิงก์เพื่อตั้งรหัสผ่านใหม่');
     return;
   }
+  if (held && authMode === 'in' && !pass && email.toLowerCase() === (held.user.email || '').toLowerCase()) { useHeld(); return; }
   if (pass.length < 6) { aMsg('รหัสผ่านต้องยาวอย่างน้อย 6 ตัว'); $('a-pass').focus(); return; }
+  holdIn = false;
   if (authMode === 'up' && pass !== $('a-pass2').value) { aMsg('รหัสผ่านสองช่องไม่ตรงกัน'); $('a-pass2').focus(); return; }
   busy(btn, true);
   store(EMAIL_KEY, remembered() ? email : null);
@@ -1021,6 +1026,8 @@ $('rc-form').onsubmit = async e => {
 };
 
 let entered = false;
+// a remembered sign-in is held on the login screen until the player presses a button (Karoz: the login screen shows on every visit)
+let held = null, holdIn = false;
 function enterTown(session) {
   if (entered || !session) return;
   entered = true; online.user = session.user;
@@ -1041,12 +1048,14 @@ async function boot() {
     const b = document.createElement('button'); b.type = 'button'; b.id = 'a-preview'; b.textContent = 'ดูเมือง (หน้าตัวอย่าง ไม่ต้องล็อกอิน)';
     b.onclick = previewTown; $('auth').appendChild(b);
   }
+  // coming back from a Google sign-in or an email link: go straight in
+  const fromLink = /[?#&](code|access_token|token_hash)=/.test(location.href);
   if (!window.supabase) { $('auth').hidden = false; aMsg('โหลดระบบล็อกอินไม่ได้ ลองรีเฟรชหน้า'); chatState('โหลดระบบแชทไม่ได้', false); return; }
   const sb = online.sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'sky-lobby-auth', storage: authStore } });
   sb.auth.onAuthStateChange((ev, session) => {
     if (ev === 'PASSWORD_RECOVERY') { $('m-recover').dataset.lock = '1'; $('rc-err').textContent = ''; openModal('m-recover'); }
     if (ev === 'USER_UPDATED' && session) online.user = session.user;
-    if (ev === 'SIGNED_IN' && session && !session.user.is_anonymous) enterTown(session);
+    if (ev === 'SIGNED_IN' && session && !session.user.is_anonymous && !holdIn) enterTown(session);
   });
   const { data: { session }, error } = await sb.auth.getSession();
   const urlErr = new URLSearchParams(location.hash.slice(1) || location.search).get('error_description');
@@ -1054,8 +1063,13 @@ async function boot() {
     // old guest sessions from the test period: an account is required now
     await sb.auth.signOut().catch(() => {});
     aMsg('', 'ตอนนี้ต้องสมัครสมาชิกก่อนเข้าเมือง สมัครด้วยอีเมลหรือ Google ได้เลย');
-  } else if (session) { enterTown(session); return; }
+  } else if (session && fromLink) { enterTown(session); return; }
+  else if (session) { held = session; holdIn = true; }
   $('auth').hidden = false; chatState('ยังไม่ได้เข้าสู่ระบบ', false);
+  if (held) {
+    if (held.user.email) $('a-email').value = held.user.email;
+    aMsg('', isGoogle(held.user) ? 'จำบัญชีไว้แล้ว กดปุ่ม Google ได้เลย' : 'จำบัญชีไว้แล้ว กดเข้าสู่ระบบได้เลย');
+  }
   if (error || urlErr) aMsg(authErr(error || urlErr));
   setTimeout(() => ($('a-email').value ? $('a-pass') : $('a-email')).focus(), 50);
 }
