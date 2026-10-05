@@ -139,6 +139,87 @@ button, input { font: inherit; color: inherit; }
   pointer-events: none; opacity: 0; transition: opacity .2s; }
 #toast.on { opacity: 1; }
 
+/* sign-in screen shown before the town: dark-fantasy framed panel over the town art */
+#auth { position: fixed; inset: 0; z-index: 25; display: flex; flex-direction: column; overflow: auto; padding: 16px;
+  background: radial-gradient(ellipse at 50% 45%, rgba(10, 6, 4, .25) 0%, rgba(10, 6, 4, .6) 50%, rgba(4, 2, 1, .95) 100%),
+    linear-gradient(rgba(24, 10, 4, .45), rgba(24, 10, 4, .45)), #0d0b14 url("img/town.webp") center / cover no-repeat; }
+#auth[hidden] { display: none; }
+.astack { margin: auto; width: min(440px, 100%); display: flex; flex-direction: column; align-items: center; padding-top: 74px; }
+.aframe { position: relative; width: 100%; padding: 64px 34px 26px; color: #f3e3c0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(120, 70, 30, .35), transparent 60%),
+    linear-gradient(#2b1d16, #170f0b 60%, #100a07);
+  border: 3px solid #a07a38; border-radius: 6px;
+  box-shadow: inset 0 0 0 2px #1a100a, inset 0 0 0 4px #5e4420, inset 0 0 40px rgba(0, 0, 0, .7), 0 0 0 2px #120a06, 0 18px 50px rgba(0, 0, 0, .8), 0 0 60px rgba(255, 160, 60, .12); }
+.aframe .cn { position: absolute; width: 30px; height: 30px; border: 3px solid #e2b55a; pointer-events: none; }
+.aframe .cn::after { content: ""; position: absolute; width: 8px; height: 8px; background: #f5d27a; transform: rotate(45deg); box-shadow: 0 0 6px rgba(255, 200, 90, .8); }
+.cn.tl { left: 6px; top: 6px; border-right: 0; border-bottom: 0; } .cn.tl::after { left: 4px; top: 4px; }
+.cn.tr { right: 6px; top: 6px; border-left: 0; border-bottom: 0; } .cn.tr::after { right: 4px; top: 4px; }
+.cn.bl { left: 6px; bottom: 6px; border-right: 0; border-top: 0; } .cn.bl::after { left: 4px; bottom: 4px; }
+.cn.br { right: 6px; bottom: 6px; border-left: 0; border-top: 0; } .cn.br::after { right: 4px; bottom: 4px; }
+.crest { position: absolute; left: 50%; top: -86px; width: 250px; transform: translateX(-50%); filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .7)); pointer-events: none; }
+.agame { margin: 0; text-align: center; font-size: 34px; font-weight: 800; letter-spacing: 2px; line-height: 1.1;
+  background: linear-gradient(#fff3c4, #f5c64a 55%, #a8721c); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .9)); }
+.aplate { margin: 10px auto 20px; width: 78%; height: 40px; display: grid; place-items: center; font-size: 19px; font-weight: 700; color: #ffe7a0; letter-spacing: 1px;
+  background: linear-gradient(#5a1d12, #34100a); border-top: 2px solid #c99a48; border-bottom: 2px solid #c99a48;
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%); text-shadow: 0 2px 3px #000; }
+#a-form { display: flex; flex-direction: column; gap: 12px; }
+.ainp { position: relative; }
+.ainp[hidden] { display: none; }
+.ainp svg { position: absolute; left: 14px; top: 50%; width: 20px; height: 20px; transform: translateY(-50%); fill: #c9a060; opacity: .85; pointer-events: none; }
+.ainp input { width: 100%; height: 52px; padding: 0 46px; text-align: center; font-size: 17px; color: #fff4dc; border-radius: 4px;
+  background: linear-gradient(#3a1611, #210b08); border: 2px solid #8f6a30;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, .8), 0 0 0 1px #120806; }
+.ainp input::placeholder { color: #c7a77a; opacity: 1; }
+.ainp input:focus { outline: none; border-color: #f5c64a; box-shadow: inset 0 2px 8px rgba(0, 0, 0, .8), 0 0 0 1px #120806, 0 0 12px rgba(245, 198, 74, .45); }
+.arow { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 15px; color: #e6cf9f; margin: -2px 2px 2px; }
+.arow[hidden] { display: none; }
+.achk { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.achk input { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; margin: 0; border: 2px solid #b98d42; background: #1b0d09; border-radius: 3px; display: grid; place-items: center; cursor: pointer; }
+.achk input::after { content: ""; width: 10px; height: 10px; background: #f5c64a; transform: scale(0); transition: transform .12s; clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%); }
+.achk input:checked::after { transform: scale(1); }
+.achk input:focus-visible { outline: 2px solid #f5c64a; outline-offset: 2px; }
+.alink { border: 0; background: none; color: #f0c766; cursor: pointer; padding: 4px 0; font-size: 15px; }
+.alink:hover { color: #fff0b8; text-decoration: underline; }
+.abig { position: relative; height: 60px; border: 0; cursor: pointer; font-size: 23px; font-weight: 800; letter-spacing: 1px; color: #fff3cf; text-shadow: 0 2px 3px rgba(0, 0, 0, .9);
+  background: linear-gradient(#e2492c, #a8210f 48%, #7a1406 52%, #5a0e04); margin-top: 4px;
+  clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 18px 100%, 0 50%);
+  box-shadow: inset 0 0 0 3px #e8b860, inset 0 0 0 5px #5a1206, inset 0 0 22px rgba(255, 190, 90, .35); transition: filter .12s; }
+.abig::before, .abig::after { content: "◆"; position: absolute; top: 50%; transform: translateY(-50%); color: #f5c64a; font-size: 14px; }
+.abig::before { left: 26px; } .abig::after { right: 26px; }
+.abig:hover { filter: brightness(1.15); }
+.abig:active { filter: brightness(.95); transform: translateY(1px); }
+.abig:disabled, .aplain:disabled { filter: grayscale(.6) brightness(.7); cursor: wait; }
+.or { display: flex; align-items: center; gap: 10px; color: #c7a77a; font-size: 14px; margin: 16px 0 12px; }
+.or::before, .or::after { content: ""; flex: 1; height: 2px; background: linear-gradient(90deg, transparent, #9a7436, transparent); }
+.aplain { width: 100%; height: 50px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-weight: 700; font-size: 17px; color: #f6e6c4;
+  background: linear-gradient(#2e2420, #1a1310); border: 2px solid #8f6a30; border-radius: 4px; box-shadow: inset 0 0 0 1px #000, 0 2px 6px rgba(0, 0, 0, .6); }
+.aplain:hover { border-color: #f5c64a; color: #fff3cf; }
+.aplain svg { width: 22px; height: 22px; background: #fff; border-radius: 50%; padding: 2px; }
+.aframe .err, .aframe .ok { text-align: center; font-size: 15px; min-height: 1.3em; margin: 10px 0 0; }
+.aframe .err:empty, .aframe .ok:empty { display: none; }
+.aframe .err { color: #ff9a8a; } .aframe .ok { color: #9be8a4; margin-top: 2px; }
+.anew { margin-top: 16px; width: min(320px, 86%); height: 50px; cursor: pointer; font-size: 18px; font-weight: 700; color: #ffe7a0; letter-spacing: .5px;
+  background: linear-gradient(#3b2a1c, #1d140d); border: 0; text-shadow: 0 2px 2px #000;
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
+  box-shadow: inset 0 0 0 2px #b98d42, inset 0 0 0 4px #20140b, 0 6px 16px rgba(0, 0, 0, .7); }
+.anew:hover { filter: brightness(1.25); }
+.aver { position: fixed; left: 14px; bottom: 10px; font-size: 13px; color: rgba(255, 236, 200, .7); text-shadow: 0 1px 2px #000; pointer-events: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-height: 780px) {
+  .astack { padding-top: 62px; } .crest { width: 220px; top: -76px; } .aframe { padding: 52px 30px 20px; } .aplate { margin: 8px auto 14px; }
+  .or { margin: 12px 0 10px; } .anew { margin-top: 12px; }
+}
+@media (max-height: 560px) {
+  .astack { padding-top: 54px; } .crest { width: 190px; top: -64px; }
+  .aframe { padding: 44px 26px 16px; } .agame { font-size: 26px; } .aplate { margin: 6px auto 12px; height: 34px; font-size: 17px; }
+  #a-form { gap: 8px; } .ainp input { height: 44px; } .abig { height: 50px; font-size: 20px; } .aplain { height: 44px; }
+  .or { margin: 10px 0 8px; } .anew { margin-top: 10px; height: 44px; } .aver { display: none; }
+}
+.card label { display: block; font-size: 14px; color: var(--muted); margin: 0 0 4px; }
+.card .ok { color: #8fe39a; min-height: 1.3em; margin: 0; font-size: 14px; }
+.acct-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 10px; font-size: 15px; }
+.acct-row b { color: #ffe7a0; }
 #game { position: fixed; inset: 0; z-index: 40; background: #0d0b14; }
 #game[hidden] { display: none; }
 #game iframe { width: 100%; height: 100%; border: 0; display: block; }
@@ -216,7 +297,7 @@ button, input { font: inherit; color: inherit; }
 
 <div class="modal" id="m-name" hidden role="dialog" aria-modal="true" aria-labelledby="t-name">
   <form class="card" id="nameform" autocomplete="off">
-    <button class="x" type="button" data-close aria-label="ปิด">✕</button>
+    <button class="x" type="button" data-close aria-label="ปิด" id="name-x">✕</button>
     <h2 id="t-name">ชื่อในเกม</h2>
     <p>ชื่อนี้จะแสดงบนโปรไฟล์และในแชทรวม</p>
     <div class="row">
@@ -224,6 +305,82 @@ button, input { font: inherit; color: inherit; }
       <button class="btn go" type="submit">บันทึก</button>
     </div>
     <p class="err" id="name-err" role="status"></p>
+  </form>
+</div>
+
+<div id="auth" hidden role="dialog" aria-modal="true" aria-labelledby="a-title">
+  <div class="astack">
+    <div class="aframe">
+      <span class="cn tl"></span><span class="cn tr"></span><span class="cn bl"></span><span class="cn br"></span>
+      <svg class="crest" viewBox="0 0 250 120" aria-hidden="true">
+        <defs>
+          <linearGradient id="cr-steel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6fa"/><stop offset=".5" stop-color="#9aa3b0"/><stop offset="1" stop-color="#e3e7ee"/></linearGradient>
+          <linearGradient id="cr-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0b0"/><stop offset=".5" stop-color="#e0a93a"/><stop offset="1" stop-color="#8a5a14"/></linearGradient>
+          <linearGradient id="cr-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f8fe0"/><stop offset="1" stop-color="#0b2a5a"/></linearGradient>
+          <linearGradient id="cr-red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8321e"/><stop offset="1" stop-color="#4a0c05"/></linearGradient>
+        </defs>
+        <g stroke="#2a1a0a" stroke-width="2">
+          <path d="M28 112 L196 10 L204 16 L36 118 Z" fill="url(#cr-steel)"/>
+          <path d="M222 112 L54 10 L46 16 L214 118 Z" fill="url(#cr-steel)"/>
+          <rect x="20" y="96" width="34" height="8" rx="3" fill="url(#cr-gold)" transform="rotate(-31 37 100)"/>
+          <rect x="196" y="96" width="34" height="8" rx="3" fill="url(#cr-gold)" transform="rotate(31 213 100)"/>
+          <circle cx="22" cy="116" r="6" fill="url(#cr-gold)"/><circle cx="228" cy="116" r="6" fill="url(#cr-gold)"/>
+          <g transform="rotate(-14 62 66)"><path d="M40 40 h44 v26 c0 18 -12 28 -22 34 c-10 -6 -22 -16 -22 -34 z" fill="url(#cr-red)" stroke="url(#cr-gold)" stroke-width="4"/><path d="M62 50 v38 M48 62 h28" stroke="#f5c64a" stroke-width="3"/></g>
+          <g transform="rotate(14 188 66)"><path d="M166 40 h44 v26 c0 18 -12 28 -22 34 c-10 -6 -22 -16 -22 -34 z" fill="url(#cr-red)" stroke="url(#cr-gold)" stroke-width="4"/><path d="M188 50 v38 M174 62 h28" stroke="#f5c64a" stroke-width="3"/></g>
+          <path d="M84 16 h82 v44 c0 30 -22 46 -41 56 c-19 -10 -41 -26 -41 -56 z" fill="url(#cr-sky)" stroke="url(#cr-gold)" stroke-width="6"/>
+          <path d="M93 24 h64 v36 c0 24 -17 37 -32 45 c-15 -8 -32 -21 -32 -45 z" fill="none" stroke="#f5c64a" stroke-opacity=".55" stroke-width="1.5"/>
+          <path d="M125 34 l7 20 l20 0 l-16 12 l6 20 l-17 -12 l-17 12 l6 -20 l-16 -12 l20 0 z" fill="url(#cr-gold)" stroke="#5a3a0a" stroke-width="1.5"/>
+          <path d="M112 8 l6 8 l7 -12 l7 12 l6 -8 l-2 12 h-22 z" fill="url(#cr-gold)" stroke="#5a3a0a" stroke-width="1.5"/>
+        </g>
+      </svg>
+      <p class="agame">ศึกฟ้าคราม</p>
+      <h1 class="aplate" id="a-title">เข้าสู่ระบบ</h1>
+      <form id="a-form" autocomplete="on" novalidate>
+        <div class="ainp"><svg viewBox="0 0 24 24"><path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm9 7.2L4.4 7H19.6zM4 9.1V17h16V9.1l-8 5.4z"/></svg><label class="sr" for="a-email">อีเมล</label><input id="a-email" type="email" autocomplete="email" placeholder="อีเมล" required></div>
+        <div class="ainp" id="a-pass-f"><svg viewBox="0 0 24 24"><path d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm2 0h6V8a3 3 0 0 0-6 0zm3 4a1.6 1.6 0 0 0-1 2.9V19h2v-2.1a1.6 1.6 0 0 0-1-2.9z"/></svg><label class="sr" for="a-pass">รหัสผ่าน</label><input id="a-pass" type="password" autocomplete="current-password" placeholder="รหัสผ่าน" minlength="6"></div>
+        <div class="ainp" id="a-pass2-f" hidden><svg viewBox="0 0 24 24"><path d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm2 0h6V8a3 3 0 0 0-6 0zm3 4a1.6 1.6 0 0 0-1 2.9V19h2v-2.1a1.6 1.6 0 0 0-1-2.9z"/></svg><label class="sr" for="a-pass2">ยืนยันรหัสผ่าน</label><input id="a-pass2" type="password" autocomplete="new-password" placeholder="ยืนยันรหัสผ่าน" minlength="6"></div>
+        <div class="arow" id="a-row">
+          <label class="achk"><input type="checkbox" id="a-remember" checked>จำรหัสผ่าน</label>
+          <button type="button" class="alink" id="a-forgot">ลืมรหัสผ่าน?</button>
+        </div>
+        <button type="submit" class="abig" id="a-submit">เข้าสู่ระบบ</button>
+      </form>
+      <p class="err" id="a-err" role="alert"></p>
+      <p class="ok" id="a-ok" role="status"></p>
+      <div class="or">หรือ</div>
+      <button type="button" class="aplain" id="a-google"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg><span>เข้าสู่ระบบด้วย Google</span></button>
+    </div>
+    <button type="button" class="anew" id="a-switch">สร้างบัญชีใหม่</button>
+  </div>
+  <div class="aver">ศึกฟ้าคราม · เมืองทดสอบ</div>
+</div>
+
+<div class="modal" id="m-acct" hidden role="dialog" aria-modal="true" aria-labelledby="t-acct">
+  <div class="card">
+    <button class="x" type="button" data-close aria-label="ปิด">✕</button>
+    <h2 id="t-acct">บัญชีของฉัน</h2>
+    <div class="acct-row"><span>ชื่อในเกม <b id="ac-name"></b></span><button type="button" class="btn" id="ac-rename">เปลี่ยนชื่อ</button></div>
+    <div class="acct-row"><span>เข้าสู่ระบบด้วย <b id="ac-kind"></b></span></div>
+    <form id="ac-pass-f" novalidate hidden>
+      <hr>
+      <label for="ac-pass">ตั้งรหัสผ่านใหม่</label>
+      <div class="row"><input id="ac-pass" type="password" minlength="6" autocomplete="new-password" aria-label="รหัสผ่านใหม่"><button class="btn go" type="submit">บันทึก</button></div>
+    </form>
+    <p class="err" id="ac-err" role="alert"></p>
+    <p class="ok" id="ac-ok" role="status"></p>
+    <hr>
+    <button type="button" class="btn wide" id="ac-out">ออกจากระบบ</button>
+  </div>
+</div>
+
+<div class="modal" id="m-recover" hidden role="dialog" aria-modal="true" aria-labelledby="t-recover">
+  <form class="card" id="rc-form" novalidate>
+    <h2 id="t-recover">ตั้งรหัสผ่านใหม่</h2>
+    <p>ใส่รหัสผ่านใหม่อย่างน้อย 6 ตัว</p>
+    <div class="fld"><input id="rc-pass" type="password" minlength="6" autocomplete="new-password" aria-label="รหัสผ่านใหม่"></div>
+    <div class="fld"><input id="rc-pass2" type="password" minlength="6" autocomplete="new-password" aria-label="ยืนยันรหัสผ่านใหม่" placeholder="ยืนยันรหัสผ่าน"></div>
+    <button class="btn go wide" type="submit">บันทึกรหัสผ่าน</button>
+    <p class="err" id="rc-err" role="alert"></p>
   </form>
 </div>
 
@@ -258,7 +415,7 @@ function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add(
 // ---------- modals ----------
 let lastFocus = null;
 function openModal(id) { lastFocus = document.activeElement; const m = $(id); m.hidden = false; const f = m.querySelector('input, .btn'); if (f) f.focus(); }
-function closeModal(m) { m.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+function closeModal(m) { if (m.dataset.lock) return; m.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
 for (const m of document.querySelectorAll('.modal')) {
   m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-close]')) closeModal(m); });
 }
@@ -285,7 +442,7 @@ const ICONS = [
   { name: 'Coin', box: [1470, 8, 125, 104] }, { name: 'Daily', box: [1655, 8, 120, 104] }, { name: 'เมนูเพิ่มเติม', box: [1840, 20, 80, 80] },
   { name: 'Backpack', box: [1165, 975, 125, 105] }, { name: 'Shop', box: [1295, 975, 125, 105] }, { name: 'Quest', box: [1425, 960, 140, 120] },
   { name: 'Mail', box: [1570, 975, 130, 105] }, { name: 'Social', box: [1705, 945, 95, 135] },
-  { name: 'Setting', box: [1800, 940, 120, 140], act: () => nameModal() },
+  { name: 'Setting', box: [1800, 940, 120, 140], act: () => acctModal() },
 ];
 const chatEl = $('chat');
 const place = (el, [x, y, w, h]) => Object.assign(el.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
@@ -396,9 +553,9 @@ function botModal(k) {
   openModal('m-bot');
 }
 
-// ---------- profile (kept on this device, name also saved online) ----------
+// ---------- profile (server copy wins; a local copy shows instantly on the next visit) ----------
 const PROF_KEY = 'sky-lobby-profile';
-let prof = { name: '', level: 1, exp: 0 };
+let prof = { uid: '', name: '', level: 1, exp: 0 };
 try { Object.assign(prof, JSON.parse(localStorage.getItem(PROF_KEY) || '{}')); } catch (_) {}
 const saveProf = () => { try { localStorage.setItem(PROF_KEY, JSON.stringify(prof)); } catch (_) {} };
 function renderProf() {
@@ -408,17 +565,24 @@ function renderProf() {
   const pct = Math.max(0, Math.min(99, prof.exp | 0));
   $('expfill').style.width = pct + '%'; $('exp').textContent = `EXP ${pct}%`;
 }
-function nameModal() { $('name-in').value = prof.name; $('name-err').textContent = ''; openModal('m-name'); }
-$('prof').onclick = nameModal;
+let nameWait = null; // set while a new player must pick a name
+function nameModal(first) {
+  $('name-in').value = prof.name; $('name-err').textContent = '';
+  $('name-x').hidden = !!first; if (first) $('m-name').dataset.lock = '1'; else delete $('m-name').dataset.lock;
+  openModal('m-name');
+}
+const askName = () => new Promise(r => { nameWait = r; nameModal(true); });
+$('prof').onclick = () => acctModal();
 $('nameform').onsubmit = async e => {
   e.preventDefault();
-  const n = $('name-in').value.trim().replace(/\s+/g, ' ');
+  const n = $('name-in').value.trim().replace(/\s+/g, ' ').slice(0, 16);
   if (!n) { $('name-err').textContent = 'ใส่ชื่ออย่างน้อย 1 ตัวอักษร'; return; }
-  prof.name = n.slice(0, 16); saveProf(); renderProf(); closeModal($('m-name'));
-  if (online.user) await saveName();
+  delete $('m-name').dataset.lock; closeModal($('m-name'));
+  prof.name = n; saveProf(); renderProf();
+  if (nameWait) { const r = nameWait; nameWait = null; r(n); return; }
+  if (online.me) { if (await setProfile({ name: n })) { online.me.name = n; chatState(`ออนไลน์ ในชื่อ ${n}`, true); } }
 };
 renderProf();
-if (!prof.name) setTimeout(nameModal, 300);
 
 // ---------- chat (Supabase): world, guild, whisper, room, announce ----------
 const CH = {
@@ -517,23 +681,22 @@ const SEND_ERR = {
 };
 const sendErr = e => { const s = String(e && e.message || ''); for (const k in SEND_ERR) if (s.includes(k)) return SEND_ERR[k]; return why(e); };
 
-async function saveName() {
+async function loadProfile() {
   const sb = online.sb, id = online.user.id;
   const { data, error } = await sb.from('profiles').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
-  if (!data) {
-    const r = await sb.from('profiles').insert({ id, name: prof.name || 'ผู้เล่น' }).select('*').single();
+  if (data) online.me = data;
+  else {
+    const meta = online.user.user_metadata || {};
+    const suggested = prof.uid === id && prof.name ? prof.name : String(meta.full_name || meta.name || '').slice(0, 16);
+    prof.name = suggested;
+    const name = await askName();
+    const r = await sb.from('profiles').insert({ id, name }).select('*').single();
     if (r.error) throw r.error;
     online.me = r.data;
-  } else {
-    online.me = data;
-    if (data.name !== prof.name && prof.name) {
-      const r = await sb.from('profiles').update({ name: prof.name }).eq('id', id);
-      if (r.error) throw r.error;
-      online.me.name = prof.name;
-    }
-    prof.level = data.level || 1; prof.exp = data.exp || 0; saveProf(); renderProf();
   }
+  Object.assign(prof, { uid: id, name: online.me.name, level: online.me.level || 1, exp: online.me.exp || 0 });
+  saveProf(); renderProf();
   online.v2 = 'guild' in online.me;
 }
 async function setProfile(patch) {
@@ -551,19 +714,10 @@ async function loadHistory() {
   data.reverse().forEach(addMsg);
 }
 async function startChat() {
-  if (!window.supabase) { chatState('โหลดระบบแชทไม่ได้', false); return; }
   chatState('กำลังเชื่อมต่อ...', false);
   try {
-    const sb = online.sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'sky-lobby-auth' } });
-    let { data: { session } } = await sb.auth.getSession();
-    if (!session) {
-      const r = await sb.auth.signInAnonymously();
-      if (r.error) throw r.error;
-      session = r.data.session;
-    }
-    online.user = session.user;
-    while (!prof.name) await new Promise(r => setTimeout(r, 400)); // wait for the first-visit name
-    await saveName();
+    const sb = online.sb;
+    await loadProfile();
     await loadHistory();
     if (!online.v2) sysLine('ตอนนี้ใช้ได้แค่ช่องโลก ต้องรัน SQL ช่องแชทใน Supabase ก่อน');
     else if (online.me.guild) sysLine(`คุณอยู่กิลด์ ${online.me.guild}`);
@@ -630,8 +784,146 @@ $('chatform').onsubmit = async e => {
   const ok = await submitChat(text);
   if (ok === false) inp.value = text;
 };
+// ---------- sign in (Supabase Auth): Google or email + password; an account is required ----------
+const HERE = location.origin + location.pathname;
+let authMode = 'in'; // in | up | forgot
+function authErr(e) {
+  const s = String((e && (e.message || e.code)) || e || '');
+  if (/invalid login credentials/i.test(s)) return 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+  if (/already (registered|been registered)|already exists/i.test(s)) return 'อีเมลนี้สมัครไว้แล้ว ลองเข้าสู่ระบบแทน';
+  if (/email not confirmed/i.test(s)) return 'ยังไม่ได้ยืนยันอีเมล ให้กดลิงก์ในอีเมลก่อน';
+  if (/rate limit|too many|security purposes/i.test(s)) return 'ส่งคำขอบ่อยเกินไป รอสักครู่แล้วลองใหม่';
+  if (/password.*(6|short|weak)/i.test(s)) return 'รหัสผ่านต้องยาวอย่างน้อย 6 ตัว';
+  if (/provider is not enabled|unsupported provider/i.test(s)) return 'ยังไม่ได้เปิดล็อกอิน Google ใน Supabase';
+  if (/manual linking/i.test(s)) return 'ยังไม่ได้เปิด Allow manual linking ใน Supabase';
+  if (/identity.*already|already linked/i.test(s)) return 'บัญชีนี้ผูกกับผู้เล่นคนอื่นแล้ว';
+  if (/invalid.*email|email.*invalid/i.test(s)) return 'รูปแบบอีเมลไม่ถูกต้อง';
+  if (/fetch|network/i.test(s)) return 'ต่อเซิร์ฟเวอร์ไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่';
+  return 'ทำรายการไม่สำเร็จ (' + s.slice(0, 80) + ')';
+}
+const aMsg = (err, ok) => { $('a-err').textContent = err || ''; $('a-ok').textContent = ok || ''; };
+function setAuthMode(m) {
+  authMode = m;
+  $('a-title').textContent = m === 'up' ? 'สร้างบัญชีใหม่' : m === 'forgot' ? 'ลืมรหัสผ่าน' : 'เข้าสู่ระบบ';
+  $('a-pass-f').hidden = m === 'forgot';
+  $('a-pass2-f').hidden = m !== 'up';
+  $('a-row').hidden = m !== 'in';
+  $('a-pass').autocomplete = m === 'up' ? 'new-password' : 'current-password';
+  $('a-submit').textContent = m === 'up' ? 'สมัครสมาชิก' : m === 'forgot' ? 'ส่งลิงก์ตั้งรหัสผ่านใหม่' : 'เข้าสู่ระบบ';
+  $('a-switch').textContent = m === 'in' ? 'สร้างบัญชีใหม่' : 'กลับไปหน้าเข้าสู่ระบบ';
+  aMsg();
+}
+$('a-switch').onclick = () => setAuthMode(authMode === 'in' ? 'up' : 'in');
+$('a-forgot').onclick = () => setAuthMode('forgot');
+
+// "จำรหัสผ่าน": stay signed in across browser restarts and prefill the email; off = session ends when the browser closes
+const REM_KEY = 'sky-lobby-remember', EMAIL_KEY = 'sky-lobby-email';
+const store = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch {} };
+const remembered = () => { try { return localStorage.getItem(REM_KEY) !== '0'; } catch { return true; } };
+const authStore = {
+  getItem(k) { try { return localStorage.getItem(k) ?? sessionStorage.getItem(k); } catch { return null; } },
+  setItem(k, v) { try { const keep = remembered(); (keep ? localStorage : sessionStorage).setItem(k, v); (keep ? sessionStorage : localStorage).removeItem(k); } catch {} },
+  removeItem(k) { try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch {} },
+};
+$('a-remember').checked = remembered();
+try { $('a-email').value = localStorage.getItem(EMAIL_KEY) || ''; } catch {}
+$('a-remember').onchange = () => store(REM_KEY, $('a-remember').checked ? null : '0');
+function busy(btn, on) { btn.disabled = on; }
+
+$('a-google').onclick = async () => {
+  aMsg(); busy($('a-google'), true);
+  const { error } = await online.sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: HERE } });
+  if (error) { aMsg(authErr(error)); busy($('a-google'), false); }
+};
+$('a-form').onsubmit = async e => {
+  e.preventDefault(); aMsg();
+  const email = $('a-email').value.trim(), pass = $('a-pass').value;
+  if (!/^\S+@\S+\.\S+$/.test(email)) { aMsg('ใส่อีเมลให้ถูกต้อง'); $('a-email').focus(); return; }
+  const sb = online.sb, btn = $('a-submit');
+  if (authMode === 'forgot') {
+    busy(btn, true);
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: HERE });
+    busy(btn, false);
+    aMsg(error && authErr(error), error ? '' : 'ส่งลิงก์ไปที่อีเมลแล้ว เปิดอีเมลแล้วกดลิงก์เพื่อตั้งรหัสผ่านใหม่');
+    return;
+  }
+  if (pass.length < 6) { aMsg('รหัสผ่านต้องยาวอย่างน้อย 6 ตัว'); $('a-pass').focus(); return; }
+  if (authMode === 'up' && pass !== $('a-pass2').value) { aMsg('รหัสผ่านสองช่องไม่ตรงกัน'); $('a-pass2').focus(); return; }
+  busy(btn, true);
+  store(EMAIL_KEY, remembered() ? email : null);
+  const r = authMode === 'up'
+    ? await sb.auth.signUp({ email, password: pass, options: { emailRedirectTo: HERE } })
+    : await sb.auth.signInWithPassword({ email, password: pass });
+  busy(btn, false);
+  if (r.error) { aMsg(authErr(r.error)); return; }
+  if (r.data.session) { enterTown(r.data.session); return; }
+  // sign-up with "Confirm email" on: no session until the link is clicked
+  aMsg('', 'สมัครแล้ว เปิดอีเมลแล้วกดลิงก์ยืนยัน จากนั้นกลับมาเข้าสู่ระบบ');
+  setAuthMode('in'); $('a-ok').textContent = 'สมัครแล้ว เปิดอีเมลแล้วกดลิงก์ยืนยัน จากนั้นกลับมาเข้าสู่ระบบ';
+};
+
+// account modal (Setting button and the profile badge)
+const acMsg = (err, ok) => { $('ac-err').textContent = err || ''; $('ac-ok').textContent = ok || ''; };
+function acctModal() {
+  const u = online.user; if (!u) return;
+  const ids = (u.identities || []).map(i => i.provider);
+  $('ac-name').textContent = prof.name || '-';
+  $('ac-kind').textContent = [ids.includes('google') ? 'Google' : '', u.email || ''].filter(Boolean).join(' · ');
+  $('ac-pass-f').hidden = !u.email;
+  acMsg(); openModal('m-acct');
+}
+$('ac-rename').onclick = () => { closeModal($('m-acct')); nameModal(false); };
+$('ac-pass-f').onsubmit = async e => {
+  e.preventDefault(); acMsg();
+  const pass = $('ac-pass').value;
+  if (pass.length < 6) { acMsg('รหัสผ่านต้องยาวอย่างน้อย 6 ตัว'); return; }
+  const { error } = await online.sb.auth.updateUser({ password: pass });
+  if (error) acMsg(authErr(error)); else { $('ac-pass').value = ''; acMsg('', 'บันทึกรหัสผ่านแล้ว'); }
+};
+$('ac-out').onclick = async () => {
+  await online.sb.auth.signOut().catch(() => {});
+  location.replace(HERE);
+};
+
+// arriving from a "reset password" email
+$('rc-form').onsubmit = async e => {
+  e.preventDefault();
+  const p1 = $('rc-pass').value, p2 = $('rc-pass2').value;
+  if (p1.length < 6) { $('rc-err').textContent = 'รหัสผ่านต้องยาวอย่างน้อย 6 ตัว'; return; }
+  if (p1 !== p2) { $('rc-err').textContent = 'รหัสผ่านสองช่องไม่ตรงกัน'; return; }
+  const { error } = await online.sb.auth.updateUser({ password: p1 });
+  if (error) { $('rc-err').textContent = authErr(error); return; }
+  delete $('m-recover').dataset.lock; closeModal($('m-recover')); toast('ตั้งรหัสผ่านใหม่แล้ว');
+};
+
+let entered = false;
+function enterTown(session) {
+  if (entered || !session) return;
+  entered = true; online.user = session.user;
+  $('auth').hidden = true;
+  startChat();
+}
+async function boot() {
+  if (!window.supabase) { $('auth').hidden = false; aMsg('โหลดระบบล็อกอินไม่ได้ ลองรีเฟรชหน้า'); chatState('โหลดระบบแชทไม่ได้', false); return; }
+  const sb = online.sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'sky-lobby-auth', storage: authStore } });
+  sb.auth.onAuthStateChange((ev, session) => {
+    if (ev === 'PASSWORD_RECOVERY') { $('m-recover').dataset.lock = '1'; $('rc-err').textContent = ''; openModal('m-recover'); }
+    if (ev === 'USER_UPDATED' && session) online.user = session.user;
+    if (ev === 'SIGNED_IN' && session && !session.user.is_anonymous) enterTown(session);
+  });
+  const { data: { session }, error } = await sb.auth.getSession();
+  const urlErr = new URLSearchParams(location.hash.slice(1) || location.search).get('error_description');
+  if (session && session.user.is_anonymous) {
+    // old guest sessions from the test period: an account is required now
+    await sb.auth.signOut().catch(() => {});
+    aMsg('', 'ตอนนี้ต้องสมัครสมาชิกก่อนเข้าเมือง สมัครด้วยอีเมลหรือ Google ได้เลย');
+  } else if (session) { enterTown(session); return; }
+  $('auth').hidden = false; chatState('ยังไม่ได้เข้าสู่ระบบ', false);
+  if (error || urlErr) aMsg(authErr(error || urlErr));
+  setTimeout(() => ($('a-email').value ? $('a-pass') : $('a-email')).focus(), 50);
+}
 sysLine('ยินดีต้อนรับสู่เมือง กดที่อาคารเพื่อเข้าไป');
-startChat();
+boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
 </body>
