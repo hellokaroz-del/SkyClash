@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ศึกฟ้าคราม เมือง</title>
+<meta name="description" content="เมืองของศึกฟ้าคราม (หน้าทดสอบ) เข้าสนามประลอง สู้บอท และคุยกับเพื่อนในแชทรวม">
+<style>
+:root {
+  --ink: #fff;
+  --panel: rgba(20, 16, 30, .72);
+  --panel-solid: #221b31;
+  --line: rgba(255, 255, 255, .18);
+  --gold: #f5c64a;
+  --gold-dk: #b9861b;
+  --accent: #5fb4ff;
+  --muted: #c9c2d8;
+  --bad: #ff8a80;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #0d0b14; color: var(--ink); overflow: hidden;
+  font-family: "Kanit", "Prompt", "Sarabun", "Noto Sans Thai", system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+button, input { font: inherit; color: inherit; }
+
+/* the town is drawn in a fixed 1920x1080 space and scaled to fit the window */
+#view { position: fixed; inset: 0; display: grid; place-items: center; }
+#world { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0;
+  background: #24402a url("img/town.webp") center / 100% 100% no-repeat; overflow: hidden; user-select: none; }
+
+/* buildings */
+.bld { position: absolute; border: 0; padding: 0; background: none; cursor: pointer; border-radius: 40%; }
+.bld .glow { position: absolute; inset: 0; border-radius: 50%; opacity: 0; transition: opacity .18s;
+  background: radial-gradient(closest-side, rgba(255, 236, 160, .38), rgba(255, 220, 120, .12) 60%, transparent); mix-blend-mode: screen; pointer-events: none; }
+.bld:hover .glow, .bld:focus-visible .glow { opacity: 1; }
+.lbl { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; pointer-events: none;
+  padding: 6px 22px; border-radius: 10px; background: rgba(30, 24, 36, .55); font-weight: 700; font-size: 34px; line-height: 1.15;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, .7); text-align: center; transition: transform .18s, background .18s; }
+.bld:hover + .lbl, .bld:focus-visible + .lbl { transform: translate(-50%, -50%) scale(1.08); background: rgba(40, 30, 10, .78); color: #ffe7a0; }
+.lbl small { display: block; font-size: 20px; font-weight: 600; color: #ffd76a; }
+.bld:focus-visible { outline: 4px solid var(--gold); outline-offset: -8px; }
+
+/* top and bottom icon bars (art from Karoz's mockup) */
+.bar { position: absolute; pointer-events: none; }
+.ico { position: absolute; border: 0; padding: 0; background: none; cursor: pointer; border-radius: 18px; }
+.ico:hover, .ico:focus-visible { background: rgba(255, 255, 255, .16); box-shadow: 0 0 0 3px rgba(255, 220, 120, .55) inset; outline: none; }
+
+/* profile */
+#prof { position: absolute; left: 0; top: 18px; width: 470px; height: 180px; border: 0; padding: 0; cursor: pointer; text-align: left;
+  background: none; }
+#prof .pill { position: absolute; left: 70px; top: 30px; width: 390px; height: 130px; border-radius: 0 40px 40px 0;
+  background: rgba(32, 30, 38, .86); box-shadow: 0 6px 18px rgba(0, 0, 0, .4); }
+#prof .ava { position: absolute; left: 10px; top: 0; width: 170px; height: 170px; border-radius: 50%;
+  background: #3a3646; border: 6px solid #4a4658; display: grid; place-items: center; font-size: 80px; font-weight: 800; color: #e9e4f5;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
+#prof .lv { position: absolute; left: 200px; top: 42px; font-size: 38px; font-weight: 800; letter-spacing: 1px; }
+#prof .expbar { position: absolute; left: 200px; top: 100px; width: 220px; height: 16px; border-radius: 8px; background: #1a1822; border: 2px solid #55516a; overflow: hidden; }
+#prof .expbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #4cd964, #a8f07a); }
+#prof .exp { position: absolute; left: 200px; top: 120px; font-size: 22px; color: var(--muted); }
+#prof .nm { position: absolute; left: 0; top: 160px; width: 190px; text-align: center; font-size: 32px; font-weight: 800;
+  text-shadow: 0 2px 4px #000, 0 0 2px #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#prof:hover .pill { background: rgba(48, 44, 58, .9); }
+#prof:focus-visible { outline: 4px solid var(--gold); outline-offset: 4px; border-radius: 30px; }
+
+/* chat */
+#chat { position: absolute; left: 30px; top: 790px; width: 640px; height: 270px; border-radius: 26px; background: var(--panel);
+  border: 2px solid var(--line); display: flex; flex-direction: column; padding: 14px 18px 14px; backdrop-filter: blur(3px); }
+#chat .hd { display: flex; align-items: center; gap: 14px; font-size: 26px; font-weight: 700; }
+#chat .hd .dot { width: 14px; height: 14px; border-radius: 50%; background: #777; flex: none; }
+#chat .hd .dot.on { background: #4cd964; box-shadow: 0 0 8px #4cd964; }
+#chat .hd .st { font-size: 20px; font-weight: 500; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#log { flex: 1; overflow-y: auto; margin: 8px 0; font-size: 24px; line-height: 1.35; padding-right: 6px; user-select: text; scrollbar-width: thin; }
+#log p { margin: 0 0 2px; word-break: break-word; }
+#log b { color: var(--gold); font-weight: 700; }
+#log b.me { color: var(--accent); }
+#log .sys { color: var(--muted); font-style: italic; }
+#chatform { display: flex; gap: 10px; }
+#msg { flex: 1; min-width: 0; height: 52px; border-radius: 14px; border: 2px solid var(--line); background: rgba(0, 0, 0, .35); padding: 0 16px; font-size: 24px; }
+#msg:focus { outline: none; border-color: var(--gold); }
+#send { height: 52px; padding: 0 24px; border-radius: 14px; border: 0; background: var(--gold); color: #2b1d00; font-weight: 800; font-size: 24px; cursor: pointer; }
+#send:disabled, #msg:disabled { opacity: .5; cursor: default; }
+
+/* test-page badge */
+#tag { position: absolute; left: 740px; top: 14px; transform: translateX(-50%); padding: 6px 20px; border-radius: 999px;
+  background: rgba(20, 16, 30, .7); font-size: 22px; color: #ffe39a; border: 2px solid rgba(255, 220, 120, .4); pointer-events: none; }
+
+/* overlays use normal (unscaled) CSS so text stays readable on phones */
+.modal { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(5, 4, 10, .6); z-index: 20; padding: 16px; }
+.modal[hidden] { display: none; }
+.card { width: min(420px, 100%); max-height: 100%; overflow: auto; background: var(--panel-solid); border: 2px solid rgba(245, 198, 74, .5);
+  border-radius: 18px; padding: 20px 20px 18px; box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
+.card h2 { margin: 0 0 4px; font-size: 22px; color: var(--gold); }
+.card p { margin: 0 0 14px; color: var(--muted); font-size: 15px; line-height: 1.5; }
+.card .row { display: flex; gap: 10px; margin-bottom: 10px; }
+.card input { flex: 1; min-width: 0; height: 44px; border-radius: 10px; border: 2px solid var(--line); background: #15111f; padding: 0 12px; font-size: 17px; }
+.card input:focus { outline: none; border-color: var(--gold); }
+.btn { height: 44px; padding: 0 18px; border-radius: 10px; border: 2px solid var(--line); background: #2f2742; font-weight: 700; font-size: 16px; cursor: pointer; }
+.btn:hover { background: #3b3152; }
+.btn.go { background: var(--gold); color: #2b1d00; border-color: var(--gold-dk); }
+.btn.go:hover { background: #ffd566; }
+.btn.wide { width: 100%; }
+.card .err { color: var(--bad); min-height: 1.3em; margin: 0; font-size: 14px; }
+.card .x { float: right; border: 0; background: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted); padding: 2px 4px; }
+.card hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+
+#toast { position: fixed; left: 50%; top: 12%; transform: translateX(-50%); z-index: 30; padding: 10px 22px; border-radius: 999px;
+  background: rgba(20, 16, 30, .92); border: 2px solid rgba(245, 198, 74, .6); color: #ffe7a0; font-weight: 700; font-size: 16px;
+  pointer-events: none; opacity: 0; transition: opacity .2s; }
+#toast.on { opacity: 1; }
+
+#game { position: fixed; inset: 0; z-index: 40; background: #0d0b14; }
+#game[hidden] { display: none; }
+#game iframe { width: 100%; height: 100%; border: 0; display: block; }
+#back { position: fixed; left: 10px; top: 10px; z-index: 41; height: 38px; padding: 0 14px; border-radius: 999px; border: 2px solid rgba(245, 198, 74, .7);
+  background: rgba(20, 16, 30, .85); color: #ffe7a0; font-weight: 700; cursor: pointer; font-size: 15px; }
+
+#rotate { position: fixed; inset: 0; z-index: 15; display: none; place-items: center; text-align: center; padding: 24px;
+  background: rgba(5, 4, 10, .85); font-size: 18px; color: #ffe7a0; }
+@media (orientation: portrait) and (max-width: 700px) { #rotate { display: grid; } }
+</style>
+</head>
+<body>
+<div id="view">
+  <div id="world" aria-label="เมือง">
+    <div id="tag">หน้าทดสอบ เมือง Lobby</div>
+
+    <button id="prof" type="button" aria-label="โปรไฟล์ เปลี่ยนชื่อ">
+      <span class="pill"></span>
+      <span class="ava" id="ava">?</span>
+      <span class="lv" id="lv">LV.1</span>
+      <span class="expbar"><i id="expfill"></i></span>
+      <span class="exp" id="exp">EXP 0%</span>
+      <span class="nm" id="nm">NAME</span>
+    </button>
+
+    <img class="bar" src="img/topbar.png" alt="" style="left:1060px;top:0;width:860px;height:115px">
+    <img class="bar" src="img/botbar.png" alt="" style="left:1140px;top:937px;width:780px;height:143px">
+
+    <section id="chat" aria-label="แชทรวม">
+      <div class="hd"><span class="dot" id="dot"></span><span>แชทรวม</span><span class="st" id="cst">กำลังเชื่อมต่อ...</span></div>
+      <div id="log" role="log" aria-live="polite"></div>
+      <form id="chatform" autocomplete="off">
+        <input id="msg" maxlength="200" placeholder="พิมพ์ข้อความ..." aria-label="ข้อความแชท" disabled>
+        <button id="send" type="submit" disabled>ส่ง</button>
+      </form>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="m-stadium" hidden role="dialog" aria-modal="true" aria-labelledby="t-stadium">
+  <div class="card">
+    <button class="x" data-close aria-label="ปิด">✕</button>
+    <h2 id="t-stadium">สนามประลอง</h2>
+    <p>สู้กับเพื่อนออนไลน์ คนหนึ่งสร้างห้องแล้วส่งรหัส 4 หลักให้อีกคน</p>
+    <button class="btn go wide" id="st-make">สร้างห้อง</button>
+    <hr>
+    <div class="row">
+      <input id="st-code" inputmode="numeric" maxlength="4" placeholder="รหัสห้อง 4 หลัก" aria-label="รหัสห้อง" autocomplete="off">
+      <button class="btn go" id="st-join">เข้าห้อง</button>
+    </div>
+    <p class="err" id="st-err" role="status"></p>
+    <hr>
+    <button class="btn wide" id="st-pvp">2 ผู้เล่น เครื่องเดียว</button>
+  </div>
+</div>
+
+<div class="modal" id="m-bot" hidden role="dialog" aria-modal="true" aria-labelledby="t-bot">
+  <div class="card">
+    <button class="x" data-close aria-label="ปิด">✕</button>
+    <h2 id="t-bot"></h2>
+    <p id="d-bot"></p>
+    <div class="row" id="bot-lvs"></div>
+  </div>
+</div>
+
+<div class="modal" id="m-name" hidden role="dialog" aria-modal="true" aria-labelledby="t-name">
+  <form class="card" id="nameform" autocomplete="off">
+    <button class="x" type="button" data-close aria-label="ปิด">✕</button>
+    <h2 id="t-name">ชื่อในเกม</h2>
+    <p>ชื่อนี้จะแสดงบนโปรไฟล์และในแชทรวม</p>
+    <div class="row">
+      <input id="name-in" maxlength="16" aria-label="ชื่อในเกม" required>
+      <button class="btn go" type="submit">บันทึก</button>
+    </div>
+    <p class="err" id="name-err" role="status"></p>
+  </form>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="rotate">หมุนโทรศัพท์เป็นแนวนอนเพื่อเข้าเมือง</div>
+
+<div id="game" hidden>
+  <button id="back" type="button">← กลับเมือง</button>
+</div>
+
+<script src="supabase.min.js"></script>
+<script>
+'use strict';
+const SB_URL = 'https://wslkvlysmdjxlxcihyqh.supabase.co';
+const SB_KEY = 'sb_publishable_dDNp9wKERhV3Ms9fUctNEw_hPIR0FDw'; // publishable key, safe in the browser
+const GAME_URL = '../index.html';
+
+const $ = id => document.getElementById(id);
+const world = $('world');
+
+// ---------- fit the 1920x1080 town to the window ----------
+function fit() {
+  const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+  world.style.transform = `translate(${(innerWidth - 1920 * s) / 2}px, ${(innerHeight - 1080 * s) / 2}px) scale(${s})`;
+}
+addEventListener('resize', fit); fit();
+
+// ---------- toast ----------
+let toastT = 0;
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 1800); }
+
+// ---------- modals ----------
+let lastFocus = null;
+function openModal(id) { lastFocus = document.activeElement; const m = $(id); m.hidden = false; const f = m.querySelector('input, .btn'); if (f) f.focus(); }
+function closeModal(m) { m.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+for (const m of document.querySelectorAll('.modal')) {
+  m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-close]')) closeModal(m); });
+}
+addEventListener('keydown', e => { if (e.key === 'Escape') for (const m of document.querySelectorAll('.modal:not([hidden])')) closeModal(m); });
+
+// ---------- buildings and icons ----------
+// x, y, w, h of the click area and the label position, in the 1920x1080 town space
+const SOON = 'เร็วๆ นี้';
+const BUILDINGS = [
+  { k: 'tower', name: 'Endless Tower', th: 'หอคอยไร้สิ้นสุด', box: [320, 10, 220, 300], at: [425, 252], act: () => botModal('tower') },
+  { k: 'wedding', name: 'Wedding Hall', th: SOON, box: [510, 230, 300, 240], at: [690, 408] },
+  { k: 'stadium', name: 'Stadium', th: 'สนามประลอง', box: [800, 220, 330, 260], at: [957, 324], act: () => { $('st-err').textContent = ''; openModal('m-stadium'); } },
+  { k: 'guild', name: 'Guild', th: SOON, box: [1160, 190, 320, 280], at: [1295, 378] },
+  { k: 'dungeon', name: 'Dungeon', th: 'ดันเจียน', box: [1570, 140, 340, 300], at: [1763, 312], act: () => botModal('dungeon') },
+  { k: 'smith', name: 'Blacksmith', th: SOON, box: [70, 400, 420, 250], at: [306, 522] },
+  { k: 'brewery', name: 'Brewery', th: SOON, box: [1290, 500, 370, 230], at: [1446, 610] },
+  { k: 'fame', name: 'Hall of Fame', th: SOON, box: [1680, 430, 230, 400], at: [1768, 674] },
+  { k: 'auction', name: 'Auction', th: SOON, box: [500, 620, 420, 290], at: [740, 758] },
+  { k: 'shop', name: 'Shop', th: SOON, box: [990, 660, 540, 300], at: [1266, 889] },
+];
+const ICONS = [
+  { name: 'Reward', box: [1095, 8, 150, 104] }, { name: 'Promotion', box: [1260, 8, 155, 104] },
+  { name: 'Coin', box: [1470, 8, 125, 104] }, { name: 'Daily', box: [1655, 8, 120, 104] }, { name: 'เมนูเพิ่มเติม', box: [1840, 20, 80, 80] },
+  { name: 'Backpack', box: [1165, 975, 125, 105] }, { name: 'Shop', box: [1295, 975, 125, 105] }, { name: 'Quest', box: [1425, 960, 140, 120] },
+  { name: 'Mail', box: [1570, 975, 130, 105] }, { name: 'Social', box: [1705, 945, 95, 135] },
+  { name: 'Setting', box: [1800, 940, 120, 140], act: () => nameModal() },
+];
+const chatEl = $('chat');
+const place = (el, [x, y, w, h]) => Object.assign(el.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+for (const b of BUILDINGS) {
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'bld'; btn.dataset.k = b.k;
+  btn.setAttribute('aria-label', `${b.name} ${b.th}`);
+  btn.innerHTML = '<span class="glow"></span>'; place(btn, b.box);
+  btn.onclick = b.act || (() => toast(`${b.name} ${SOON}`));
+  const lbl = document.createElement('span');
+  lbl.className = 'lbl'; lbl.style.left = b.at[0] + 'px'; lbl.style.top = b.at[1] + 'px';
+  lbl.innerHTML = b.name.replace('Endless ', 'Endless<br>');
+  const sm = document.createElement('small'); sm.textContent = b.th; lbl.appendChild(sm);
+  world.insertBefore(btn, chatEl); world.insertBefore(lbl, chatEl);
+}
+for (const ic of ICONS) {
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'ico'; btn.setAttribute('aria-label', ic.name); btn.title = ic.name; place(btn, ic.box);
+  btn.onclick = ic.act || (() => toast(`${ic.name} ${SOON}`));
+  world.appendChild(btn);
+}
+
+// ---------- open the game inside the town ----------
+const gameBox = $('game');
+function launch(setup) {
+  for (const m of document.querySelectorAll('.modal')) m.hidden = true;
+  const old = gameBox.querySelector('iframe'); if (old) old.remove();
+  const fr = document.createElement('iframe');
+  fr.title = 'ศึกฟ้าคราม'; fr.allow = 'autoplay; fullscreen';
+  fr.src = GAME_URL;
+  fr.onload = () => {
+    // same site, so the town can press the game's own setup buttons for the player
+    let tries = 0;
+    const go = () => {
+      const d = fr.contentDocument;
+      if (d && d.getElementById('mode-net') && d.getElementById('start')) { try { setup(d); } catch (e) { console.warn(e); } return; }
+      if (++tries < 50) setTimeout(go, 100);
+    };
+    go();
+  };
+  gameBox.appendChild(fr); gameBox.hidden = false; $('back').focus();
+}
+$('back').onclick = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; };
+const press = (d, sel) => { const el = d.querySelector(sel); if (el) el.click(); return !!el; };
+
+// stadium
+$('st-make').onclick = () => launch(d => { press(d, '#mode-net'); press(d, '#net-make'); });
+function joinRoom() {
+  const c = $('st-code').value.replace(/\D/g, '');
+  if (c.length !== 4) { $('st-err').textContent = 'ใส่รหัสห้อง 4 หลัก'; $('st-code').focus(); return; }
+  launch(d => { press(d, '#mode-net'); d.getElementById('net-code').value = c; press(d, '#net-join'); });
+}
+$('st-join').onclick = joinRoom;
+$('st-code').addEventListener('keydown', e => { if (e.key === 'Enter') joinRoom(); });
+$('st-pvp').onclick = () => launch(d => press(d, '#mode-pvp'));
+
+// bot fights
+const BOT_PLACES = {
+  tower: { title: 'Endless Tower', desc: 'หอคอยของบอทฝีมือดี ไต่ขึ้นไปสู้กับบอทระดับยาก', lvs: [['hard', 'เข้าหอคอย (บอทยาก)']] },
+  dungeon: { title: 'Dungeon', desc: 'ลงดันเจียนสู้กับบอท เลือกความยากได้', lvs: [['easy', 'ง่าย'], ['normal', 'ปกติ'], ['hard', 'ยาก']] },
+};
+function botModal(k) {
+  const p = BOT_PLACES[k];
+  $('t-bot').textContent = p.title; $('d-bot').textContent = p.desc;
+  const row = $('bot-lvs'); row.textContent = '';
+  for (const [lv, label] of p.lvs) {
+    const b = document.createElement('button'); b.className = 'btn go wide'; b.textContent = label;
+    b.onclick = () => launch(d => { press(d, '#mode-bot'); press(d, `#botlv .seg[data-lv="${lv}"]`); });
+    row.appendChild(b);
+  }
+  openModal('m-bot');
+}
+
+// ---------- profile (kept on this device, name also saved online) ----------
+const PROF_KEY = 'sky-lobby-profile';
+let prof = { name: '', level: 1, exp: 0 };
+try { Object.assign(prof, JSON.parse(localStorage.getItem(PROF_KEY) || '{}')); } catch (_) {}
+const saveProf = () => { try { localStorage.setItem(PROF_KEY, JSON.stringify(prof)); } catch (_) {} };
+function renderProf() {
+  $('nm').textContent = prof.name || 'NAME';
+  $('ava').textContent = (prof.name || '?').trim().charAt(0).toUpperCase() || '?';
+  $('lv').textContent = 'LV.' + prof.level;
+  const pct = Math.max(0, Math.min(99, prof.exp | 0));
+  $('expfill').style.width = pct + '%'; $('exp').textContent = `EXP ${pct}%`;
+}
+function nameModal() { $('name-in').value = prof.name; $('name-err').textContent = ''; openModal('m-name'); }
+$('prof').onclick = nameModal;
+$('nameform').onsubmit = async e => {
+  e.preventDefault();
+  const n = $('name-in').value.trim().replace(/\s+/g, ' ');
+  if (!n) { $('name-err').textContent = 'ใส่ชื่ออย่างน้อย 1 ตัวอักษร'; return; }
+  prof.name = n.slice(0, 16); saveProf(); renderProf(); closeModal($('m-name'));
+  if (online.user) await saveName();
+};
+renderProf();
+if (!prof.name) setTimeout(nameModal, 300);
+
+// ---------- world chat (Supabase) ----------
+const online = { sb: null, user: null, ready: false, seen: new Set() };
+function chatState(text, on) { $('cst').textContent = text; $('dot').classList.toggle('on', !!on); $('msg').disabled = $('send').disabled = !on; }
+function sysLine(t) { const p = document.createElement('p'); p.className = 'sys'; p.textContent = t; addLine(p); }
+function addLine(p) {
+  const log = $('log'); const atEnd = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+  log.appendChild(p); while (log.children.length > 150) log.firstChild.remove();
+  if (atEnd) log.scrollTop = log.scrollHeight;
+}
+function addMsg(m) {
+  if (online.seen.has(m.id)) return; online.seen.add(m.id);
+  const p = document.createElement('p'); const b = document.createElement('b');
+  b.textContent = m.name + ': '; if (online.user && m.user_id === online.user.id) b.className = 'me';
+  p.appendChild(b); p.appendChild(document.createTextNode(m.body)); addLine(p);
+}
+function why(err) {
+  const s = String((err && (err.message || err.code)) || err || '');
+  if (/anonymous/i.test(s)) return 'ยังไม่ได้เปิด Anonymous sign-ins ใน Supabase';
+  if (/relation|schema cache|does not exist|PGRST20/i.test(s)) return 'ยังไม่ได้สร้างตารางแชทใน Supabase';
+  if (/fetch|network/i.test(s)) return 'ต่อเซิร์ฟเวอร์แชทไม่ได้';
+  return 'แชทใช้ไม่ได้ตอนนี้';
+}
+async function saveName() {
+  const sb = online.sb, id = online.user.id;
+  const { data, error } = await sb.from('profiles').select('id, name, level, exp').eq('id', id).maybeSingle();
+  if (error) throw error;
+  if (!data) {
+    const r = await sb.from('profiles').insert({ id, name: prof.name || 'ผู้เล่น' });
+    if (r.error) throw r.error;
+  } else if (data.name !== prof.name && prof.name) {
+    const r = await sb.from('profiles').update({ name: prof.name }).eq('id', id);
+    if (r.error) throw r.error;
+  }
+  if (data) { prof.level = data.level || 1; prof.exp = data.exp || 0; saveProf(); renderProf(); }
+}
+async function startChat() {
+  if (!window.supabase) { chatState('โหลดระบบแชทไม่ได้', false); return; }
+  chatState('กำลังเชื่อมต่อ...', false);
+  try {
+    const sb = online.sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'sky-lobby-auth' } });
+    let { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      const r = await sb.auth.signInAnonymously();
+      if (r.error) throw r.error;
+      session = r.data.session;
+    }
+    online.user = session.user;
+    while (!prof.name) await new Promise(r => setTimeout(r, 400)); // wait for the first-visit name
+    await saveName();
+    const { data, error } = await sb.from('chat_messages').select('id, user_id, name, body, created_at').order('created_at', { ascending: false }).limit(40);
+    if (error) throw error;
+    data.reverse().forEach(addMsg);
+    sb.channel('world-chat')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, p => addMsg(p.new))
+      .subscribe(st => {
+        if (st === 'SUBSCRIBED') chatState('ออนไลน์', true);
+        else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') chatState('การเชื่อมต่อแชทสะดุด กำลังลองใหม่', true);
+      });
+    chatState('ออนไลน์', true);
+  } catch (e) {
+    console.warn('chat', e);
+    chatState(why(e), false);
+  }
+}
+let lastSend = 0;
+$('chatform').onsubmit = async e => {
+  e.preventDefault();
+  const inp = $('msg'), body = inp.value.trim();
+  if (!body || !online.sb) return;
+  if (Date.now() - lastSend < 2000) { toast('ส่งเร็วไป รอสักครู่'); return; }
+  lastSend = Date.now(); inp.value = '';
+  const { data, error } = await online.sb.from('chat_messages').insert({ body }).select('id, user_id, name, body, created_at').single();
+  if (error) { inp.value = body; toast(/slow_down/.test(error.message) ? 'ส่งเร็วไป รอสักครู่' : why(error)); return; }
+  addMsg(data);
+};
+sysLine('ยินดีต้อนรับสู่เมือง กดที่อาคารเพื่อเข้าไป');
+startChat();
+</script>
+</body>
+</html>
