@@ -144,8 +144,8 @@ button, input { font: inherit; color: inherit; }
   background: radial-gradient(ellipse at 50% 45%, rgba(10, 6, 4, .25) 0%, rgba(10, 6, 4, .6) 50%, rgba(4, 2, 1, .95) 100%),
     linear-gradient(rgba(24, 10, 4, .45), rgba(24, 10, 4, .45)), #0d0b14 url("img/town.webp") center / cover no-repeat; }
 #auth[hidden] { display: none; }
-.astack { margin: auto; width: min(440px, 100%); display: flex; flex-direction: column; align-items: center; padding-top: 74px; }
-.aframe { position: relative; width: 100%; padding: 64px 34px 26px; color: #f3e3c0;
+.astack { margin: auto; width: min(440px, 100%); display: flex; flex-direction: column; align-items: center; }
+.aframe { position: relative; width: 100%; padding: 44px 34px 26px; color: #f3e3c0;
   background: radial-gradient(ellipse at 50% 0%, rgba(120, 70, 30, .35), transparent 60%),
     linear-gradient(#2b1d16, #170f0b 60%, #100a07);
   border: 3px solid #a07a38; border-radius: 6px;
@@ -156,11 +156,9 @@ button, input { font: inherit; color: inherit; }
 .cn.tr { right: 6px; top: 6px; border-left: 0; border-bottom: 0; } .cn.tr::after { right: 4px; top: 4px; }
 .cn.bl { left: 6px; bottom: 6px; border-right: 0; border-top: 0; } .cn.bl::after { left: 4px; bottom: 4px; }
 .cn.br { right: 6px; bottom: 6px; border-left: 0; border-top: 0; } .cn.br::after { right: 4px; bottom: 4px; }
-.crest { position: absolute; left: 50%; top: -86px; width: 250px; transform: translateX(-50%); filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .7)); pointer-events: none; }
-.agame { margin: 0; text-align: center; font-size: 34px; font-weight: 800; letter-spacing: 2px; line-height: 1.1;
-  background: linear-gradient(#fff3c4, #f5c64a 55%, #a8721c); -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .9)); }
-.aplate { margin: 10px auto 20px; width: 78%; height: 40px; display: grid; place-items: center; font-size: 19px; font-weight: 700; color: #ffe7a0; letter-spacing: 1px;
+.alogo { position: relative; z-index: 1; display: block; width: min(560px, 120%); max-width: calc(100vw - 16px); height: auto; margin-bottom: -46px;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .75)); pointer-events: none; user-select: none; }
+.aplate { margin: 0 auto 20px; width: 78%; height: 40px; display: grid; place-items: center; font-size: 19px; font-weight: 700; color: #ffe7a0; letter-spacing: 1px;
   background: linear-gradient(#5a1d12, #34100a); border-top: 2px solid #c99a48; border-bottom: 2px solid #c99a48;
   clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%); text-shadow: 0 2px 3px #000; }
 #a-form { display: flex; flex-direction: column; gap: 12px; }
@@ -209,12 +207,12 @@ button, input { font: inherit; color: inherit; }
 .alegal a { color: #f0c766; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (max-height: 780px) {
-  .astack { padding-top: 62px; } .crest { width: 220px; top: -76px; } .aframe { padding: 52px 30px 20px; } .aplate { margin: 8px auto 14px; }
+  .alogo { width: min(430px, 100%); margin-bottom: -36px; } .aframe { padding: 40px 30px 20px; } .aplate { margin: 8px auto 14px; }
   .or { margin: 12px 0 10px; } .anew { margin-top: 12px; }
 }
 @media (max-height: 560px) {
-  .astack { padding-top: 54px; } .crest { width: 190px; top: -64px; }
-  .aframe { padding: 44px 26px 16px; } .agame { font-size: 26px; } .aplate { margin: 6px auto 12px; height: 34px; font-size: 17px; }
+  .alogo { width: 340px; margin-bottom: -28px; }
+  .aframe { padding: 32px 26px 16px; } .aplate { margin: 6px auto 12px; height: 34px; font-size: 17px; }
   #a-form { gap: 8px; } .ainp input { height: 44px; } .abig { height: 50px; font-size: 20px; } .aplain { height: 44px; }
   .or { margin: 10px 0 8px; } .anew { margin-top: 10px; height: 44px; } .aver { display: none; }
 }
@@ -312,31 +310,10 @@ button, input { font: inherit; color: inherit; }
 
 <div id="auth" hidden role="dialog" aria-modal="true" aria-labelledby="a-title">
   <div class="astack">
+    <img class="alogo" src="img/logo.webp" alt="Ages of Aether" width="820" height="376">
     <div class="aframe">
       <span class="cn tl"></span><span class="cn tr"></span><span class="cn bl"></span><span class="cn br"></span>
-      <svg class="crest" viewBox="0 0 250 120" aria-hidden="true">
-        <defs>
-          <linearGradient id="cr-steel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6fa"/><stop offset=".5" stop-color="#9aa3b0"/><stop offset="1" stop-color="#e3e7ee"/></linearGradient>
-          <linearGradient id="cr-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0b0"/><stop offset=".5" stop-color="#e0a93a"/><stop offset="1" stop-color="#8a5a14"/></linearGradient>
-          <linearGradient id="cr-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f8fe0"/><stop offset="1" stop-color="#0b2a5a"/></linearGradient>
-          <linearGradient id="cr-red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8321e"/><stop offset="1" stop-color="#4a0c05"/></linearGradient>
-        </defs>
-        <g stroke="#2a1a0a" stroke-width="2">
-          <path d="M28 112 L196 10 L204 16 L36 118 Z" fill="url(#cr-steel)"/>
-          <path d="M222 112 L54 10 L46 16 L214 118 Z" fill="url(#cr-steel)"/>
-          <rect x="20" y="96" width="34" height="8" rx="3" fill="url(#cr-gold)" transform="rotate(-31 37 100)"/>
-          <rect x="196" y="96" width="34" height="8" rx="3" fill="url(#cr-gold)" transform="rotate(31 213 100)"/>
-          <circle cx="22" cy="116" r="6" fill="url(#cr-gold)"/><circle cx="228" cy="116" r="6" fill="url(#cr-gold)"/>
-          <g transform="rotate(-14 62 66)"><path d="M40 40 h44 v26 c0 18 -12 28 -22 34 c-10 -6 -22 -16 -22 -34 z" fill="url(#cr-red)" stroke="url(#cr-gold)" stroke-width="4"/><path d="M62 50 v38 M48 62 h28" stroke="#f5c64a" stroke-width="3"/></g>
-          <g transform="rotate(14 188 66)"><path d="M166 40 h44 v26 c0 18 -12 28 -22 34 c-10 -6 -22 -16 -22 -34 z" fill="url(#cr-red)" stroke="url(#cr-gold)" stroke-width="4"/><path d="M188 50 v38 M174 62 h28" stroke="#f5c64a" stroke-width="3"/></g>
-          <path d="M84 16 h82 v44 c0 30 -22 46 -41 56 c-19 -10 -41 -26 -41 -56 z" fill="url(#cr-sky)" stroke="url(#cr-gold)" stroke-width="6"/>
-          <path d="M93 24 h64 v36 c0 24 -17 37 -32 45 c-15 -8 -32 -21 -32 -45 z" fill="none" stroke="#f5c64a" stroke-opacity=".55" stroke-width="1.5"/>
-          <path d="M125 34 l7 20 l20 0 l-16 12 l6 20 l-17 -12 l-17 12 l6 -20 l-16 -12 l20 0 z" fill="url(#cr-gold)" stroke="#5a3a0a" stroke-width="1.5"/>
-          <path d="M112 8 l6 8 l7 -12 l7 12 l6 -8 l-2 12 h-22 z" fill="url(#cr-gold)" stroke="#5a3a0a" stroke-width="1.5"/>
-        </g>
-      </svg>
-      <p class="agame">Ages of Aether</p>
-      <h1 class="aplate" id="a-title">เข้าสู่ระบบ</h1>
+            <h1 class="aplate" id="a-title">เข้าสู่ระบบ</h1>
       <form id="a-form" autocomplete="on" novalidate>
         <div class="ainp"><svg viewBox="0 0 24 24"><path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm9 7.2L4.4 7H19.6zM4 9.1V17h16V9.1l-8 5.4z"/></svg><label class="sr" for="a-email">อีเมล</label><input id="a-email" type="email" autocomplete="email" placeholder="อีเมล" required></div>
         <div class="ainp" id="a-pass-f"><svg viewBox="0 0 24 24"><path d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm2 0h6V8a3 3 0 0 0-6 0zm3 4a1.6 1.6 0 0 0-1 2.9V19h2v-2.1a1.6 1.6 0 0 0-1-2.9z"/></svg><label class="sr" for="a-pass">รหัสผ่าน</label><input id="a-pass" type="password" autocomplete="current-password" placeholder="รหัสผ่าน" minlength="6"></div>
