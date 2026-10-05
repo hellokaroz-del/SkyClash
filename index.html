@@ -415,7 +415,7 @@ const DEFAULT_DATA = {
               desc: 'เวทแรงที่สุด แช่แข็ง ระเบิดวงกว้าง แต่ HP ต่ำ', s1: 'mg_nova', s2: 'mg_meteor', s3: 'mg_firebolt', s4: 'mg_heaven', s5: 'mg_firewall', s6: 'mg_amp', b: 'mg_thunder', p1: 'pa_magicm', p2: 'pa_elem' },
     merchant: { name: 'Merchant', hp: 1150, atk: 50, matk: 20, def: 60, mdef: 50, spd: 40, luk: 70, nBase: 'atk', nPct: 100, color: '#b5652a', r: 38, gf: 1.1, vel: 0.97, shot: 'axe',
               desc: 'ถึกพอตัว มียา โล่ และบัฟตัวเอง', s1: 'mc_mammo', s2: 'mc_cartrev', s3: 'mc_coin', s4: 'mc_potion', s5: 'mc_upgrade', s6: 'mc_armor', b: 'mc_termination', p1: 'pa_overcharge', p2: 'pa_lucky' },
-    cleric: { name: 'Priest', hp: 1000, atk: 15, matk: 75, def: 45, mdef: 80, spd: 40, luk: 50, nBase: 'matk', nPct: 80, color: '#e0a43a', r: 34, gf: 1, vel: 1, shot: 'orb',
+    cleric: { name: 'Priest', hp: 1000, atk: 15, matk: 75, def: 45, mdef: 70, shieldCap: 30, spd: 40, luk: 50, nBase: 'matk', nPct: 80, color: '#e0a43a', r: 34, gf: 1, vel: 1, shot: 'orb',
               desc: 'ฮีลดีที่สุด บัฟ โล่ และล้างสถานะ', s1: 'pr_holy', s2: 'pr_heal', s3: 'pr_bless', s4: 'pr_angelus', s5: 'pr_barrier', s6: 'pr_purge', b: 'pr_sanct', p1: 'pa_grace', p2: 'pa_guardian' },
     doram:  { name: 'Doram', hp: 900, atk: 20, matk: 70, def: 35, mdef: 55, spd: 65, luk: 65, nBase: 'matk', nPct: 85, color: '#c98f2e', r: 34, gf: 1, vel: 1.02, shot: 'spirit',
               desc: 'คอมโบธาตุ ติดมาร์ค 2 ธาตุแล้วจุดปฏิกิริยา', s1: 'dr_flame', s2: 'dr_water', s3: 'dr_thunder', s4: 'dr_nature', s5: 'dr_burst', s6: 'dr_shift', b: 'dr_golem', p1: 'pa_bond', p2: 'pa_nine' },
@@ -464,12 +464,12 @@ const DEFAULT_DATA = {
     mc_termination: { name: 'Cart Termination', type: 'shot', base: 'atk', dmg: 220, size: 160, weight: 112, proj: 'cart', short: '220% ATK วงกว้าง' },
     // Priest
     pr_holy: { name: 'Holy Light', cd: 2, type: 'shot', base: 'matk', dmg: 110, short: '110% MATK' },
-    pr_heal: { name: 'Heal', cd: 3, type: 'self', healMatk: 85, short: 'ฟื้น HP 85% MATK' },
+    pr_heal: { name: 'Heal', cd: 4, type: 'self', healMatk: 70, short: 'ฟื้น HP 70% MATK' },
     pr_bless: { name: 'Blessing', cd: 4, type: 'self', team: true, bAtk: 15, bMatk: 15, bTurns: 2, short: 'ATK และ MATK +15% 2 เทิร์น (ทั้งทีม)' },
     pr_angelus: { name: 'Angelus', cd: 4, type: 'self', team: true, bDef: 20, bMdef: 20, bTurns: 2, short: 'DEF และ MDEF +20% 2 เทิร์น (ทั้งทีม)' },
-    pr_barrier: { name: 'Holy Barrier', cd: 4, type: 'self', shieldMatk: 100, short: 'ได้โล่ 100% MATK' },
+    pr_barrier: { name: 'Holy Barrier', cd: 4, type: 'self', shieldMatk: 75, short: 'ได้โล่ 75% MATK' },
     pr_purge: { name: 'Purge', cd: 4, type: 'self', purge: true, healMatk: 35, short: 'ล้างสถานะผิดปกติ 1 อย่าง และฟื้น 35% MATK', tip: 'ล้างสถานะผิดปกติ 1 อย่าง (แข็ง มึน ตรึง ดีบัฟ หรือพิษ) และฟื้น HP 35% MATK ใช้ได้แม้ตอนโดนแข็งหรือมึน แต่ถ้าล้างแข็งหรือมึน เทิร์นนั้นจะจบทันที' },
-    pr_sanct: { name: 'Sanctuary', type: 'self', team: true, healMatk: 130, shieldMatk: 50, short: 'ฟื้น 130% MATK และโล่ 50% MATK ทั้งทีม' },
+    pr_sanct: { name: 'Sanctuary', type: 'self', team: true, healMatk: 100, shieldMatk: 30, short: 'ฟื้น 100% MATK และโล่ 30% MATK ทั้งทีม' },
     // Doram
     dr_flame: { name: 'Flame Spirit', cd: 2, type: 'shot', base: 'matk', dmg: 70, mark: 'fire', proj: 'spirit', short: '70% MATK และติดมาร์คไฟ' },
     dr_water: { name: 'Water Spirit', cd: 2, type: 'shot', base: 'matk', dmg: 70, mark: 'water', proj: 'spirit', short: '70% MATK และติดมาร์คน้ำ' },
@@ -493,8 +493,8 @@ const DEFAULT_DATA = {
     pa_elem: { name: 'Elemental Mastery', kind: 'none', tip: 'โจมตีธาตุที่เป้าแพ้ ดาเมจ +12% (ระบบธาตุของเป้ายังไม่ได้ทำ จึงยังไม่มีผล)' },
     pa_overcharge: { name: 'Overcharge', kind: 'consumable', v: 15, tip: 'ยาและโล่จากสกิลแรงขึ้น 15%' },
     pa_lucky: { name: 'Lucky Merchant', kind: 'luckMul', v: 50, tip: 'LUK มีผลกับโอกาสคริติคอลมากกว่าอาชีพอื่น 50%' },
-    pa_grace: { name: 'Divine Grace', kind: 'healBonus', v: 10, tip: 'การฟื้น HP แรงขึ้น 10%' },
-    pa_guardian: { name: 'Guardian Angel', kind: 'guardian', v: 15, hp: 30, tip: 'ครั้งแรกที่ HP ต่ำกว่า 30% ได้โล่ 15% ของ HP สูงสุด' },
+    pa_grace: { name: 'Divine Grace', kind: 'healBonus', v: 8, tip: 'การฟื้น HP แรงขึ้น 8%' },
+    pa_guardian: { name: 'Guardian Angel', kind: 'guardian', v: 10, hp: 30, tip: 'ครั้งแรกที่ HP ต่ำกว่า 30% ได้โล่ 10% ของ HP สูงสุด' },
     pa_bond: { name: 'Spirit Bond', kind: 'spiritBond', v: 8, tip: 'ทำปฏิกิริยาธาตุสำเร็จ MATK +8% ในตาถัดไป' },
     pa_nine: { name: 'Nine Lives', kind: 'nineLives', v: 30, hp: 30, tip: 'ครั้งแรกที่ HP ต่ำกว่า 30% ดาเมจครั้งถัดไปที่รับ -30%' },
   },
@@ -668,11 +668,21 @@ function pushPlayer(pl, dx) {
   }
 }
 // once-per-match passives that wake up when HP drops low
+// Shield Cap (Priest Nerf V2): a class with shieldCap can hold at most that % of its max HP as shield in total,
+// whatever it came from. Returns the shield actually added; by = who made it (counted in their 'shield' stat).
+function addShield(t, s, by) {
+  const cap = t.c && t.c.shieldCap > 0 ? Math.round(t.maxHp * t.c.shieldCap / 100) : Infinity;
+  const got = Math.max(0, Math.min(s, cap - (t.shield || 0)));
+  t.shield = (t.shield || 0) + got;
+  if (by != null) stAdd(by, 'shield', got);
+  if (got < s) stAdd(t.i, 'shieldCut', s - got);
+  return got;
+}
 function lowHp(pl) {
   const pv = pl.c.pv || {};
   if (!pl.alive) return;
   if (pv.guardian && !pl.once.guardian && pl.hp < pl.maxHp * pv.guardianHp / 100) {
-    pl.once.guardian = true; const s = Math.round(pl.maxHp * pv.guardian / 100); pl.shield += s; stAdd(pl.i, 'shield', s); say(pl, 'Guardian Angel โล่ +' + s, '#9fe0ff', 90, 104);
+    pl.once.guardian = true; const s = addShield(pl, Math.round(pl.maxHp * pv.guardian / 100), pl.i); say(pl, 'Guardian Angel โล่ +' + s, '#9fe0ff', 90, 104);
   }
   if (pv.nineLives && !pl.once.nine && pl.hp < pl.maxHp * pv.nineLivesHp / 100) { pl.once.nine = true; pl.nineNext = true; say(pl, 'Nine Lives!', '#ffd36a', 90, 104); }
 }
@@ -728,7 +738,7 @@ function selfSkill(p, sk) {
     const h = Math.round((t.maxHp * (sk.heal || 0) / 100 + statOf(p, 'matk') * (sk.healMatk || 0) / 100 * HEAL_K) * more * (1 + (pv.healBonus || 0) / 100));
     if (h > 0) { const got = Math.min(t.maxHp - t.hp, h); stAdd(p.i, 'heal', got); stAdd(t.i, 'healRecv', got); t.hp += got; fx.texts.push({ x: t.x, y: t.y - 50, s: '+' + h, col: '#7dff9a', t: 70 }); }
     const s = Math.round((t.maxHp * (sk.shieldPct || 0) / 100 + statOf(p, 'matk') * (sk.shieldMatk || 0) / 100 * HEAL_K) * more);
-    if (s > 0) { t.shield = (t.shield || 0) + s; stAdd(p.i, 'shield', s); say(t, 'โล่ +' + s, '#7fd8ff', 70, 64); }
+    if (s > 0) { const got = addShield(t, s, p.i); say(t, got < s ? 'โล่ +' + got + ' (เต็ม)' : 'โล่ +' + got, '#7fd8ff', 70, 64); }
     if (sk.bAtk || sk.bMatk || sk.bDef || sk.bMdef || sk.bTaken || sk.bNext || sk.bNextMagic) addBuff(t, sk);
   }
   if (sk.guard > 0) { p.iron = true; p.guard = sk.guard; }
@@ -1591,7 +1601,7 @@ function golemMelee(g, e) {
 function golemGuard(g) {
   const s = Math.round(g.maxHp * g.guardPct / 100), own = S.players[g.owner], os = Math.round(s * g.share / 100);
   g.shield += s; stAdd(g.owner, 'gShield', s); say(g, 'โล่ +' + s, '#ffe9a8', 80, 96);
-  if (own.alive) { own.shield = (own.shield || 0) + os; stAdd(g.owner, 'gOwnerShield', os); stAdd(g.owner, 'shield', os); say(own, 'โล่จาก Golem +' + os, '#ffe9a8', 80, 64); gfx({ k: 'link', x: g.x, y: g.y, x2: own.x, y2: own.y, dur: 40 }); }
+  if (own.alive) { const og = addShield(own, os, null); stAdd(g.owner, 'gOwnerShield', og); stAdd(g.owner, 'shield', og); say(own, 'โล่จาก Golem +' + os, '#ffe9a8', 80, 64); gfx({ k: 'link', x: g.x, y: g.y, x2: own.x, y2: own.y, dur: 40 }); }
   g.guardCd = 3;
 }
 function golemWarp(g, to) {
@@ -4084,7 +4094,7 @@ $m('maker-btn').onclick = () => { openMaker(); };
 // Runs whole matches at full speed (no drawing, no waits, no sound) with sharper bots than the easy one you play against:
 // they read the wind right, aim with only a little error and hit at full strength. Sides swap every match.
 const SIM_MAX_TURNS = 200;
-function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, shieldAbs: 0, cc: 0, ccTurns: 0, poisonAp: 0, bleedAp: 0, burnAp: 0, react: 0, ult: 0, enSkill: 0, enMove: 0, myTurns: 0, gSummon: 0, gLife: 0, gDmg: 0, gMelee: 0, gSpirit: 0, gReactDmg: 0, gReact: 0, gStun: 0, gShield: 0, gOwnerShield: 0, gWarp: 0, gKills: 0, gShots: 0, gHits: 0, gTaken: 0, gDeath: 0, skills: {} }; }
+function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, shieldAbs: 0, shieldCut: 0, cc: 0, ccTurns: 0, poisonAp: 0, bleedAp: 0, burnAp: 0, react: 0, ult: 0, enSkill: 0, enMove: 0, myTurns: 0, gSummon: 0, gLife: 0, gDmg: 0, gMelee: 0, gSpirit: 0, gReactDmg: 0, gReact: 0, gStun: 0, gShield: 0, gOwnerShield: 0, gWarp: 0, gKills: 0, gShots: 0, gHits: 0, gTaken: 0, gDeath: 0, skills: {} }; }
 function simPairs(a, b) {
   const keys = Object.keys(CLASSES), out = [];
   if (a && b) out.push([a, b]);
