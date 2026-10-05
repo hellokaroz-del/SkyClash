@@ -35,6 +35,9 @@ button, input { font: inherit; color: inherit; }
 #create h1 { left: 0; right: 0; top: 34px; margin: 0; text-align: center; font-size: 60px; font-weight: 800; letter-spacing: 1px;
   background: linear-gradient(#fff6cf, #f5c64a 55%, #b9861b); -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 3px 0 #3a2506) drop-shadow(0 0 18px rgba(245, 198, 74, .45)); }
+#create .cr-out { right: 40px; top: 40px; padding: 10px 22px; border-radius: 12px; font-family: inherit; font-weight: 600; font-size: 20px; line-height: 1.2; color: #e8dcc0; cursor: pointer;
+  background: rgba(20, 16, 30, .8); border: 2px solid rgba(245, 198, 74, .45); }
+#create .cr-out:hover { color: #ffe7a0; border-color: #f5c64a; }
 #create .sub { left: 0; right: 0; top: 120px; margin: 0; text-align: center; font-size: 24px; color: #e8dcc0; text-shadow: 0 2px 4px #000; }
 .cr-list { left: 70px; top: 180px; width: 470px; display: flex; flex-direction: column; gap: 10px; }
 .cr-job { display: flex; align-items: center; gap: 16px; height: 98px; padding: 0 18px 0 8px; border-radius: 16px; cursor: pointer; text-align: left;
@@ -284,6 +287,7 @@ button, input { font: inherit; color: inherit; }
     <form id="create" hidden autocomplete="off" aria-labelledby="cr-title">
       <h1 id="cr-title">สร้างตัวละคร</h1>
       <p class="sub">เลือกอาชีพและตั้งชื่อ แล้วออกเดินทางสู่ Ages of Aether</p>
+      <button type="button" class="cr-out" id="cr-out">เปลี่ยนบัญชี</button>
       <div class="cr-list" id="cr-list" role="radiogroup" aria-label="อาชีพ"></div>
       <div class="cr-stage" aria-hidden="true"><div class="ring"></div><img id="cr-img" alt=""></div>
       <div class="cr-info" aria-live="polite"><h2 id="cr-job"></h2><p id="cr-desc"></p><div id="cr-diff" class="cr-diff"></div><h3>จุดเด่น</h3><ul id="cr-pros" class="cr-pros"></ul></div>
@@ -998,7 +1002,9 @@ $('ac-pass-f').onsubmit = async e => {
   const { error } = await online.sb.auth.updateUser({ password: pass });
   if (error) acMsg(authErr(error)); else { $('ac-pass').value = ''; acMsg('', 'บันทึกรหัสผ่านแล้ว'); }
 };
-$('ac-out').onclick = async () => {
+// sign out from the account menu, or from character creation when the wrong account is signed in
+$('cr-out').onclick = $('ac-out').onclick = async () => {
+  if (PREVIEW) { location.reload(); return; }
   await online.sb.auth.signOut().catch(() => {});
   location.replace(HERE);
 };
