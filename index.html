@@ -409,7 +409,7 @@ const DEFAULT_DATA = {
               desc: 'ดาเมจระเบิด พิษ เลือดไหล ล่องหน คริติคอลสูง แต่ HP ต่ำ', s1: 'as_double', s2: 'as_venom', s3: 'as_backstab', s4: 'as_bleed', s5: 'as_hide', s6: 'as_assassinate', b: 'as_sonic', p1: 'pa_katar', p2: 'pa_exec' },
     archer: { name: 'Archer', hp: 950, atk: 75, matk: 10, def: 30, mdef: 35, spd: 70, luk: 60, nBase: 'atk', nPct: 100, color: '#3f9b5a', r: 22, gf: 0.85, vel: 1.08, shot: 'arrow',
               desc: 'ยิงธรรมดาแรงที่สุด แม่นและยิงไกล', s1: 'ar_strafe', s2: 'ar_shower', s3: 'ar_pierce', s4: 'ar_wind', s5: 'ar_mark', s6: 'ar_focus', b: 'ar_rain', p1: 'pa_vulture', p2: 'pa_critshot' },
-    blade:  { name: 'Swordman', hp: 1300, atk: 55, matk: 10, def: 75, mdef: 45, spd: 35, luk: 30, nBase: 'atk', nPct: 100, color: '#d9534f', r: 32, gf: 1.15, vel: 1, shot: 'sword',
+    blade:  { name: 'Swordman', hp: 1300, atk: 60, matk: 10, def: 75, mdef: 45, spd: 35, luk: 30, nBase: 'atk', nPct: 100, color: '#d9534f', r: 32, gf: 1.15, vel: 1, shot: 'sword',
               desc: 'ทนที่สุด HP และ DEF สูง', s1: 'sw_bash', s2: 'sw_magnum', s3: 'sw_armor', s4: 'sw_provoke', s5: 'sw_endure', s6: 'sw_charge', b: 'sw_hundred', p1: 'pa_swordm', p2: 'pa_ironbody' },
     mage:   { name: 'Mage', hp: 800, atk: 10, matk: 100, def: 20, mdef: 70, spd: 55, luk: 40, nBase: 'matk', nPct: 65, color: '#7a5fe0', r: 52, gf: 1, vel: 1, shot: 'fire', face: -1,
               desc: 'เวทแรงที่สุด แช่แข็ง ระเบิดวงกว้าง แต่ HP ต่ำ', s1: 'mg_nova', s2: 'mg_meteor', s3: 'mg_firebolt', s4: 'mg_heaven', s5: 'mg_firewall', s6: 'mg_amp', b: 'mg_thunder', p1: 'pa_magicm', p2: 'pa_elem' },
@@ -1263,6 +1263,7 @@ function botSeeX(e) {
   return e._gX;
 }
 const botSeeY = e => e.hidden > 0 ? surfaceY(botSeeX(e)) : e.y;
+const SIM_AIM = { archer: 0.68, thief: 0.8 }; // auto battle test only: aim error multiplier per class (1 = the default)
 function botPlan(p) {
   const e = other(p), ex = botSeeX(e);
   p.face = ex > p.x ? 1 : -1;
@@ -1295,7 +1296,9 @@ function botPlan(p) {
     const sc = tryShot(ang, pow);
     if (sc < best.sc) best = { ang, pow, sc };
   }
-  const err = SIM ? (Math.random() - 0.5) * 8 : 0, aerr = SIM ? Math.round((Math.random() - 0.5) * 4) : 0; // the test bots keep their old small error
+  // the test bots keep a small aim error; SIM_AIM scales it per class (V8: Archer and Assassin test bots aim tighter)
+  const ae = SIM ? (SIM_AIM[p.k] != null ? SIM_AIM[p.k] : 1) : 0;
+  const err = SIM ? (Math.random() - 0.5) * 8 * ae : 0, aerr = SIM ? Math.round((Math.random() - 0.5) * 4 * ae) : 0;
   return { ang: Math.max(5, Math.min(85, best.ang + aerr)), pow: Math.max(10, Math.min(100, best.pow + err)) };
 }
 // test bots (auto battle test): pick skills by what they do instead of at random.
