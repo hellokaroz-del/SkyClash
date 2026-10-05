@@ -23,7 +23,7 @@ Supabase > **Authentication** > **Sign In / Providers**
 1. เข้า https://console.cloud.google.com ด้วยบัญชี Google ของคุณ
 2. มุมซ้ายบนกดเลือกโปรเจกต์ > **New Project** ตั้งชื่อ `SkyClash` > Create แล้วเลือกโปรเจกต์นี้
 3. ช่องค้นหาด้านบนพิมพ์ **Google Auth Platform** แล้วกดเข้าไป > **Get started**
-   - App name: `ศึกฟ้าคราม`
+   - App name: `Ages of Aether`
    - User support email: อีเมลของคุณ
    - Audience: **External**
    - Contact email: อีเมลของคุณ > ติ๊กยอมรับ > Create

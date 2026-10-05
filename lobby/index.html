@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ศึกฟ้าคราม เมือง</title>
-<meta name="description" content="เมืองของศึกฟ้าคราม (หน้าทดสอบ) เข้าสนามประลอง สู้บอท และคุยกับเพื่อนในแชทรวม">
+<title>Ages of Aether เมือง</title>
+<meta name="description" content="เมืองของ Ages of Aether (หน้าทดสอบ) เข้าสนามประลอง สู้บอท และคุยกับเพื่อนในแชทรวม">
 <style>
 :root {
   --ink: #fff;
@@ -333,7 +333,7 @@ button, input { font: inherit; color: inherit; }
           <path d="M112 8 l6 8 l7 -12 l7 12 l6 -8 l-2 12 h-22 z" fill="url(#cr-gold)" stroke="#5a3a0a" stroke-width="1.5"/>
         </g>
       </svg>
-      <p class="agame">ศึกฟ้าคราม</p>
+      <p class="agame">Ages of Aether</p>
       <h1 class="aplate" id="a-title">เข้าสู่ระบบ</h1>
       <form id="a-form" autocomplete="on" novalidate>
         <div class="ainp"><svg viewBox="0 0 24 24"><path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm9 7.2L4.4 7H19.6zM4 9.1V17h16V9.1l-8 5.4z"/></svg><label class="sr" for="a-email">อีเมล</label><input id="a-email" type="email" autocomplete="email" placeholder="อีเมล" required></div>
@@ -352,7 +352,7 @@ button, input { font: inherit; color: inherit; }
     </div>
     <button type="button" class="anew" id="a-switch">สร้างบัญชีใหม่</button>
   </div>
-  <div class="aver">ศึกฟ้าคราม · เมืองทดสอบ</div>
+  <div class="aver">Ages of Aether · เมืองทดสอบ</div>
 </div>
 
 <div class="modal" id="m-acct" hidden role="dialog" aria-modal="true" aria-labelledby="t-acct">
@@ -499,7 +499,7 @@ function launch(setup, watchRoom) {
   for (const m of document.querySelectorAll('.modal')) m.hidden = true;
   const old = gameBox.querySelector('iframe'); if (old) old.remove();
   const fr = document.createElement('iframe');
-  fr.title = 'ศึกฟ้าคราม'; fr.allow = 'autoplay; fullscreen';
+  fr.title = 'Ages of Aether'; fr.allow = 'autoplay; fullscreen';
   fr.src = GAME_URL;
   fr.onload = () => {
     // same site, so the town can press the game's own setup buttons for the player
