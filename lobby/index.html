@@ -434,7 +434,6 @@ const HELP = [
   '/w ชื่อ ข้อความ  กระซิบหาคนเดียว',
   '/r ข้อความ  คุยกับคนในห้อง Stadium ล่าสุด',
   '/a ข้อความ  ประกาศ (เฉพาะแอดมิน)',
-  '/gjoin ชื่อกิลด์  เข้ากิลด์   /gleave  ออกจากกิลด์',
 ];
 const online = { sb: null, user: null, v2: false, seen: new Set(), me: null };
 const chat = { send: 'world', to: null, view: 'all', lock: false };
@@ -513,7 +512,7 @@ function why(err) {
   return 'แชทใช้ไม่ได้ตอนนี้';
 }
 const SEND_ERR = {
-  slow_down: 'ส่งเร็วไป รอสักครู่', no_guild: 'คุณยังไม่มีกิลด์ พิมพ์ /gjoin ชื่อกิลด์', no_room: 'ยังไม่ได้เข้าห้อง เข้า Stadium ก่อน',
+  slow_down: 'ส่งเร็วไป รอสักครู่', no_guild: 'คุณยังไม่มีกิลด์ (ระบบกิลด์เร็วๆ นี้)', no_room: 'ยังไม่ได้เข้าห้อง เข้า Stadium ก่อน',
   no_target: 'ไม่พบผู้เล่นคนนี้', not_admin: 'ประกาศได้เฉพาะแอดมิน', chat_messages_channel_check: 'ต้องรัน SQL ช่องแชทใน Supabase ก่อน',
 };
 const sendErr = e => { const s = String(e && e.message || ''); for (const k in SEND_ERR) if (s.includes(k)) return SEND_ERR[k]; return why(e); };
@@ -612,13 +611,6 @@ async function submitChat(text) {
   const cmd = m[1].toLowerCase(), rest = m[2].trim();
   const ALIAS = { s: 'world', world: 'world', g: 'guild', guild: 'guild', r: 'room', room: 'room', a: 'announce', ann: 'announce' };
   if (cmd === 'help' || cmd === 'h') { HELP.forEach(sysLine); return true; }
-  if (cmd === 'gjoin') {
-    const g = rest.slice(0, 16);
-    if (!g) { toast('พิมพ์ /gjoin ชื่อกิลด์'); return false; }
-    if (await setProfile({ guild: g })) sysLine(`เข้ากิลด์ ${g} แล้ว พิมพ์ /g เพื่อคุยในกิลด์`);
-    return true;
-  }
-  if (cmd === 'gleave') { if (await setProfile({ guild: null })) sysLine('ออกจากกิลด์แล้ว'); return true; }
   if (cmd === 'w' || cmd === 'whisper' || cmd === 'pm') {
     const mm = rest.match(/^(\S+)\s*([\s\S]*)$/);
     if (!mm) { setSend('whisper', null); return true; }
