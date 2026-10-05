@@ -31,7 +31,7 @@ button, input { font: inherit; color: inherit; }
 .bld { position: absolute; border: 0; padding: 0; background: none; cursor: pointer; }
 .hl { position: absolute; pointer-events: none; opacity: 0; transition: opacity .2s; }
 .hl.on { opacity: 1; animation: hlpulse 1.6s ease-in-out infinite; }
-@keyframes hlpulse { 50% { filter: brightness(1.12) drop-shadow(0 0 10px rgba(255, 214, 96, .7)); } }
+@keyframes hlpulse { 50% { opacity: .72; } }
 #tip { position: absolute; width: 400px; padding: 18px 24px 20px; border-radius: 22px; pointer-events: none; z-index: 2;
   background: linear-gradient(#fbf0cf, #efdcaa); border: 4px solid #8a5a22; color: #3b2408; box-shadow: 0 8px 20px rgba(0, 0, 0, .45);
   font-size: 25px; line-height: 1.35; opacity: 0; transform: translateY(8px); transition: opacity .15s, transform .15s; }
@@ -70,23 +70,46 @@ button, input { font: inherit; color: inherit; }
 #prof:hover .pill { background: rgba(48, 44, 58, .9); }
 #prof:focus-visible { outline: 4px solid var(--gold); outline-offset: 4px; border-radius: 30px; }
 
-/* chat */
-#chat { position: absolute; left: 30px; top: 790px; width: 640px; height: 270px; border-radius: 26px; background: var(--panel);
-  border: 2px solid var(--line); display: flex; flex-direction: column; padding: 14px 18px 14px; backdrop-filter: blur(3px); }
-#chat .hd { display: flex; align-items: center; gap: 14px; font-size: 26px; font-weight: 700; }
+/* chat (layout follows Karoz's reference: side buttons, channel tabs, channel picker) */
+#chat { position: absolute; left: 20px; top: 728px; width: 650px; height: 336px; border-radius: 18px; background: var(--panel);
+  border: 3px solid rgba(214, 170, 80, .55); display: grid; grid-template-columns: 54px 1fr 92px; grid-template-rows: 34px 1fr 60px;
+  gap: 6px 8px; padding: 10px; backdrop-filter: blur(3px); }
+#chat .side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 8px; }
+#chat .side button, #chat .tabs button { border: 2px solid #b8862e; background: linear-gradient(#5a4320, #3a2a12); color: #ffe7a0;
+  border-radius: 9px; cursor: pointer; font-weight: 800; padding: 0; }
+#chat .side button { height: 48px; font-size: 24px; }
+#chat .side button[aria-pressed="true"] { background: linear-gradient(#8a6a2a, #5a4320); }
+#chat .hd { grid-column: 2; display: flex; align-items: center; gap: 12px; font-size: 21px; color: var(--muted); min-width: 0; }
 #chat .hd .dot { width: 14px; height: 14px; border-radius: 50%; background: #777; flex: none; }
 #chat .hd .dot.on { background: #4cd964; box-shadow: 0 0 8px #4cd964; }
-#chat .hd .st { font-size: 20px; font-weight: 500; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#log { flex: 1; overflow-y: auto; margin: 8px 0; font-size: 24px; line-height: 1.35; padding-right: 6px; user-select: text; scrollbar-width: thin; }
+#chat .hd .st { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#chat .tabs { grid-column: 3; grid-row: 1 / 3; display: flex; flex-direction: column; gap: 5px; }
+#chat .tabs button { flex: 1; font-size: 19px; }
+#chat .tabs button[aria-selected="true"] { background: linear-gradient(#f1c55a, #b8862e); color: #2b1d00; }
+#log { grid-column: 2; overflow-y: auto; font-size: 23px; line-height: 1.32; user-select: text; scrollbar-width: thin;
+  background: rgba(0, 0, 0, .22); border-radius: 10px; padding: 6px 10px; }
 #log p { margin: 0 0 2px; word-break: break-word; }
-#log b { color: var(--gold); font-weight: 700; }
-#log b.me { color: var(--accent); }
+#log .ch { font-weight: 700; margin-right: 4px; }
+#log b { font-weight: 700; cursor: pointer; }
 #log .sys { color: var(--muted); font-style: italic; }
-#chatform { display: flex; gap: 10px; }
-#msg { flex: 1; min-width: 0; height: 52px; border-radius: 14px; border: 2px solid var(--line); background: rgba(0, 0, 0, .35); padding: 0 16px; font-size: 24px; }
+#log .c-world b, #log .c-world .ch { color: #f5c64a; }
+#log .c-guild { color: #9df0a6; }
+#log .c-whisper { color: #ffaed9; }
+#log .c-room { color: #9fd2ff; }
+#log .c-announce { color: #ffe066; font-weight: 700; text-shadow: 0 0 6px rgba(255, 200, 60, .5); }
+#log b.me { color: var(--accent) !important; }
+#chatform { grid-column: 1 / 4; display: flex; gap: 8px; position: relative; }
+#chan { flex: none; min-width: 132px; height: 56px; border-radius: 12px; border: 2px solid #b8862e; background: linear-gradient(#5a4320, #3a2a12);
+  color: #ffe7a0; font-weight: 800; font-size: 22px; cursor: pointer; padding: 0 12px; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#msg { flex: 1; min-width: 0; height: 56px; border-radius: 12px; border: 2px solid var(--line); background: rgba(0, 0, 0, .4); padding: 0 16px; font-size: 23px; }
 #msg:focus { outline: none; border-color: var(--gold); }
-#send { height: 52px; padding: 0 24px; border-radius: 14px; border: 0; background: var(--gold); color: #2b1d00; font-weight: 800; font-size: 24px; cursor: pointer; }
-#send:disabled, #msg:disabled { opacity: .5; cursor: default; }
+#send { height: 56px; padding: 0 24px; border-radius: 12px; border: 0; background: var(--gold); color: #2b1d00; font-weight: 800; font-size: 23px; cursor: pointer; }
+#send:disabled, #msg:disabled, #chan:disabled { opacity: .5; cursor: default; }
+#chanmenu { position: absolute; left: 0; bottom: 64px; background: var(--panel-solid); border: 2px solid #b8862e; border-radius: 12px; padding: 6px; z-index: 3; min-width: 280px; }
+#chanmenu[hidden] { display: none; }
+#chanmenu button { display: flex; justify-content: space-between; gap: 20px; width: 100%; border: 0; background: none; font-size: 22px; padding: 8px 12px; border-radius: 8px; cursor: pointer; text-align: left; }
+#chanmenu button:hover, #chanmenu button:focus-visible { background: rgba(255, 255, 255, .1); outline: none; }
+#chanmenu small { color: var(--muted); font-size: 19px; }
 
 /* test-page badge */
 #tag { position: absolute; left: 740px; top: 14px; transform: translateX(-50%); padding: 6px 20px; border-radius: 999px;
@@ -144,11 +167,21 @@ button, input { font: inherit; color: inherit; }
     <img class="bar" src="img/topbar.png" alt="" style="left:1060px;top:0;width:860px;height:115px">
     <img class="bar" src="img/botbar.png" alt="" style="left:1140px;top:937px;width:780px;height:143px">
 
-    <section id="chat" aria-label="แชทรวม">
-      <div class="hd"><span class="dot" id="dot"></span><span>แชทรวม</span><span class="st" id="cst">กำลังเชื่อมต่อ...</span></div>
+    <section id="chat" aria-label="แชท">
+      <div class="side">
+        <button type="button" id="c-lock" aria-pressed="false" title="ล็อกไม่ให้เลื่อนลงเอง" aria-label="ล็อกการเลื่อน">🔓</button>
+        <button type="button" id="c-clear" title="ล้างข้อความบนจอ" aria-label="ล้างข้อความบนจอ">C</button>
+        <button type="button" id="c-up" title="เลื่อนขึ้น" aria-label="เลื่อนขึ้น">▲</button>
+        <button type="button" id="c-down" title="เลื่อนลง" aria-label="เลื่อนลง">▼</button>
+        <button type="button" id="c-end" title="ไปข้อความล่าสุด" aria-label="ไปข้อความล่าสุด">⤓</button>
+      </div>
+      <div class="hd"><span class="dot" id="dot"></span><span class="st" id="cst">กำลังเชื่อมต่อ...</span></div>
       <div id="log" role="log" aria-live="polite"></div>
+      <div class="tabs" role="tablist" aria-label="กรองช่องแชท" id="tabs"></div>
       <form id="chatform" autocomplete="off">
-        <input id="msg" maxlength="200" placeholder="พิมพ์ข้อความ..." aria-label="ข้อความแชท" disabled>
+        <button type="button" id="chan" aria-haspopup="true" aria-expanded="false" disabled>โลก ▴</button>
+        <div id="chanmenu" hidden></div>
+        <input id="msg" maxlength="220" placeholder="พิมพ์ข้อความ... (/help ดูคำสั่ง)" aria-label="ข้อความแชท" disabled>
         <button id="send" type="submit" disabled>ส่ง</button>
       </form>
     </section>
@@ -232,8 +265,8 @@ for (const m of document.querySelectorAll('.modal')) {
 addEventListener('keydown', e => { if (e.key === 'Escape') for (const m of document.querySelectorAll('.modal:not([hidden])')) closeModal(m); });
 
 // ---------- buildings and icons ----------
-// label position in the 1920x1080 town space; HL holds each glow image's box and the building outline (made by hl.py)
-const HL = {"tower": {"box": [311, 0, 241, 386], "poly": "49.4% 0.0% 62.7% 7.8% 73.0% 16.1% 80.5% 31.1% 83.4% 64.8% 85.9% 77.7% 78.4% 91.2% 36.9% 91.2% 19.5% 77.7% 14.1% 66.1% 14.1% 31.1% 25.3% 16.1% 36.9% 7.8%"}, "wedding": {"box": [476, 198, 353, 354], "poly": "50.7% 14.1% 63.5% 9.6% 73.4% 26.0% 83.9% 45.8% 90.4% 71.2% 90.4% 88.7% 69.1% 90.4% 32.3% 83.9% 9.6% 74.6% 11.0% 57.1% 23.8% 33.1% 35.1% 23.2%"}, "stadium": {"box": [788, 181, 381, 345], "poly": "15.0% 30.1% 26.8% 23.5% 42.5% 18.6% 51.7% 9.9% 55.6% 17.1% 68.8% 19.4% 81.9% 25.2% 90.3% 34.5% 91.1% 63.5% 78.0% 76.5% 71.9% 90.1% 42.0% 90.1% 27.3% 78.6% 9.7% 65.8% 8.9% 38.8%"}, "guild": {"box": [1131, 169, 388, 383], "poly": "35.8% 8.9% 43.6% 14.6% 52.6% 15.4% 65.5% 18.0% 74.5% 34.2% 85.3% 46.0% 91.2% 73.4% 83.5% 85.1% 56.4% 89.6% 17.8% 91.1% 8.8% 74.7% 10.6% 43.3% 20.4% 30.3% 28.1% 21.1%"}, "dungeon": {"box": [1544, 121, 375, 368], "poly": "38.9% 12.0% 56.3% 16.0% 73.6% 9.2% 87.5% 24.7% 90.9% 48.6% 90.1% 81.2% 65.6% 90.8% 25.6% 90.8% 9.1% 62.2% 15.7% 32.3% 30.9% 13.9%"}, "smith": {"box": [36, 379, 530, 297], "poly": "34.7% 11.4% 44.5% 13.1% 51.7% 14.8% 58.3% 20.5% 68.7% 27.3% 84.7% 30.6% 93.6% 49.2% 93.6% 71.7% 68.7% 88.6% 43.2% 85.2% 6.4% 75.1% 7.9% 44.1% 14.9% 33.3% 25.3% 20.5%"}, "brewery": {"box": [1239, 481, 453, 275], "poly": "21.2% 14.9% 33.3% 21.5% 60.9% 12.4% 69.1% 13.5% 77.9% 35.3% 91.2% 53.5% 92.5% 79.6% 68.7% 87.6% 38.9% 86.2% 7.5% 73.1% 11.7% 30.5%"}, "fame": {"box": [1614, 404, 306, 432], "poly": "40.5% 7.9% 78.8% 10.2% 72.2% 26.9% 75.5% 40.7% 77.1% 59.3% 95.1% 58.1% 99.3% 77.8% 80.4% 89.8% 28.1% 92.1% 11.1% 77.8% 17.6% 58.8% 34.0% 45.4% 39.5% 32.6%"}, "auction": {"box": [434, 584, 532, 362], "poly": "52.8% 9.4% 66.9% 26.0% 78.2% 37.0% 93.6% 53.6% 88.0% 76.8% 74.4% 90.6% 21.8% 90.6% 6.4% 76.8% 6.4% 55.5% 25.6% 38.1% 42.5% 28.7%"}, "shop": {"box": [956, 669, 590, 327], "poly": "52.4% 10.4% 68.5% 24.2% 80.3% 44.6% 90.8% 54.7% 94.2% 87.5% 51.5% 89.6% 5.8% 88.1% 8.8% 61.5% 15.6% 42.5% 35.9% 22.6%"}};
+// label position in the 1920x1080 town space; HL holds each glow image's box and the building outline (made by hl2.py in the project files)
+const HL = {"tower": {"box": [315, 0, 233, 382], "poly": "49.4% 0.0% 63.1% 7.9% 73.8% 16.2% 81.5% 31.4% 84.5% 65.4% 87.1% 78.5% 79.4% 92.1% 36.5% 92.1% 18.5% 78.5% 12.9% 66.8% 12.9% 31.4% 24.5% 16.2% 36.5% 7.9%"}, "wedding": {"box": [480, 202, 345, 346], "poly": "50.7% 13.3% 63.8% 8.7% 73.9% 25.4% 84.6% 45.7% 91.3% 71.7% 91.3% 89.6% 69.6% 91.3% 31.9% 84.7% 8.7% 75.1% 10.1% 57.2% 23.2% 32.7% 34.8% 22.5%"}, "stadium": {"box": [792, 185, 373, 337], "poly": "14.2% 29.7% 26.3% 22.8% 42.4% 17.8% 51.7% 8.9% 55.8% 16.3% 69.2% 18.7% 82.6% 24.6% 91.2% 34.1% 92.0% 63.8% 78.6% 77.2% 72.4% 91.1% 41.8% 91.1% 26.8% 79.2% 8.8% 66.2% 8.0% 38.6%"}, "guild": {"box": [1135, 173, 380, 375], "poly": "35.5% 8.0% 43.4% 13.9% 52.6% 14.7% 65.8% 17.3% 75.0% 33.9% 86.1% 45.9% 92.1% 73.9% 84.2% 85.9% 56.6% 90.4% 17.1% 92.0% 7.9% 75.2% 9.7% 43.2% 19.7% 29.9% 27.6% 20.5%"}, "dungeon": {"box": [1548, 125, 367, 360], "poly": "38.7% 11.1% 56.4% 15.3% 74.1% 8.3% 88.3% 24.2% 91.8% 48.6% 91.0% 81.9% 65.9% 91.7% 25.1% 91.7% 8.2% 62.5% 15.0% 31.9% 30.5% 13.1%"}, "smith": {"box": [40, 383, 522, 289], "poly": "34.5% 10.4% 44.4% 12.1% 51.7% 13.8% 58.4% 19.7% 69.0% 26.6% 85.2% 30.1% 94.3% 49.1% 94.3% 72.3% 69.0% 89.6% 43.1% 86.2% 5.7% 75.8% 7.3% 43.9% 14.4% 32.9% 24.9% 19.7%"}, "brewery": {"box": [1243, 485, 445, 267], "poly": "20.7% 13.9% 33.0% 20.6% 61.1% 11.2% 69.4% 12.4% 78.4% 34.8% 91.9% 53.6% 93.3% 80.5% 69.0% 88.8% 38.7% 87.3% 6.7% 73.8% 11.0% 30.0%"}, "fame": {"box": [1618, 408, 302, 424], "poly": "39.7% 7.1% 78.5% 9.4% 71.9% 26.4% 75.2% 40.6% 76.8% 59.4% 95.0% 58.3% 99.3% 78.3% 80.1% 90.6% 27.2% 92.9% 9.9% 78.3% 16.6% 59.0% 33.1% 45.3% 38.7% 32.3%"}, "auction": {"box": [438, 588, 524, 354], "poly": "52.9% 8.5% 67.2% 25.4% 78.6% 36.7% 94.3% 53.7% 88.5% 77.4% 74.8% 91.5% 21.4% 91.5% 5.7% 77.4% 5.7% 55.6% 25.2% 37.9% 42.4% 28.2%"}, "shop": {"box": [960, 673, 582, 319], "poly": "52.4% 9.4% 68.7% 23.5% 80.8% 44.5% 91.4% 54.9% 94.8% 88.4% 51.5% 90.6% 5.2% 89.0% 8.2% 61.8% 15.1% 42.3% 35.7% 21.9%"}};
 const SOON = 'เร็วๆ นี้';
 const BUILDINGS = [
   { k: 'tower', desc: 'สู้กับบอทระดับยาก ทดสอบฝีมือการเล็งและอ่านลมของคุณ', name: 'Endless Tower', th: 'หอคอยไร้สิ้นสุด', at: [425, 252], act: () => botModal('tower') },
@@ -244,7 +277,7 @@ const BUILDINGS = [
   { k: 'smith', desc: 'ตีบวกและอัปเกรดอาวุธให้แรงขึ้น', name: 'Blacksmith', th: SOON, at: [306, 522] },
   { k: 'brewery', desc: 'ร้านเหล้าประจำเมือง พบปะเพื่อนและรับเควส', name: 'Brewery', th: SOON, at: [1446, 610] },
   { k: 'fame', desc: 'ทำเนียบผู้กล้า ดูอันดับผู้เล่นที่เก่งที่สุด', name: 'Hall of Fame', th: SOON, at: [1768, 674] },
-  { k: 'auction', desc: 'ประมูลซื้อขายไอเทมกับผู้เล่นคนอื่น', name: 'Auction', th: SOON, at: [740, 758] },
+  { k: 'auction', desc: 'ประมูลซื้อขายไอเทมกับผู้เล่นคนอื่น', name: 'Auction', th: SOON, at: [810, 758] },
   { k: 'shop', desc: 'ซื้ออาวุธ ชุด และไอเทมต่างๆ', name: 'Shop', th: SOON, at: [1266, 889] },
 ];
 const ICONS = [
@@ -305,7 +338,7 @@ for (const ic of ICONS) {
 
 // ---------- open the game inside the town ----------
 const gameBox = $('game');
-function launch(setup) {
+function launch(setup, watchRoom) {
   for (const m of document.querySelectorAll('.modal')) m.hidden = true;
   const old = gameBox.querySelector('iframe'); if (old) old.remove();
   const fr = document.createElement('iframe');
@@ -316,22 +349,31 @@ function launch(setup) {
     let tries = 0;
     const go = () => {
       const d = fr.contentDocument;
-      if (d && d.getElementById('mode-net') && d.getElementById('start')) { try { setup(d); } catch (e) { console.warn(e); } return; }
+      if (d && d.getElementById('mode-net') && d.getElementById('start')) { try { setup(d); } catch (e) { console.warn(e); } if (watchRoom) watchGameRoom(fr); return; }
       if (++tries < 50) setTimeout(go, 100);
     };
     go();
   };
   gameBox.appendChild(fr); gameBox.hidden = false; $('back').focus();
 }
+// read the room code the game shows, so /r in town chat reaches the same room
+function watchGameRoom(fr) {
+  const t = setInterval(() => {
+    if (!fr.isConnected) { clearInterval(t); return; }
+    const el = fr.contentDocument && fr.contentDocument.getElementById('net-msg');
+    const m = el && el.textContent.match(/ห้อง\s*(\d{4})/);
+    if (m) setRoom(m[1]);
+  }, 1500);
+}
 $('back').onclick = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; };
 const press = (d, sel) => { const el = d.querySelector(sel); if (el) el.click(); return !!el; };
 
 // stadium
-$('st-make').onclick = () => launch(d => { press(d, '#mode-net'); press(d, '#net-make'); });
+$('st-make').onclick = () => launch(d => { press(d, '#mode-net'); press(d, '#net-make'); }, true);
 function joinRoom() {
   const c = $('st-code').value.replace(/\D/g, '');
   if (c.length !== 4) { $('st-err').textContent = 'ใส่รหัสห้อง 4 หลัก'; $('st-code').focus(); return; }
-  launch(d => { press(d, '#mode-net'); d.getElementById('net-code').value = c; press(d, '#net-join'); });
+  setRoom(c); launch(d => { press(d, '#mode-net'); d.getElementById('net-code').value = c; press(d, '#net-join'); }, true);
 }
 $('st-join').onclick = joinRoom;
 $('st-code').addEventListener('keydown', e => { if (e.key === 'Enter') joinRoom(); });
@@ -378,21 +420,91 @@ $('nameform').onsubmit = async e => {
 renderProf();
 if (!prof.name) setTimeout(nameModal, 300);
 
-// ---------- world chat (Supabase) ----------
-const online = { sb: null, user: null, ready: false, seen: new Set() };
-function chatState(text, on) { $('cst').textContent = text; $('dot').classList.toggle('on', !!on); $('msg').disabled = $('send').disabled = !on; }
-function sysLine(t) { const p = document.createElement('p'); p.className = 'sys'; p.textContent = t; addLine(p); }
-function addLine(p) {
-  const log = $('log'); const atEnd = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
-  log.appendChild(p); while (log.children.length > 150) log.firstChild.remove();
-  if (atEnd) log.scrollTop = log.scrollHeight;
+// ---------- chat (Supabase): world, guild, whisper, room, announce ----------
+const CH = {
+  world: { th: 'โลก', cmd: '/s' },
+  guild: { th: 'กิลด์', cmd: '/g' },
+  whisper: { th: 'กระซิบ', cmd: '/w' },
+  room: { th: 'ห้อง', cmd: '/r' },
+  announce: { th: 'ประกาศ', cmd: '/a' },
+};
+const HELP = [
+  '/s ข้อความ  คุยในช่องโลก (ทุกคนเห็น)',
+  '/g ข้อความ  คุยกับคนในกิลด์',
+  '/w ชื่อ ข้อความ  กระซิบหาคนเดียว',
+  '/r ข้อความ  คุยกับคนในห้อง Stadium ล่าสุด',
+  '/a ข้อความ  ประกาศ (เฉพาะแอดมิน)',
+  '/gjoin ชื่อกิลด์  เข้ากิลด์   /gleave  ออกจากกิลด์',
+];
+const online = { sb: null, user: null, v2: false, seen: new Set(), me: null };
+const chat = { send: 'world', to: null, view: 'all', lock: false };
+const log = $('log');
+
+function chatState(text, on) {
+  $('cst').textContent = text; $('dot').classList.toggle('on', !!on);
+  $('msg').disabled = $('send').disabled = $('chan').disabled = !on;
 }
+function addLine(p, ch) {
+  p.dataset.ch = ch || 'sys';
+  p.hidden = !(chat.view === 'all' || p.dataset.ch === chat.view || p.dataset.ch === 'sys' || p.dataset.ch === 'announce');
+  log.appendChild(p); while (log.children.length > 200) log.firstChild.remove();
+  if (!chat.lock) log.scrollTop = log.scrollHeight;
+}
+function sysLine(t) { const p = document.createElement('p'); p.className = 'sys'; p.textContent = t; addLine(p); }
 function addMsg(m) {
   if (online.seen.has(m.id)) return; online.seen.add(m.id);
-  const p = document.createElement('p'); const b = document.createElement('b');
-  b.textContent = m.name + ': '; if (online.user && m.user_id === online.user.id) b.className = 'me';
-  p.appendChild(b); p.appendChild(document.createTextNode(m.body)); addLine(p);
+  const ch = CH[m.channel] ? m.channel : 'world', mine = online.user && m.user_id === online.user.id;
+  const p = document.createElement('p'); p.className = 'c-' + ch;
+  const tag = document.createElement('span'); tag.className = 'ch'; tag.textContent = `[${CH[ch].th}]`;
+  const b = document.createElement('b');
+  if (ch === 'whisper') b.textContent = mine ? `ถึง ${m.to_name || '?'}: ` : `จาก ${m.name}: `;
+  else b.textContent = `[${m.name}]: `;
+  if (mine && ch !== 'whisper') b.className = 'me';
+  const replyTo = ch === 'whisper' ? (mine ? { id: m.to_id, name: m.to_name } : { id: m.user_id, name: m.name }) : (mine ? null : { id: m.user_id, name: m.name });
+  if (replyTo && replyTo.id) { b.title = `กระซิบหา ${replyTo.name}`; b.onclick = () => setSend('whisper', replyTo); }
+  p.append(tag, b, document.createTextNode(m.body)); addLine(p, ch);
 }
+
+// tabs on the right filter what the log shows
+const TABS = [['all', 'ทั้งหมด'], ...Object.entries(CH).map(([k, v]) => [k, v.th])];
+for (const [k, label] of TABS) {
+  const t = document.createElement('button');
+  t.type = 'button'; t.setAttribute('role', 'tab'); t.textContent = label; t.dataset.k = k; t.setAttribute('aria-selected', String(k === 'all'));
+  t.onclick = () => {
+    chat.view = k;
+    for (const x of $('tabs').children) x.setAttribute('aria-selected', String(x === t));
+    for (const p of log.children) p.hidden = !(k === 'all' || p.dataset.ch === k || p.dataset.ch === 'sys' || p.dataset.ch === 'announce');
+    log.scrollTop = log.scrollHeight;
+    if (k !== 'all' && k !== 'announce') setSend(k, k === 'whisper' ? chat.to : null);
+  };
+  $('tabs').appendChild(t);
+}
+
+// side buttons
+$('c-lock').onclick = () => { chat.lock = !chat.lock; $('c-lock').setAttribute('aria-pressed', String(chat.lock)); $('c-lock').textContent = chat.lock ? '🔒' : '🔓'; };
+$('c-lock').textContent = '🔓';
+$('c-clear').onclick = () => { log.textContent = ''; };
+$('c-up').onclick = () => { log.scrollTop -= log.clientHeight * 0.8; };
+$('c-down').onclick = () => { log.scrollTop += log.clientHeight * 0.8; };
+$('c-end').onclick = () => { log.scrollTop = log.scrollHeight; };
+
+// which channel the input sends to
+function setSend(ch, to) {
+  chat.send = ch; if (ch === 'whisper') chat.to = to || chat.to;
+  $('chan').textContent = (ch === 'whisper' && chat.to ? `กระซิบ: ${chat.to.name}` : CH[ch].th) + ' ▴';
+  $('msg').placeholder = ch === 'whisper' && !chat.to ? 'พิมพ์ /w ชื่อ ข้อความ' : `พิมพ์ข้อความ${CH[ch].th === 'โลก' ? '' : 'ใน' + CH[ch].th}... (/help ดูคำสั่ง)`;
+  $('chanmenu').hidden = true; $('chan').setAttribute('aria-expanded', 'false');
+  if (!$('msg').disabled) $('msg').focus();
+}
+for (const [k, v] of Object.entries(CH)) {
+  const o = document.createElement('button');
+  o.type = 'button'; o.className = 'c-' + k; o.innerHTML = `<span></span><small>${v.cmd}</small>`; o.firstChild.textContent = v.th;
+  o.onclick = () => setSend(k, null);
+  $('chanmenu').appendChild(o);
+}
+$('chan').onclick = () => { const m = $('chanmenu'); m.hidden = !m.hidden; $('chan').setAttribute('aria-expanded', String(!m.hidden)); };
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#chanmenu, #chan')) { $('chanmenu').hidden = true; $('chan').setAttribute('aria-expanded', 'false'); } });
+
 function why(err) {
   const s = String((err && (err.message || err.code)) || err || '');
   if (/anonymous/i.test(s)) return 'ยังไม่ได้เปิด Anonymous sign-ins ใน Supabase';
@@ -400,18 +512,44 @@ function why(err) {
   if (/fetch|network/i.test(s)) return 'ต่อเซิร์ฟเวอร์แชทไม่ได้';
   return 'แชทใช้ไม่ได้ตอนนี้';
 }
+const SEND_ERR = {
+  slow_down: 'ส่งเร็วไป รอสักครู่', no_guild: 'คุณยังไม่มีกิลด์ พิมพ์ /gjoin ชื่อกิลด์', no_room: 'ยังไม่ได้เข้าห้อง เข้า Stadium ก่อน',
+  no_target: 'ไม่พบผู้เล่นคนนี้', not_admin: 'ประกาศได้เฉพาะแอดมิน', chat_messages_channel_check: 'ต้องรัน SQL ช่องแชทใน Supabase ก่อน',
+};
+const sendErr = e => { const s = String(e && e.message || ''); for (const k in SEND_ERR) if (s.includes(k)) return SEND_ERR[k]; return why(e); };
+
 async function saveName() {
   const sb = online.sb, id = online.user.id;
-  const { data, error } = await sb.from('profiles').select('id, name, level, exp').eq('id', id).maybeSingle();
+  const { data, error } = await sb.from('profiles').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
   if (!data) {
-    const r = await sb.from('profiles').insert({ id, name: prof.name || 'ผู้เล่น' });
+    const r = await sb.from('profiles').insert({ id, name: prof.name || 'ผู้เล่น' }).select('*').single();
     if (r.error) throw r.error;
-  } else if (data.name !== prof.name && prof.name) {
-    const r = await sb.from('profiles').update({ name: prof.name }).eq('id', id);
-    if (r.error) throw r.error;
+    online.me = r.data;
+  } else {
+    online.me = data;
+    if (data.name !== prof.name && prof.name) {
+      const r = await sb.from('profiles').update({ name: prof.name }).eq('id', id);
+      if (r.error) throw r.error;
+      online.me.name = prof.name;
+    }
+    prof.level = data.level || 1; prof.exp = data.exp || 0; saveProf(); renderProf();
   }
-  if (data) { prof.level = data.level || 1; prof.exp = data.exp || 0; saveProf(); renderProf(); }
+  online.v2 = 'guild' in online.me;
+}
+async function setProfile(patch) {
+  const r = await online.sb.from('profiles').update(patch).eq('id', online.user.id);
+  if (r.error) { toast(/guild|room|column/.test(r.error.message) ? 'ต้องรัน SQL ช่องแชทใน Supabase ก่อน' : why(r.error)); return false; }
+  Object.assign(online.me, patch); return true;
+}
+// remember the Stadium room code so /r reaches the people in that room
+async function setRoom(code) { if (online.v2 && online.me && online.me.room !== code) await setProfile({ room: code }); }
+
+async function loadHistory() {
+  const cols = online.v2 ? 'id, user_id, name, body, channel, to_id, to_name, created_at' : 'id, user_id, name, body, created_at';
+  const { data, error } = await online.sb.from('chat_messages').select(cols).order('created_at', { ascending: false }).limit(60);
+  if (error) throw error;
+  data.reverse().forEach(addMsg);
 }
 async function startChat() {
   if (!window.supabase) { chatState('โหลดระบบแชทไม่ได้', false); return; }
@@ -427,34 +565,82 @@ async function startChat() {
     online.user = session.user;
     while (!prof.name) await new Promise(r => setTimeout(r, 400)); // wait for the first-visit name
     await saveName();
-    const { data, error } = await sb.from('chat_messages').select('id, user_id, name, body, created_at').order('created_at', { ascending: false }).limit(40);
-    if (error) throw error;
-    data.reverse().forEach(addMsg);
-    sb.channel('world-chat')
+    await loadHistory();
+    if (!online.v2) sysLine('ตอนนี้ใช้ได้แค่ช่องโลก ต้องรัน SQL ช่องแชทใน Supabase ก่อน');
+    else if (online.me.guild) sysLine(`คุณอยู่กิลด์ ${online.me.guild}`);
+    sb.channel('town-chat')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, p => addMsg(p.new))
       .subscribe(st => {
-        if (st === 'SUBSCRIBED') chatState('ออนไลน์', true);
+        if (st === 'SUBSCRIBED') chatState(`ออนไลน์ ในชื่อ ${prof.name}`, true);
         else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') chatState('การเชื่อมต่อแชทสะดุด กำลังลองใหม่', true);
       });
-    chatState('ออนไลน์', true);
+    chatState(`ออนไลน์ ในชื่อ ${prof.name}`, true);
   } catch (e) {
     console.warn('chat', e);
     chatState(why(e), false);
   }
 }
+
+// whisper target by name: the most recently active player with that name
+async function findPlayer(name) {
+  const { data, error } = await online.sb.from('profiles').select('id, name').ilike('name', name.replace(/[\\%_]/g, '\\$&')).order('updated_at', { ascending: false }).limit(1);
+  if (error || !data.length) return null;
+  return data[0];
+}
+
 let lastSend = 0;
+async function post(channel, body, to) {
+  if (!body) return;
+  if (Date.now() - lastSend < 2000) { toast('ส่งเร็วไป รอสักครู่'); return false; }
+  if (!online.v2 && channel !== 'world') { toast('ต้องรัน SQL ช่องแชทใน Supabase ก่อน'); return false; }
+  lastSend = Date.now();
+  const row = online.v2 ? { body, channel } : { body };
+  if (channel === 'whisper') row.to_id = to.id;
+  const cols = online.v2 ? 'id, user_id, name, body, channel, to_id, to_name, created_at' : 'id, user_id, name, body, created_at';
+  const { data, error } = await online.sb.from('chat_messages').insert(row).select(cols).single();
+  if (error) { toast(sendErr(error)); return false; }
+  addMsg(data); return true;
+}
+
+// parse slash commands; plain text goes to the current channel
+async function submitChat(text) {
+  const m = text.match(/^\/(\S+)\s*([\s\S]*)$/);
+  if (!m) {
+    if (chat.send === 'whisper' && !chat.to) { toast('พิมพ์ /w ชื่อ ข้อความ'); return false; }
+    return post(chat.send, text, chat.to);
+  }
+  const cmd = m[1].toLowerCase(), rest = m[2].trim();
+  const ALIAS = { s: 'world', world: 'world', g: 'guild', guild: 'guild', r: 'room', room: 'room', a: 'announce', ann: 'announce' };
+  if (cmd === 'help' || cmd === 'h') { HELP.forEach(sysLine); return true; }
+  if (cmd === 'gjoin') {
+    const g = rest.slice(0, 16);
+    if (!g) { toast('พิมพ์ /gjoin ชื่อกิลด์'); return false; }
+    if (await setProfile({ guild: g })) sysLine(`เข้ากิลด์ ${g} แล้ว พิมพ์ /g เพื่อคุยในกิลด์`);
+    return true;
+  }
+  if (cmd === 'gleave') { if (await setProfile({ guild: null })) sysLine('ออกจากกิลด์แล้ว'); return true; }
+  if (cmd === 'w' || cmd === 'whisper' || cmd === 'pm') {
+    const mm = rest.match(/^(\S+)\s*([\s\S]*)$/);
+    if (!mm) { setSend('whisper', null); return true; }
+    const who = await findPlayer(mm[1]);
+    if (!who) { toast(`ไม่พบผู้เล่นชื่อ ${mm[1]}`); return false; }
+    setSend('whisper', who);
+    return mm[2].trim() ? post('whisper', mm[2].trim(), who) : true;
+  }
+  if (ALIAS[cmd]) { setSend(ALIAS[cmd], null); return rest ? post(ALIAS[cmd], rest) : true; }
+  toast(`ไม่รู้จักคำสั่ง /${cmd} พิมพ์ /help`); return false;
+}
 $('chatform').onsubmit = async e => {
   e.preventDefault();
-  const inp = $('msg'), body = inp.value.trim();
-  if (!body || !online.sb) return;
-  if (Date.now() - lastSend < 2000) { toast('ส่งเร็วไป รอสักครู่'); return; }
-  lastSend = Date.now(); inp.value = '';
-  const { data, error } = await online.sb.from('chat_messages').insert({ body }).select('id, user_id, name, body, created_at').single();
-  if (error) { inp.value = body; toast(/slow_down/.test(error.message) ? 'ส่งเร็วไป รอสักครู่' : why(error)); return; }
-  addMsg(data);
+  const inp = $('msg'), text = inp.value.trim();
+  if (!text || !online.sb) return;
+  inp.value = '';
+  const ok = await submitChat(text);
+  if (ok === false) inp.value = text;
 };
 sysLine('ยินดีต้อนรับสู่เมือง กดที่อาคารเพื่อเข้าไป');
 startChat();
+sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
 </body>
 </html>
