@@ -415,7 +415,7 @@ const DEFAULT_DATA = {
               desc: 'เวทแรงที่สุด แช่แข็ง ระเบิดวงกว้าง แต่ HP ต่ำ', s1: 'mg_nova', s2: 'mg_meteor', s3: 'mg_firebolt', s4: 'mg_heaven', s5: 'mg_firewall', s6: 'mg_amp', b: 'mg_thunder', p1: 'pa_magicm', p2: 'pa_elem' },
     merchant: { name: 'Merchant', hp: 1150, atk: 50, matk: 20, def: 60, mdef: 50, spd: 40, luk: 70, nBase: 'atk', nPct: 100, color: '#b5652a', r: 38, gf: 1.1, vel: 0.97, shot: 'axe',
               desc: 'ถึกพอตัว มียา โล่ และบัฟตัวเอง', s1: 'mc_mammo', s2: 'mc_cartrev', s3: 'mc_coin', s4: 'mc_potion', s5: 'mc_upgrade', s6: 'mc_armor', b: 'mc_termination', p1: 'pa_overcharge', p2: 'pa_lucky' },
-    cleric: { name: 'Priest', hp: 1000, atk: 15, matk: 75, def: 35, mdef: 70, shieldCap: 30, spd: 40, luk: 50, nBase: 'matk', nPct: 80, color: '#e0a43a', r: 34, gf: 1, vel: 1, shot: 'orb',
+    cleric: { name: 'Priest', hp: 1000, atk: 15, matk: 75, def: 35, mdef: 70, shieldCap: 30, spd: 40, luk: 50, nBase: 'matk', nPct: 60, color: '#e0a43a', r: 34, gf: 1, vel: 1, shot: 'orb',
               desc: 'ฮีลดีที่สุด บัฟ โล่ และล้างสถานะ', s1: 'pr_holy', s2: 'pr_heal', s3: 'pr_bless', s4: 'pr_angelus', s5: 'pr_barrier', s6: 'pr_purge', b: 'pr_sanct', p1: 'pa_grace', p2: 'pa_guardian' },
     doram:  { name: 'Doram', hp: 900, atk: 20, matk: 70, def: 35, mdef: 55, spd: 65, luk: 65, nBase: 'matk', nPct: 85, color: '#c98f2e', r: 34, gf: 1, vel: 1.02, shot: 'spirit',
               desc: 'คอมโบธาตุ ติดมาร์ค 2 ธาตุแล้วจุดปฏิกิริยา', s1: 'dr_flame', s2: 'dr_water', s3: 'dr_thunder', s4: 'dr_nature', s5: 'dr_burst', s6: 'dr_shift', b: 'dr_golem', p1: 'pa_bond', p2: 'pa_nine' },
@@ -467,7 +467,7 @@ const DEFAULT_DATA = {
     pr_heal: { name: 'Heal', cd: 4, type: 'self', healMatk: 70, short: 'ฟื้น HP 70% MATK' },
     pr_bless: { name: 'Blessing', cd: 4, type: 'self', team: true, bAtk: 15, bMatk: 15, bTurns: 2, short: 'ATK และ MATK +15% 2 เทิร์น (ทั้งทีม)' },
     pr_angelus: { name: 'Angelus', cd: 4, type: 'self', team: true, bDef: 20, bMdef: 20, bTurns: 2, short: 'DEF และ MDEF +20% 2 เทิร์น (ทั้งทีม)' },
-    pr_barrier: { name: 'Holy Barrier', cd: 4, type: 'self', shieldMatk: 50, short: 'ได้โล่ 50% MATK' },
+    pr_barrier: { name: 'Holy Barrier', cd: 4, type: 'self', shieldMatk: 75, short: 'ได้โล่ 75% MATK' },
     pr_purge: { name: 'Purge', cd: 4, type: 'self', purge: true, healMatk: 35, short: 'ล้างสถานะผิดปกติ 1 อย่าง และฟื้น 35% MATK', tip: 'ล้างสถานะผิดปกติ 1 อย่าง (แข็ง มึน ตรึง ดีบัฟ หรือพิษ) และฟื้น HP 35% MATK ใช้ได้แม้ตอนโดนแข็งหรือมึน แต่ถ้าล้างแข็งหรือมึน เทิร์นนั้นจะจบทันที' },
     pr_sanct: { name: 'Sanctuary', type: 'self', team: true, healMatk: 100, shieldMatk: 30, short: 'ฟื้น 100% MATK และโล่ 30% MATK ทั้งทีม' },
     // Doram
@@ -1077,6 +1077,7 @@ function fire() {
   if (p.armed === 'z') list.push(makeProj(p, p.angle, power, { kind: 'warp', warp: true, gf: 1, wf: 1 }));
   else if (sk) list.push(...skillShots(p, sk, power, up));
   else list.push(makeProj(p, p.angle, power, { up, pct: p.c.nPct, base: p.c.nBase }));
+  if (p.armed !== 'z') stAdd(p.i, !sk ? 'useNormal' : sk === p.c.sk.b ? 'useUltShot' : 'useSkillShot', 1);
   if (sk) sfx(sk.sound);
   p.armed = null;
   if (CAST[p.k]) { p.releaseT = CAST_RELEASE; cam.shake = Math.max(cam.shake, 5); }
@@ -1142,6 +1143,8 @@ function explode(q) {
     dmg = Math.min(!foe ? Math.max(0, pl.hp - 1) : pl.hp, dmg);
     pl.hp = Math.max(0, pl.hp - dmg);
     if (foe) stAdd(owner.i, 'dmg', dmg); stAdd(pl.i, 'taken', dmg);
+    if (foe) { const kd = !sk ? 'Normal' : sk === c.sk.b ? 'Ult' : 'Skill'; stAdd(owner.i, 'dmg' + kd, dmg); if (crit) stAdd(owner.i, 'dmgCrit', dmg);
+      const sh0 = S.shot || (S.shot = { hit: new Set(), hurt: new Set() }); if (!sh0.counted) { sh0.counted = true; stAdd(owner.i, 'hit' + kd, 1); } }
     if (pct > 0 || dmg > 0) fx.texts.push({ x: pl.x, y: pl.y - 50, s: (crit ? 'คริติคอล! -' : '-') + (shown != null ? shown : dmg) + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff5a4a', t: 70 });
     if (foe && (dmg > 0 || soak > 0)) unhide(pl, S.turn === pl.i); // getting hit breaks Hiding
     const sh = S.shot || (S.shot = { hit: new Set(), hurt: new Set() });
@@ -4096,7 +4099,7 @@ $m('maker-btn').onclick = () => { openMaker(); };
 // Runs whole matches at full speed (no drawing, no waits, no sound) with sharper bots than the easy one you play against:
 // they read the wind right, aim with only a little error and hit at full strength. Sides swap every match.
 const SIM_MAX_TURNS = 200;
-function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, shieldAbs: 0, shieldCut: 0, shSkill: 0, shUlt: 0, shGuard: 0, cc: 0, ccTurns: 0, poisonAp: 0, bleedAp: 0, burnAp: 0, react: 0, ult: 0, enSkill: 0, enMove: 0, myTurns: 0, gSummon: 0, gLife: 0, gDmg: 0, gMelee: 0, gSpirit: 0, gReactDmg: 0, gReact: 0, gStun: 0, gShield: 0, gOwnerShield: 0, gWarp: 0, gSpiritN: 0, gSpiritHit: 0, gMeleeN: 0, gMeleeHit: 0, gGuardN: 0, gRxFT: 0, gRxWT: 0, gRxWN: 0, gRxFN: 0, gKills: 0, gShots: 0, gHits: 0, gTaken: 0, gDeath: 0, skills: {} }; }
+function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, shieldAbs: 0, shieldCut: 0, dmgNormal: 0, dmgSkill: 0, dmgUlt: 0, dmgCrit: 0, useNormal: 0, useSkillShot: 0, useUltShot: 0, hitNormal: 0, hitSkill: 0, hitUlt: 0, shSkill: 0, shUlt: 0, shGuard: 0, cc: 0, ccTurns: 0, poisonAp: 0, bleedAp: 0, burnAp: 0, react: 0, ult: 0, enSkill: 0, enMove: 0, myTurns: 0, gSummon: 0, gLife: 0, gDmg: 0, gMelee: 0, gSpirit: 0, gReactDmg: 0, gReact: 0, gStun: 0, gShield: 0, gOwnerShield: 0, gWarp: 0, gSpiritN: 0, gSpiritHit: 0, gMeleeN: 0, gMeleeHit: 0, gGuardN: 0, gRxFT: 0, gRxWT: 0, gRxWN: 0, gRxFN: 0, gKills: 0, gShots: 0, gHits: 0, gTaken: 0, gDeath: 0, skills: {} }; }
 function simPairs(a, b) {
   const keys = Object.keys(CLASSES), out = [];
   if (a && b) out.push([a, b]);
