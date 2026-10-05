@@ -28,16 +28,25 @@ button, input { font: inherit; color: inherit; }
   background: #24402a url("img/town.webp") center / 100% 100% no-repeat; overflow: hidden; user-select: none; }
 
 /* buildings */
-.bld { position: absolute; border: 0; padding: 0; background: none; cursor: pointer; border-radius: 40%; }
-.bld .glow { position: absolute; inset: 0; border-radius: 50%; opacity: 0; transition: opacity .18s;
-  background: radial-gradient(closest-side, rgba(255, 236, 160, .38), rgba(255, 220, 120, .12) 60%, transparent); mix-blend-mode: screen; pointer-events: none; }
-.bld:hover .glow, .bld:focus-visible .glow { opacity: 1; }
+.bld { position: absolute; border: 0; padding: 0; background: none; cursor: pointer; }
+.hl { position: absolute; pointer-events: none; opacity: 0; transition: opacity .2s; }
+.hl.on { opacity: 1; animation: hlpulse 1.6s ease-in-out infinite; }
+@keyframes hlpulse { 50% { filter: brightness(1.12) drop-shadow(0 0 10px rgba(255, 214, 96, .7)); } }
+#tip { position: absolute; width: 400px; padding: 18px 24px 20px; border-radius: 22px; pointer-events: none; z-index: 2;
+  background: linear-gradient(#fbf0cf, #efdcaa); border: 4px solid #8a5a22; color: #3b2408; box-shadow: 0 8px 20px rgba(0, 0, 0, .45);
+  font-size: 25px; line-height: 1.35; opacity: 0; transform: translateY(8px); transition: opacity .15s, transform .15s; }
+#tip.on { opacity: 1; transform: none; }
+#tip b { display: block; font-size: 29px; color: #6b3a05; margin-bottom: 4px; }
+#tip i { display: block; font-style: normal; font-weight: 700; color: #a0520e; margin-top: 6px; font-size: 22px; }
+#tip::after { content: ""; position: absolute; top: 40px; width: 26px; height: 26px; background: #f6e7bd; border: 4px solid #8a5a22; }
+#tip.r::after { left: -17px; border-width: 0 0 4px 4px; transform: rotate(45deg); }
+#tip.l::after { right: -17px; border-width: 4px 4px 0 0; transform: rotate(45deg); }
 .lbl { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; pointer-events: none;
   padding: 6px 22px; border-radius: 10px; background: rgba(30, 24, 36, .55); font-weight: 700; font-size: 34px; line-height: 1.15;
   text-shadow: 0 2px 3px rgba(0, 0, 0, .7); text-align: center; transition: transform .18s, background .18s; }
 .bld:hover + .lbl, .bld:focus-visible + .lbl { transform: translate(-50%, -50%) scale(1.08); background: rgba(40, 30, 10, .78); color: #ffe7a0; }
 .lbl small { display: block; font-size: 20px; font-weight: 600; color: #ffd76a; }
-.bld:focus-visible { outline: 4px solid var(--gold); outline-offset: -8px; }
+.bld:focus-visible { outline: none; }
 
 /* top and bottom icon bars (art from Karoz's mockup) */
 .bar { position: absolute; pointer-events: none; }
@@ -223,19 +232,20 @@ for (const m of document.querySelectorAll('.modal')) {
 addEventListener('keydown', e => { if (e.key === 'Escape') for (const m of document.querySelectorAll('.modal:not([hidden])')) closeModal(m); });
 
 // ---------- buildings and icons ----------
-// x, y, w, h of the click area and the label position, in the 1920x1080 town space
+// label position in the 1920x1080 town space; HL holds each glow image's box and the building outline (made by hl.py)
+const HL = {"tower": {"box": [311, 0, 241, 386], "poly": "49.4% 0.0% 62.7% 7.8% 73.0% 16.1% 80.5% 31.1% 83.4% 64.8% 85.9% 77.7% 78.4% 91.2% 36.9% 91.2% 19.5% 77.7% 14.1% 66.1% 14.1% 31.1% 25.3% 16.1% 36.9% 7.8%"}, "wedding": {"box": [476, 198, 353, 354], "poly": "50.7% 14.1% 63.5% 9.6% 73.4% 26.0% 83.9% 45.8% 90.4% 71.2% 90.4% 88.7% 69.1% 90.4% 32.3% 83.9% 9.6% 74.6% 11.0% 57.1% 23.8% 33.1% 35.1% 23.2%"}, "stadium": {"box": [788, 181, 381, 345], "poly": "15.0% 30.1% 26.8% 23.5% 42.5% 18.6% 51.7% 9.9% 55.6% 17.1% 68.8% 19.4% 81.9% 25.2% 90.3% 34.5% 91.1% 63.5% 78.0% 76.5% 71.9% 90.1% 42.0% 90.1% 27.3% 78.6% 9.7% 65.8% 8.9% 38.8%"}, "guild": {"box": [1131, 169, 388, 383], "poly": "35.8% 8.9% 43.6% 14.6% 52.6% 15.4% 65.5% 18.0% 74.5% 34.2% 85.3% 46.0% 91.2% 73.4% 83.5% 85.1% 56.4% 89.6% 17.8% 91.1% 8.8% 74.7% 10.6% 43.3% 20.4% 30.3% 28.1% 21.1%"}, "dungeon": {"box": [1544, 121, 375, 368], "poly": "38.9% 12.0% 56.3% 16.0% 73.6% 9.2% 87.5% 24.7% 90.9% 48.6% 90.1% 81.2% 65.6% 90.8% 25.6% 90.8% 9.1% 62.2% 15.7% 32.3% 30.9% 13.9%"}, "smith": {"box": [36, 379, 530, 297], "poly": "34.7% 11.4% 44.5% 13.1% 51.7% 14.8% 58.3% 20.5% 68.7% 27.3% 84.7% 30.6% 93.6% 49.2% 93.6% 71.7% 68.7% 88.6% 43.2% 85.2% 6.4% 75.1% 7.9% 44.1% 14.9% 33.3% 25.3% 20.5%"}, "brewery": {"box": [1239, 481, 453, 275], "poly": "21.2% 14.9% 33.3% 21.5% 60.9% 12.4% 69.1% 13.5% 77.9% 35.3% 91.2% 53.5% 92.5% 79.6% 68.7% 87.6% 38.9% 86.2% 7.5% 73.1% 11.7% 30.5%"}, "fame": {"box": [1614, 404, 306, 432], "poly": "40.5% 7.9% 78.8% 10.2% 72.2% 26.9% 75.5% 40.7% 77.1% 59.3% 95.1% 58.1% 99.3% 77.8% 80.4% 89.8% 28.1% 92.1% 11.1% 77.8% 17.6% 58.8% 34.0% 45.4% 39.5% 32.6%"}, "auction": {"box": [434, 584, 532, 362], "poly": "52.8% 9.4% 66.9% 26.0% 78.2% 37.0% 93.6% 53.6% 88.0% 76.8% 74.4% 90.6% 21.8% 90.6% 6.4% 76.8% 6.4% 55.5% 25.6% 38.1% 42.5% 28.7%"}, "shop": {"box": [956, 669, 590, 327], "poly": "52.4% 10.4% 68.5% 24.2% 80.3% 44.6% 90.8% 54.7% 94.2% 87.5% 51.5% 89.6% 5.8% 88.1% 8.8% 61.5% 15.6% 42.5% 35.9% 22.6%"}};
 const SOON = 'เร็วๆ นี้';
 const BUILDINGS = [
-  { k: 'tower', name: 'Endless Tower', th: 'หอคอยไร้สิ้นสุด', box: [320, 10, 220, 300], at: [425, 252], act: () => botModal('tower') },
-  { k: 'wedding', name: 'Wedding Hall', th: SOON, box: [510, 230, 300, 240], at: [690, 408] },
-  { k: 'stadium', name: 'Stadium', th: 'สนามประลอง', box: [800, 220, 330, 260], at: [957, 324], act: () => { $('st-err').textContent = ''; openModal('m-stadium'); } },
-  { k: 'guild', name: 'Guild', th: SOON, box: [1160, 190, 320, 280], at: [1295, 378] },
-  { k: 'dungeon', name: 'Dungeon', th: 'ดันเจียน', box: [1570, 140, 340, 300], at: [1763, 312], act: () => botModal('dungeon') },
-  { k: 'smith', name: 'Blacksmith', th: SOON, box: [70, 400, 420, 250], at: [306, 522] },
-  { k: 'brewery', name: 'Brewery', th: SOON, box: [1290, 500, 370, 230], at: [1446, 610] },
-  { k: 'fame', name: 'Hall of Fame', th: SOON, box: [1680, 430, 230, 400], at: [1768, 674] },
-  { k: 'auction', name: 'Auction', th: SOON, box: [500, 620, 420, 290], at: [740, 758] },
-  { k: 'shop', name: 'Shop', th: SOON, box: [990, 660, 540, 300], at: [1266, 889] },
+  { k: 'tower', desc: 'สู้กับบอทระดับยาก ทดสอบฝีมือการเล็งและอ่านลมของคุณ', name: 'Endless Tower', th: 'หอคอยไร้สิ้นสุด', at: [425, 252], act: () => botModal('tower') },
+  { k: 'wedding', desc: 'จับคู่กับคนพิเศษ แล้วจัดงานแต่งให้ทั้งเมืองรู้', name: 'Wedding Hall', th: SOON, at: [690, 408] },
+  { k: 'stadium', desc: 'สร้างห้องหรือเข้าห้องด้วยรหัส แล้วดวลกับเพื่อนแบบออนไลน์', name: 'Stadium', th: 'สนามประลอง', at: [957, 324], act: () => { $('st-err').textContent = ''; openModal('m-stadium'); } },
+  { k: 'guild', desc: 'สร้างหรือเข้าร่วมกิลด์ แล้วร่วมมือกับเพื่อนพิชิตศัตรู', name: 'Guild', th: SOON, at: [1295, 378] },
+  { k: 'dungeon', desc: 'ลงดันเจียนไปสู้กับบอท เลือกความยากได้ 3 ระดับ', name: 'Dungeon', th: 'ดันเจียน', at: [1763, 312], act: () => botModal('dungeon') },
+  { k: 'smith', desc: 'ตีบวกและอัปเกรดอาวุธให้แรงขึ้น', name: 'Blacksmith', th: SOON, at: [306, 522] },
+  { k: 'brewery', desc: 'ร้านเหล้าประจำเมือง พบปะเพื่อนและรับเควส', name: 'Brewery', th: SOON, at: [1446, 610] },
+  { k: 'fame', desc: 'ทำเนียบผู้กล้า ดูอันดับผู้เล่นที่เก่งที่สุด', name: 'Hall of Fame', th: SOON, at: [1768, 674] },
+  { k: 'auction', desc: 'ประมูลซื้อขายไอเทมกับผู้เล่นคนอื่น', name: 'Auction', th: SOON, at: [740, 758] },
+  { k: 'shop', desc: 'ซื้ออาวุธ ชุด และไอเทมต่างๆ', name: 'Shop', th: SOON, at: [1266, 889] },
 ];
 const ICONS = [
   { name: 'Reward', box: [1095, 8, 150, 104] }, { name: 'Promotion', box: [1260, 8, 155, 104] },
@@ -246,17 +256,45 @@ const ICONS = [
 ];
 const chatEl = $('chat');
 const place = (el, [x, y, w, h]) => Object.assign(el.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+const tip = document.createElement('div'); tip.id = 'tip';
+for (const b of BUILDINGS) {
+  const img = document.createElement('img');
+  img.className = 'hl'; img.src = `img/hl-${b.k}.webp`; img.alt = ''; place(img, HL[b.k].box);
+  world.insertBefore(img, chatEl);
+}
 for (const b of BUILDINGS) {
   const btn = document.createElement('button');
   btn.type = 'button'; btn.className = 'bld'; btn.dataset.k = b.k;
   btn.setAttribute('aria-label', `${b.name} ${b.th}`);
-  btn.innerHTML = '<span class="glow"></span>'; place(btn, b.box);
-  btn.onclick = b.act || (() => toast(`${b.name} ${SOON}`));
+  place(btn, HL[b.k].box); btn.style.clipPath = `polygon(${HL[b.k].poly.split(' ').reduce((a, v, i) => a + (i % 2 ? ' ' : i ? ', ' : '') + v, '')})`;
+  btn.onclick = () => { hideTip(b); (b.act || (() => toast(`${b.name} ${SOON}`)))(); };
+  const on = () => showTip(b), off = () => hideTip(b);
+  btn.addEventListener('pointerenter', on); btn.addEventListener('pointerleave', off);
+  btn.addEventListener('focus', on); btn.addEventListener('blur', off);
   const lbl = document.createElement('span');
   lbl.className = 'lbl'; lbl.style.left = b.at[0] + 'px'; lbl.style.top = b.at[1] + 'px';
   lbl.innerHTML = b.name.replace('Endless ', 'Endless<br>');
   const sm = document.createElement('small'); sm.textContent = b.th; lbl.appendChild(sm);
   world.insertBefore(btn, chatEl); world.insertBefore(lbl, chatEl);
+}
+world.appendChild(tip);
+let tipFor = null;
+function showTip(b) {
+  tipFor = b;
+  for (const im of world.querySelectorAll('.hl')) im.classList.toggle('on', im.src.endsWith(`hl-${b.k}.webp`));
+  tip.textContent = '';
+  const t = document.createElement('b'); t.textContent = `${b.name}`; tip.appendChild(t);
+  tip.appendChild(document.createTextNode(b.desc));
+  if (b.th === SOON) { const s = document.createElement('i'); s.textContent = SOON; tip.appendChild(s); }
+  const [x, y, w] = HL[b.k].box, right = x + w + 430 <= 1920;
+  tip.className = right ? 'r' : 'l';
+  tip.style.left = (right ? x + w - 10 : x - 400 + 10) + 'px';
+  tip.style.top = Math.max(10, Math.min(y + 30, 1080 - 260)) + 'px';
+  requestAnimationFrame(() => tip.classList.add('on'));
+}
+function hideTip(b) {
+  if (tipFor !== b) return; tipFor = null; tip.classList.remove('on');
+  for (const im of world.querySelectorAll('.hl.on')) im.classList.remove('on');
 }
 for (const ic of ICONS) {
   const btn = document.createElement('button');
