@@ -139,83 +139,55 @@ button, input { font: inherit; color: inherit; }
   pointer-events: none; opacity: 0; transition: opacity .2s; }
 #toast.on { opacity: 1; }
 
-/* sign-in screen shown before the town: dark-fantasy framed panel over the town art */
-#auth { position: fixed; inset: 0; z-index: 25; display: flex; flex-direction: column; overflow: auto; padding: 16px;
-  background: radial-gradient(ellipse at 50% 45%, rgba(10, 6, 4, .25) 0%, rgba(10, 6, 4, .6) 50%, rgba(4, 2, 1, .95) 100%),
-    linear-gradient(rgba(24, 10, 4, .45), rgba(24, 10, 4, .45)), #0d0b14 url("img/town.webp") center / cover no-repeat; }
+/* sign-in screen: Karoz's painted login art (img/login-bg.webp, text painted out) in a 1672x941 stage;
+   real inputs and buttons sit on the painted fields, patches cover parts that change per mode */
+#auth { position: fixed; inset: 0; z-index: 25; overflow: hidden; background: #0b1020; }
 #auth[hidden] { display: none; }
-.astack { margin: auto; width: min(440px, 100%); display: flex; flex-direction: column; align-items: center; }
-.aframe { position: relative; width: 100%; padding: 44px 34px 26px; color: #f3e3c0;
-  background: radial-gradient(ellipse at 50% 0%, rgba(120, 70, 30, .35), transparent 60%),
-    linear-gradient(#2b1d16, #170f0b 60%, #100a07);
-  border: 3px solid #a07a38; border-radius: 6px;
-  box-shadow: inset 0 0 0 2px #1a100a, inset 0 0 0 4px #5e4420, inset 0 0 40px rgba(0, 0, 0, .7), 0 0 0 2px #120a06, 0 18px 50px rgba(0, 0, 0, .8), 0 0 60px rgba(255, 160, 60, .12); }
-.aframe .cn { position: absolute; width: 30px; height: 30px; border: 3px solid #e2b55a; pointer-events: none; }
-.aframe .cn::after { content: ""; position: absolute; width: 8px; height: 8px; background: #f5d27a; transform: rotate(45deg); box-shadow: 0 0 6px rgba(255, 200, 90, .8); }
-.cn.tl { left: 6px; top: 6px; border-right: 0; border-bottom: 0; } .cn.tl::after { left: 4px; top: 4px; }
-.cn.tr { right: 6px; top: 6px; border-left: 0; border-bottom: 0; } .cn.tr::after { right: 4px; top: 4px; }
-.cn.bl { left: 6px; bottom: 6px; border-right: 0; border-top: 0; } .cn.bl::after { left: 4px; bottom: 4px; }
-.cn.br { right: 6px; bottom: 6px; border-left: 0; border-top: 0; } .cn.br::after { right: 4px; bottom: 4px; }
-.alogo { position: relative; z-index: 1; display: block; width: min(560px, 120%); max-width: calc(100vw - 16px); height: auto; margin-bottom: -46px;
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .75)); pointer-events: none; user-select: none; }
-.aplate { margin: 0 auto 20px; width: 78%; height: 40px; display: grid; place-items: center; font-size: 19px; font-weight: 700; color: #ffe7a0; letter-spacing: 1px;
-  background: linear-gradient(#5a1d12, #34100a); border-top: 2px solid #c99a48; border-bottom: 2px solid #c99a48;
-  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%); text-shadow: 0 2px 3px #000; }
-#a-form { display: flex; flex-direction: column; gap: 12px; }
-.ainp { position: relative; }
-.ainp[hidden] { display: none; }
-.ainp svg { position: absolute; left: 14px; top: 50%; width: 20px; height: 20px; transform: translateY(-50%); fill: #c9a060; opacity: .85; pointer-events: none; }
-.ainp input { width: 100%; height: 52px; padding: 0 46px; text-align: center; font-size: 17px; color: #fff4dc; border-radius: 4px;
-  background: linear-gradient(#3a1611, #210b08); border: 2px solid #8f6a30;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, .8), 0 0 0 1px #120806; }
-.ainp input::placeholder { color: #c7a77a; opacity: 1; }
-.ainp input:focus { outline: none; border-color: #f5c64a; box-shadow: inset 0 2px 8px rgba(0, 0, 0, .8), 0 0 0 1px #120806, 0 0 12px rgba(245, 198, 74, .45); }
-.arow { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 15px; color: #e6cf9f; margin: -2px 2px 2px; }
-.arow[hidden] { display: none; }
-.achk { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
-.achk input { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; margin: 0; border: 2px solid #b98d42; background: #1b0d09; border-radius: 3px; display: grid; place-items: center; cursor: pointer; }
-.achk input::after { content: ""; width: 10px; height: 10px; background: #f5c64a; transform: scale(0); transition: transform .12s; clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%); }
-.achk input:checked::after { transform: scale(1); }
-.achk input:focus-visible { outline: 2px solid #f5c64a; outline-offset: 2px; }
-.alink { border: 0; background: none; color: #f0c766; cursor: pointer; padding: 4px 0; font-size: 15px; }
-.alink:hover { color: #fff0b8; text-decoration: underline; }
-.abig { position: relative; height: 60px; border: 0; cursor: pointer; font-size: 23px; font-weight: 800; letter-spacing: 1px; color: #fff3cf; text-shadow: 0 2px 3px rgba(0, 0, 0, .9);
-  background: linear-gradient(#e2492c, #a8210f 48%, #7a1406 52%, #5a0e04); margin-top: 4px;
-  clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 18px 100%, 0 50%);
-  box-shadow: inset 0 0 0 3px #e8b860, inset 0 0 0 5px #5a1206, inset 0 0 22px rgba(255, 190, 90, .35); transition: filter .12s; }
-.abig::before, .abig::after { content: "◆"; position: absolute; top: 50%; transform: translateY(-50%); color: #f5c64a; font-size: 14px; }
-.abig::before { left: 26px; } .abig::after { right: 26px; }
-.abig:hover { filter: brightness(1.15); }
-.abig:active { filter: brightness(.95); transform: translateY(1px); }
-.abig:disabled, .aplain:disabled { filter: grayscale(.6) brightness(.7); cursor: wait; }
-.or { display: flex; align-items: center; gap: 10px; color: #c7a77a; font-size: 14px; margin: 16px 0 12px; }
-.or::before, .or::after { content: ""; flex: 1; height: 2px; background: linear-gradient(90deg, transparent, #9a7436, transparent); }
-.aplain { width: 100%; height: 50px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-weight: 700; font-size: 17px; color: #f6e6c4;
-  background: linear-gradient(#2e2420, #1a1310); border: 2px solid #8f6a30; border-radius: 4px; box-shadow: inset 0 0 0 1px #000, 0 2px 6px rgba(0, 0, 0, .6); }
-.aplain:hover { border-color: #f5c64a; color: #fff3cf; }
-.aplain svg { width: 22px; height: 22px; background: #fff; border-radius: 50%; padding: 2px; }
-.aframe .err, .aframe .ok { text-align: center; font-size: 15px; min-height: 1.3em; margin: 10px 0 0; }
-.aframe .err:empty, .aframe .ok:empty { display: none; }
-.aframe .err { color: #ff9a8a; } .aframe .ok { color: #9be8a4; margin-top: 2px; }
-.anew { margin-top: 16px; width: min(320px, 86%); height: 50px; cursor: pointer; font-size: 18px; font-weight: 700; color: #ffe7a0; letter-spacing: .5px;
-  background: linear-gradient(#3b2a1c, #1d140d); border: 0; text-shadow: 0 2px 2px #000;
-  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
-  box-shadow: inset 0 0 0 2px #b98d42, inset 0 0 0 4px #20140b, 0 6px 16px rgba(0, 0, 0, .7); }
-.anew:hover { filter: brightness(1.25); }
-.aver { position: fixed; left: 14px; bottom: 10px; font-size: 13px; color: rgba(255, 236, 200, .7); text-shadow: 0 1px 2px #000; pointer-events: none; }
-.alegal { margin-top: 12px; font-size: 13px; color: rgba(255, 236, 200, .75); text-shadow: 0 1px 2px #000; text-align: center; }
+#auth::before { content: ""; position: absolute; inset: -40px; background: url("img/login-bg.webp") center / cover; filter: blur(18px) brightness(.6); }
+.astage { position: absolute; left: 0; top: 0; width: 1672px; height: 941px; transform-origin: 0 0; background: url("img/login-bg.webp") 0 0 / 100% 100%; }
+.astage > * { position: absolute; }
+.apatch { background: 0 0 / 100% 100% no-repeat; display: none; }
+.afld { background: none; border: 0; outline: none; color: #f6ead0; font-size: 24px; padding: 0 0 0 14px; caret-color: #f5c64a; text-shadow: 0 1px 2px #000; }
+.afld::placeholder { color: rgba(214, 200, 170, .82); opacity: 1; }
+.afld:focus { background: rgba(255, 220, 140, .06); border-radius: 6px; box-shadow: 0 0 0 2px rgba(245, 198, 74, .55); }
+#a-email { left: 680px; top: 387px; width: 376px; height: 46px; }
+#a-pass { left: 680px; top: 463px; width: 300px; height: 46px; }
+#a-eye { left: 988px; top: 461px; width: 64px; height: 50px; border: 0; background: none; cursor: pointer; border-radius: 8px; }
+#a-eye[aria-pressed="true"]::after { content: ""; position: absolute; left: 14px; right: 14px; top: 24px; height: 3px; background: #e9c36c; transform: rotate(-35deg); border-radius: 2px; }
+#p-field { left: 602px; top: 514px; width: 470px; height: 58px; background-image: url("img/login-field.webp"); }
+#p-field .afld { position: absolute; left: 78px; top: 6px; width: 376px; height: 46px; }
+#a-hint { left: 680px; top: 463px; width: 380px; height: 46px; display: none; align-items: center; padding-left: 14px; color: rgba(214, 200, 170, .82); font-size: 21px; text-shadow: 0 1px 2px #000; pointer-events: none; }
+.achk { left: 604px; top: 530px; width: 160px; height: 36px; cursor: pointer; }
+.achk input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.achk i { position: absolute; left: 0; top: 0; width: 36px; height: 36px; background: url("img/login-chk.webp") 0 0 / 100% 100%; display: none; }
+.achk input:not(:checked) + i { display: block; }
+.achk input:focus-visible + i, .achk input:focus-visible ~ b { outline: 2px solid #f5c64a; }
+.achk b { position: absolute; inset: 0; border-radius: 6px; }
+#a-forgot { left: 956px; top: 528px; width: 116px; height: 40px; border: 0; background: none; cursor: pointer; border-radius: 6px; }
+.abtn { border: 0; background: none; cursor: pointer; color: #fff6e0; font-weight: 800; letter-spacing: .5px; text-shadow: 0 2px 4px rgba(0, 0, 0, .85); transition: background .12s, box-shadow .12s; }
+.abtn:hover { background: rgba(255, 235, 190, .1); }
+.abtn:active { background: rgba(0, 0, 0, .15); }
+.abtn:disabled { cursor: wait; background: rgba(0, 0, 0, .35); }
+#a-submit { left: 660px; top: 594px; width: 352px; height: 64px; font-size: 36px; border-radius: 32px; }
+#a-google { left: 618px; top: 722px; width: 436px; height: 80px; border-radius: 14px; font-size: 0; }
+#a-switch { left: 690px; top: 808px; width: 292px; height: 50px; font-size: 27px; font-weight: 700; border-radius: 12px; }
+.amsg { left: 600px; top: 668px; width: 472px; height: 46px; display: none; place-items: center; text-align: center; background: linear-gradient(#141c33, #10172b); border-radius: 8px; box-shadow: 0 0 0 1px rgba(233, 195, 108, .4); padding: 0 10px; }
+.amsg.on { display: grid; }
+.amsg p { margin: 0; font-size: 19px; line-height: 1.2; text-shadow: 0 1px 2px #000; }
+.amsg p:empty { display: none; }
+.amsg .err { color: #ff9f8f; } .amsg .ok { color: #9be8a4; }
+#auth.m-up #p-field { display: block; }
+#auth.m-forgot #a-hint { display: flex; }
+#auth.m-up .achk, #auth:not(.m-in) #a-forgot, #auth.m-forgot #a-eye, #auth.m-forgot #a-pass { display: none; }
+#auth.m-up #a-submit, #auth.m-forgot #a-submit { font-size: 32px; }
+#auth.m-forgot #a-submit { font-size: 27px; }
+#auth:not(.m-in) #a-switch { font-size: 22px; }
+.alegal { position: fixed; left: 0; right: 0; bottom: 6px; text-align: center; font-size: 13px; color: rgba(255, 236, 200, .85); text-shadow: 0 1px 3px #000; z-index: 1; }
 .alegal a { color: #f0c766; }
+.aver { position: fixed; left: 14px; bottom: 6px; font-size: 13px; color: rgba(255, 236, 200, .75); text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 1; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-@media (max-height: 780px) {
-  .alogo { width: min(430px, 100%); margin-bottom: -36px; } .aframe { padding: 40px 30px 20px; } .aplate { margin: 8px auto 14px; }
-  .or { margin: 12px 0 10px; } .anew { margin-top: 12px; }
-}
-@media (max-height: 560px) {
-  .alogo { width: 340px; margin-bottom: -28px; }
-  .aframe { padding: 32px 26px 16px; } .aplate { margin: 6px auto 12px; height: 34px; font-size: 17px; }
-  #a-form { gap: 8px; } .ainp input { height: 44px; } .abig { height: 50px; font-size: 20px; } .aplain { height: 44px; }
-  .or { margin: 10px 0 8px; } .anew { margin-top: 10px; height: 44px; } .aver { display: none; }
-}
+@media (max-width: 760px) { .aver { display: none; } }
+@media (max-height: 560px) { .alegal { display: none; } }
 .card label { display: block; font-size: 14px; color: var(--muted); margin: 0 0 4px; }
 .card .ok { color: #8fe39a; min-height: 1.3em; margin: 0; font-size: 14px; }
 .acct-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 10px; font-size: 15px; }
@@ -308,30 +280,24 @@ button, input { font: inherit; color: inherit; }
   </form>
 </div>
 
-<div id="auth" hidden role="dialog" aria-modal="true" aria-labelledby="a-title">
-  <div class="astack">
-    <img class="alogo" src="img/logo.webp" alt="Ages of Aether" width="820" height="376">
-    <div class="aframe">
-      <span class="cn tl"></span><span class="cn tr"></span><span class="cn bl"></span><span class="cn br"></span>
-            <h1 class="aplate" id="a-title">เข้าสู่ระบบ</h1>
-      <form id="a-form" autocomplete="on" novalidate>
-        <div class="ainp"><svg viewBox="0 0 24 24"><path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm9 7.2L4.4 7H19.6zM4 9.1V17h16V9.1l-8 5.4z"/></svg><label class="sr" for="a-email">อีเมล</label><input id="a-email" type="email" autocomplete="email" placeholder="อีเมล" required></div>
-        <div class="ainp" id="a-pass-f"><svg viewBox="0 0 24 24"><path d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm2 0h6V8a3 3 0 0 0-6 0zm3 4a1.6 1.6 0 0 0-1 2.9V19h2v-2.1a1.6 1.6 0 0 0-1-2.9z"/></svg><label class="sr" for="a-pass">รหัสผ่าน</label><input id="a-pass" type="password" autocomplete="current-password" placeholder="รหัสผ่าน" minlength="6"></div>
-        <div class="ainp" id="a-pass2-f" hidden><svg viewBox="0 0 24 24"><path d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm2 0h6V8a3 3 0 0 0-6 0zm3 4a1.6 1.6 0 0 0-1 2.9V19h2v-2.1a1.6 1.6 0 0 0-1-2.9z"/></svg><label class="sr" for="a-pass2">ยืนยันรหัสผ่าน</label><input id="a-pass2" type="password" autocomplete="new-password" placeholder="ยืนยันรหัสผ่าน" minlength="6"></div>
-        <div class="arow" id="a-row">
-          <label class="achk"><input type="checkbox" id="a-remember" checked>จำรหัสผ่าน</label>
-          <button type="button" class="alink" id="a-forgot">ลืมรหัสผ่าน?</button>
-        </div>
-        <button type="submit" class="abig" id="a-submit">เข้าสู่ระบบ</button>
-      </form>
-      <p class="err" id="a-err" role="alert"></p>
-      <p class="ok" id="a-ok" role="status"></p>
-      <div class="or">หรือ</div>
-      <button type="button" class="aplain" id="a-google"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg><span>เข้าสู่ระบบด้วย Google</span></button>
-    </div>
-    <button type="button" class="anew" id="a-switch">สร้างบัญชีใหม่</button>
-    <p class="alegal">การเข้าสู่ระบบถือว่ายอมรับ <a href="terms.html" target="_blank" rel="noopener">ข้อตกลงการใช้งาน</a> และ <a href="privacy.html" target="_blank" rel="noopener">นโยบายความเป็นส่วนตัว</a></p>
-  </div>
+<div id="auth" class="m-in" hidden role="dialog" aria-modal="true" aria-labelledby="a-title">
+  <form class="astage" id="a-form" autocomplete="on" novalidate>
+    <h1 class="sr" id="a-title">Ages of Aether เข้าสู่ระบบ</h1>
+    <label class="sr" for="a-email">อีเมล</label>
+    <input class="afld" id="a-email" type="email" autocomplete="email" placeholder="อีเมล" required>
+    <label class="sr" for="a-pass">รหัสผ่าน</label>
+    <input class="afld" id="a-pass" type="password" autocomplete="current-password" placeholder="รหัสผ่าน" minlength="6">
+    <button type="button" id="a-eye" aria-pressed="false" aria-label="แสดงรหัสผ่าน"></button>
+    <div id="a-hint">ไม่ต้องใส่รหัสผ่าน</div>
+    <div class="apatch" id="p-field"><label class="sr" for="a-pass2">ยืนยันรหัสผ่าน</label><input class="afld" id="a-pass2" type="password" autocomplete="new-password" placeholder="ยืนยันรหัสผ่าน" minlength="6"></div>
+    <label class="achk" title="จำรหัสผ่าน"><input type="checkbox" id="a-remember" checked><i></i><b></b><span class="sr">จำรหัสผ่าน</span></label>
+    <button type="button" id="a-forgot"><span class="sr">ลืมรหัสผ่าน?</span></button>
+    <button type="submit" class="abtn" id="a-submit">เข้าสู่ระบบ</button>
+    <div class="amsg" id="a-msg"><p class="err" id="a-err" role="alert"></p><p class="ok" id="a-ok" role="status"></p></div>
+    <button type="button" class="abtn" id="a-google">เข้าสู่ระบบด้วย Google</button>
+    <button type="button" class="abtn" id="a-switch">สร้างบัญชีใหม่</button>
+  </form>
+  <p class="alegal">การเข้าสู่ระบบถือว่ายอมรับ <a href="terms.html" target="_blank" rel="noopener">ข้อตกลงการใช้งาน</a> และ <a href="privacy.html" target="_blank" rel="noopener">นโยบายความเป็นส่วนตัว</a></p>
   <div class="aver">Ages of Aether · เมืองทดสอบ</div>
 </div>
 
@@ -781,18 +747,28 @@ function authErr(e) {
   if (/fetch|network/i.test(s)) return 'ต่อเซิร์ฟเวอร์ไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่';
   return 'ทำรายการไม่สำเร็จ (' + s.slice(0, 80) + ')';
 }
-const aMsg = (err, ok) => { $('a-err').textContent = err || ''; $('a-ok').textContent = ok || ''; };
+const aMsg = (err, ok) => { $('a-err').textContent = err || ''; $('a-ok').textContent = ok || ''; $('a-msg').classList.toggle('on', !!(err || ok)); };
 function setAuthMode(m) {
   authMode = m;
-  $('a-title').textContent = m === 'up' ? 'สร้างบัญชีใหม่' : m === 'forgot' ? 'ลืมรหัสผ่าน' : 'เข้าสู่ระบบ';
-  $('a-pass-f').hidden = m === 'forgot';
-  $('a-pass2-f').hidden = m !== 'up';
-  $('a-row').hidden = m !== 'in';
+  $('auth').className = 'm-' + m;
+  $('a-title').textContent = 'Ages of Aether ' + (m === 'up' ? 'สร้างบัญชีใหม่' : m === 'forgot' ? 'ลืมรหัสผ่าน' : 'เข้าสู่ระบบ');
   $('a-pass').autocomplete = m === 'up' ? 'new-password' : 'current-password';
   $('a-submit').textContent = m === 'up' ? 'สมัครสมาชิก' : m === 'forgot' ? 'ส่งลิงก์ตั้งรหัสผ่านใหม่' : 'เข้าสู่ระบบ';
   $('a-switch').textContent = m === 'in' ? 'สร้างบัญชีใหม่' : 'กลับไปหน้าเข้าสู่ระบบ';
   aMsg();
 }
+$('a-eye').onclick = () => {
+  const show = $('a-pass').type === 'password';
+  $('a-pass').type = $('a-pass2').type = show ? 'text' : 'password';
+  $('a-eye').setAttribute('aria-pressed', String(show));
+  $('a-eye').setAttribute('aria-label', show ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน');
+};
+// the painted login art is a fixed 1672x941 stage: fit it to the window, keeping the whole panel visible
+function fitAuth() {
+  const W = innerWidth, H = innerHeight, k = Math.min(Math.max(W / 1672, H / 941), W / 760, H / 941);
+  $('a-form').style.transform = `translate(${(W - 1672 * k) / 2}px, ${(H - 941 * k) / 2}px) scale(${k})`;
+}
+addEventListener('resize', fitAuth); fitAuth();
 $('a-switch').onclick = () => setAuthMode(authMode === 'in' ? 'up' : 'in');
 $('a-forgot').onclick = () => setAuthMode('forgot');
 
