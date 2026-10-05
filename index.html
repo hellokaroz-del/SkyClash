@@ -415,7 +415,7 @@ const DEFAULT_DATA = {
               desc: 'เวทแรงที่สุด แช่แข็ง ระเบิดวงกว้าง แต่ HP ต่ำ', s1: 'mg_nova', s2: 'mg_meteor', s3: 'mg_firebolt', s4: 'mg_heaven', s5: 'mg_firewall', s6: 'mg_amp', b: 'mg_thunder', p1: 'pa_magicm', p2: 'pa_elem' },
     merchant: { name: 'Merchant', hp: 1150, atk: 50, matk: 20, def: 60, mdef: 50, spd: 40, luk: 70, nBase: 'atk', nPct: 100, color: '#b5652a', r: 38, gf: 1.1, vel: 0.97, shot: 'axe',
               desc: 'ถึกพอตัว มียา โล่ และบัฟตัวเอง', s1: 'mc_mammo', s2: 'mc_cartrev', s3: 'mc_coin', s4: 'mc_potion', s5: 'mc_upgrade', s6: 'mc_armor', b: 'mc_termination', p1: 'pa_overcharge', p2: 'pa_lucky' },
-    cleric: { name: 'Priest', hp: 1000, atk: 15, matk: 75, def: 35, mdef: 70, shieldCap: 30, fatigue: 30, fatigueTurns: 3, spd: 40, luk: 50, nBase: 'matk', nPct: 80, color: '#e0a43a', r: 34, gf: 1, vel: 1, shot: 'orb',
+    cleric: { name: 'Priest', hp: 1000, atk: 15, matk: 75, def: 35, mdef: 70, shieldCap: 30, spd: 40, luk: 50, nBase: 'matk', nPct: 80, color: '#e0a43a', r: 34, gf: 1, vel: 1, shot: 'orb',
               desc: 'ฮีลดีที่สุด บัฟ โล่ และล้างสถานะ', s1: 'pr_holy', s2: 'pr_heal', s3: 'pr_bless', s4: 'pr_angelus', s5: 'pr_barrier', s6: 'pr_purge', b: 'pr_sanct', p1: 'pa_grace', p2: 'pa_guardian' },
     doram:  { name: 'Doram', hp: 900, atk: 20, matk: 70, def: 35, mdef: 55, spd: 65, luk: 65, nBase: 'matk', nPct: 85, color: '#c98f2e', r: 34, gf: 1, vel: 1.02, shot: 'spirit',
               desc: 'คอมโบธาตุ ติดมาร์ค 2 ธาตุแล้วจุดปฏิกิริยา', s1: 'dr_flame', s2: 'dr_water', s3: 'dr_thunder', s4: 'dr_nature', s5: 'dr_burst', s6: 'dr_shift', b: 'dr_golem', p1: 'pa_bond', p2: 'pa_nine' },
@@ -464,7 +464,7 @@ const DEFAULT_DATA = {
     mc_termination: { name: 'Cart Termination', type: 'shot', base: 'atk', dmg: 220, size: 160, weight: 112, proj: 'cart', short: '220% ATK วงกว้าง' },
     // Priest
     pr_holy: { name: 'Holy Light', cd: 2, type: 'shot', base: 'matk', dmg: 110, short: '110% MATK' },
-    pr_heal: { name: 'Heal', cd: 4, type: 'self', healMatk: 70, fatigues: true, short: 'ฟื้น HP 70% MATK' },
+    pr_heal: { name: 'Heal', cd: 4, type: 'self', healMatk: 70, short: 'ฟื้น HP 70% MATK' },
     pr_bless: { name: 'Blessing', cd: 4, type: 'self', team: true, bAtk: 15, bMatk: 15, bTurns: 2, short: 'ATK และ MATK +15% 2 เทิร์น (ทั้งทีม)' },
     pr_angelus: { name: 'Angelus', cd: 4, type: 'self', team: true, bDef: 20, bMdef: 20, bTurns: 2, short: 'DEF และ MDEF +20% 2 เทิร์น (ทั้งทีม)' },
     pr_barrier: { name: 'Holy Barrier', cd: 4, type: 'self', shieldMatk: 75, short: 'ได้โล่ 75% MATK' },
@@ -595,10 +595,12 @@ function statOf(p, k) {
   return Math.max(0, (p.c[k] || 0) * (1 + pct / 100));
 }
 // damage before crit: stat x % x DMG_K, cut by the target's DEF (physical) or MDEF (magic) as 100 / (100 + defence)
+let HD_DEFR = 1; // auto battle test: raw damage before DEF/MDEF = final damage x this
 function hitDamage(o, t, base, pct, ign, up) {
   const magic = base === 'matk';
   let dmg = statOf(o, magic ? 'matk' : 'atk') * pct / 100 * DMG_K * (up || 1);
   dmg *= 100 / (100 + statOf(t, magic ? 'mdef' : 'def') * (1 - (ign || 0) / 100));
+  HD_DEFR = (100 + statOf(t, magic ? 'mdef' : 'def') * (1 - (ign || 0) / 100)) / 100;
   for (const d of t.debs || []) if (d.taken && d.by === o.i) dmg *= 1 + d.taken / 100;
   for (const d of o.debs || []) if (d.deal && d.by === t.i) dmg *= 1 - d.deal / 100;
   for (const b of t.buffs || []) if (b.taken) dmg *= 1 - b.taken / 100;
@@ -690,9 +692,9 @@ function lowHp(pl) {
 function hurtRaw(pl, amt, label, col, by) {
   if (!pl.alive || (ADMIN.god && !NET.on && !pl.bot)) return;
   let d = Math.round(amt);
-  if (pl.shield > 0) { const s = Math.min(pl.shield, d); pl.shield -= s; d -= s; stAdd(pl.i, 'shieldAbs', s); }
-  pl.hp = Math.max(0, pl.hp - d);
-  if (by != null && by !== pl.i) stAdd(by, 'dmg', d); stAdd(pl.i, 'taken', d);
+  let s0 = 0; if (pl.shield > 0) { const s = Math.min(pl.shield, d); pl.shield -= s; d -= s; s0 = s; stAdd(pl.i, 'shieldAbs', s); }
+  d = Math.min(d, pl.hp); pl.hp = Math.max(0, pl.hp - d);
+  if (by != null && by !== pl.i) { stAdd(by, 'dmg', d); stAdd(by, 'dmgDot', d); stAdd(by, 'causedAbs', s0); stAdd(by, 'eff', d + s0); } stAdd(pl.i, 'taken', d);
   say(pl, `${label} -${d}`, col, 80, 50);
   if (d > 0 || amt > 0) unhide(pl, S.turn === pl.i); // taking damage breaks Hiding
   if (pl.hp <= 0) pl.alive = false; else lowHp(pl);
@@ -1010,6 +1012,7 @@ function addRage(pl, n) {
 function other(p) { return S.players[1 - p.i]; }
 
 function startTurn(first) {
+  if (!first) effFlush(cur());
   if (!first) { const pr = cur(); if (pr.passed) pr.passed = false; else addRage(pr, 5); } // finished own turn (+5), unless PASS already paid +15
   if (!first) { const prev = cur(); if (prev.thawNext) { prev.frozen = Math.max(0, prev.frozen - 1); prev.thawNext = false; prev.ccTurn = false; if (prev.frozen === 0 && prev.ccLen >= 2) prev.ccRes = CC_RES_TURNS; } }
   if (!first) S.turn = 1 - S.turn;
@@ -1141,7 +1144,7 @@ function explode(q) {
     if (!pl.alive || boxDist(pl, q.x, q.y) > r) continue;
     const foe = teamOf(pl.i) !== teamOf(owner.i);
     if (pct <= 0 && !foe) continue;
-    let dmg = pct > 0 ? hitDamage(owner, pl, base, sk && sk.vsDot && hasDot(pl) ? sk.vsDot : pct, sk ? sk.ignoreDef : 0, q.up) : 0, rx = null;
+    let dmg = pct > 0 ? hitDamage(owner, pl, base, sk && sk.vsDot && hasDot(pl) ? sk.vsDot : pct, sk ? sk.ignoreDef : 0, q.up) : 0, rx = null; const defR = HD_DEFR;
     if (foe && sk && sk.burst) { rx = reactionOf(pl, owner); if (rx && rx.bonus) dmg += hitDamage(owner, pl, 'matk', rx.bonus, 0, q.up); }
     const crit = foe && dmg > 0 && Math.random() < critChance(owner);
     if (crit) dmg *= critMul(owner);
@@ -1158,7 +1161,10 @@ function explode(q) {
     pl.hp = Math.max(0, pl.hp - dmg);
     if (foe) stAdd(owner.i, 'dmg', dmg); stAdd(pl.i, 'taken', dmg);
     if (foe) { const kd = !sk ? 'Normal' : sk === c.sk.b ? 'Ult' : 'Skill'; stAdd(owner.i, 'dmg' + kd, dmg); if (crit) stAdd(owner.i, 'dmgCrit', dmg);
-      const sh0 = S.shot || (S.shot = { hit: new Set(), hurt: new Set() }); if (!sh0.counted) { sh0.counted = true; stAdd(owner.i, 'hit' + kd, 1); } }
+      const sh0 = S.shot || (S.shot = { hit: new Set(), hurt: new Set() }); const skk = q.skill || 'normal';
+      if (!sh0.counted) { sh0.counted = true; stAdd(owner.i, 'hit' + kd, 1); if (ST) { const m = ST.p[owner.i].skHit; m[skk] = (m[skk] || 0) + 1; } }
+      if (ST) { const m = ST.p[owner.i].skDmg; m[skk] = (m[skk] || 0) + dmg + soak; }
+      stAdd(owner.i, 'causedAbs', soak); stAdd(owner.i, 'eff', dmg + soak); stAdd(owner.i, 'preShield', shown + soak); stAdd(owner.i, 'raw', Math.round((shown + soak) * defR)); }
     if (pct > 0 || dmg > 0) fx.texts.push({ x: pl.x, y: pl.y - 50, s: (crit ? 'คริติคอล! -' : '-') + (shown != null ? shown : dmg) + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff5a4a', t: 70 });
     if (foe && (dmg > 0 || soak > 0)) unhide(pl, S.turn === pl.i); // getting hit breaks Hiding
     const sh = S.shot || (S.shot = { hit: new Set(), hurt: new Set() });
@@ -4113,7 +4119,7 @@ $m('maker-btn').onclick = () => { openMaker(); };
 // Runs whole matches at full speed (no drawing, no waits, no sound) with sharper bots than the easy one you play against:
 // they read the wind right, aim with only a little error and hit at full strength. Sides swap every match.
 const SIM_MAX_TURNS = 200;
-function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, shieldAbs: 0, shieldCut: 0, selfHealFull: 0, selfHealFat: 0, healCutFat: 0, healSelf: 0, sanctSelf: 0, sanctAlly: 0, purgeSelf: 0, fatTurns: 0, dmgNormal: 0, dmgSkill: 0, dmgUlt: 0, dmgCrit: 0, useNormal: 0, useSkillShot: 0, useUltShot: 0, hitNormal: 0, hitSkill: 0, hitUlt: 0, shSkill: 0, shUlt: 0, shGuard: 0, cc: 0, ccTurns: 0, poisonAp: 0, bleedAp: 0, burnAp: 0, react: 0, ult: 0, enSkill: 0, enMove: 0, myTurns: 0, gSummon: 0, gLife: 0, gDmg: 0, gMelee: 0, gSpirit: 0, gReactDmg: 0, gReact: 0, gStun: 0, gShield: 0, gOwnerShield: 0, gWarp: 0, gSpiritN: 0, gSpiritHit: 0, gMeleeN: 0, gMeleeHit: 0, gGuardN: 0, gRxFT: 0, gRxWT: 0, gRxWN: 0, gRxFN: 0, gKills: 0, gShots: 0, gHits: 0, gTaken: 0, gDeath: 0, skills: {} }; }
+function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, shieldAbs: 0, shieldCut: 0, dmgDot: 0, causedAbs: 0, eff: 0, preShield: 0, raw: 0, offTurns: 0, offSum: 0, maxTurn: 0, turnsDone: 0, t500: 0, t1000: 0, t1500: 0, skHit: {}, skDmg: {}, selfHealFull: 0, selfHealFat: 0, healCutFat: 0, healSelf: 0, sanctSelf: 0, sanctAlly: 0, purgeSelf: 0, fatTurns: 0, dmgNormal: 0, dmgSkill: 0, dmgUlt: 0, dmgCrit: 0, useNormal: 0, useSkillShot: 0, useUltShot: 0, hitNormal: 0, hitSkill: 0, hitUlt: 0, shSkill: 0, shUlt: 0, shGuard: 0, cc: 0, ccTurns: 0, poisonAp: 0, bleedAp: 0, burnAp: 0, react: 0, ult: 0, enSkill: 0, enMove: 0, myTurns: 0, gSummon: 0, gLife: 0, gDmg: 0, gMelee: 0, gSpirit: 0, gReactDmg: 0, gReact: 0, gStun: 0, gShield: 0, gOwnerShield: 0, gWarp: 0, gSpiritN: 0, gSpiritHit: 0, gMeleeN: 0, gMeleeHit: 0, gGuardN: 0, gRxFT: 0, gRxWT: 0, gRxWN: 0, gRxFN: 0, gKills: 0, gShots: 0, gHits: 0, gTaken: 0, gDeath: 0, skills: {} }; }
 function simPairs(a, b) {
   const keys = Object.keys(CLASSES), out = [];
   if (a && b) out.push([a, b]);
@@ -4122,6 +4128,12 @@ function simPairs(a, b) {
   return out;
 }
 // one match; A and B are class keys, swap puts A on the right
+// auto battle test: effective damage (HP + shield) a player dealt in the turn that just ended, for the burst numbers
+function effFlush(p) {
+  if (!ST || !ST.p[p.i]) return; const st = ST.p[p.i], d = st.eff - (st._mark || 0); st._mark = st.eff; st.turnsDone++;
+  if (d > 0) { st.offTurns++; st.offSum += d; st.maxTurn = Math.max(st.maxTurn, d); }
+  for (const n of [500, 1000, 1500]) if (!st['t' + n] && st.eff >= n) st['t' + n] = st.turnsDone;
+}
 function simMatch(a, b, swap) {
   picks[0] = swap ? b : a; picks[1] = swap ? a : b;
   ST = { p: [newStat(), newStat()] };
@@ -4132,6 +4144,7 @@ function simMatch(a, b, swap) {
     update();
     if (S.turnCount > SIM_MAX_TURNS && S.state !== 'over') { S.state = 'over'; S.winIdx = -1; }
   }
+  effFlush(cur()); // the last turn (usually the killing blow)
   const ia = swap ? 1 : 0, ib = 1 - ia, A = S.players[ia], B = S.players[ib], sa = ST.p[ia], sb = ST.p[ib];
   const win = S.winIdx === ia ? 'A' : S.winIdx === ib ? 'B' : 'draw';
   ST = null;
