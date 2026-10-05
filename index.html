@@ -415,7 +415,7 @@ const DEFAULT_DATA = {
               desc: 'เวทแรงที่สุด แช่แข็ง ระเบิดวงกว้าง แต่ HP ต่ำ', s1: 'mg_nova', s2: 'mg_meteor', s3: 'mg_firebolt', s4: 'mg_heaven', s5: 'mg_firewall', s6: 'mg_amp', b: 'mg_thunder', p1: 'pa_magicm', p2: 'pa_elem' },
     merchant: { name: 'Merchant', hp: 1150, atk: 50, matk: 20, def: 60, mdef: 50, spd: 40, luk: 70, nBase: 'atk', nPct: 100, color: '#b5652a', r: 38, gf: 1.1, vel: 0.97, shot: 'axe',
               desc: 'ถึกพอตัว มียา โล่ และบัฟตัวเอง', s1: 'mc_mammo', s2: 'mc_cartrev', s3: 'mc_coin', s4: 'mc_potion', s5: 'mc_upgrade', s6: 'mc_armor', b: 'mc_termination', p1: 'pa_overcharge', p2: 'pa_lucky' },
-    cleric: { name: 'Priest', hp: 1000, atk: 15, matk: 75, def: 35, mdef: 70, shieldCap: 30, spd: 40, luk: 50, nBase: 'matk', nPct: 60, color: '#e0a43a', r: 34, gf: 1, vel: 1, shot: 'orb',
+    cleric: { name: 'Priest', hp: 1000, atk: 15, matk: 75, def: 35, mdef: 70, shieldCap: 30, fatigue: 30, fatigueTurns: 3, spd: 40, luk: 50, nBase: 'matk', nPct: 80, color: '#e0a43a', r: 34, gf: 1, vel: 1, shot: 'orb',
               desc: 'ฮีลดีที่สุด บัฟ โล่ และล้างสถานะ', s1: 'pr_holy', s2: 'pr_heal', s3: 'pr_bless', s4: 'pr_angelus', s5: 'pr_barrier', s6: 'pr_purge', b: 'pr_sanct', p1: 'pa_grace', p2: 'pa_guardian' },
     doram:  { name: 'Doram', hp: 900, atk: 20, matk: 70, def: 35, mdef: 55, spd: 65, luk: 65, nBase: 'matk', nPct: 85, color: '#c98f2e', r: 34, gf: 1, vel: 1.02, shot: 'spirit',
               desc: 'คอมโบธาตุ ติดมาร์ค 2 ธาตุแล้วจุดปฏิกิริยา', s1: 'dr_flame', s2: 'dr_water', s3: 'dr_thunder', s4: 'dr_nature', s5: 'dr_burst', s6: 'dr_shift', b: 'dr_golem', p1: 'pa_bond', p2: 'pa_nine' },
@@ -464,7 +464,7 @@ const DEFAULT_DATA = {
     mc_termination: { name: 'Cart Termination', type: 'shot', base: 'atk', dmg: 220, size: 160, weight: 112, proj: 'cart', short: '220% ATK วงกว้าง' },
     // Priest
     pr_holy: { name: 'Holy Light', cd: 2, type: 'shot', base: 'matk', dmg: 110, short: '110% MATK' },
-    pr_heal: { name: 'Heal', cd: 4, type: 'self', healMatk: 70, short: 'ฟื้น HP 70% MATK' },
+    pr_heal: { name: 'Heal', cd: 4, type: 'self', healMatk: 70, fatigues: true, short: 'ฟื้น HP 70% MATK' },
     pr_bless: { name: 'Blessing', cd: 4, type: 'self', team: true, bAtk: 15, bMatk: 15, bTurns: 2, short: 'ATK และ MATK +15% 2 เทิร์น (ทั้งทีม)' },
     pr_angelus: { name: 'Angelus', cd: 4, type: 'self', team: true, bDef: 20, bMdef: 20, bTurns: 2, short: 'DEF และ MDEF +20% 2 เทิร์น (ทั้งทีม)' },
     pr_barrier: { name: 'Holy Barrier', cd: 4, type: 'self', shieldMatk: 75, short: 'ได้โล่ 75% MATK' },
@@ -719,6 +719,7 @@ function turnStartEffects(q) {
   for (const pl of S.players) pl.marks = pl.marks.filter(m => m.by !== q.i || --m.ttl > 0);
   q.bindNow = q.bind > 0; if (q.bind > 0) q.bind--;
   if (q.ccRes > 0) q.ccRes--;
+  if (q.fatigue > 0 && --q.fatigue > 0) stAdd(q.i, 'fatTurns', 1); // Healing Fatigue: a system status, Purge can't clear it
   if (q.hidden > 0 && --q.hidden <= 0) { q.hidden = 1; unhide(q, false); }
 }
 function purge(t) {
@@ -736,7 +737,19 @@ function selfSkill(p, sk) {
   for (const t of team) {
     if (sk.purge) purge(t);
     const h = Math.round((t.maxHp * (sk.heal || 0) / 100 + statOf(p, 'matk') * (sk.healMatk || 0) / 100 * HEAL_K) * more * (1 + (pv.healBonus || 0) / 100));
-    if (h > 0) { const got = Math.min(t.maxHp - t.hp, h); stAdd(p.i, 'heal', got); stAdd(t.i, 'healRecv', got); t.hp += got; fx.texts.push({ x: t.x, y: t.y - 50, s: '+' + h, col: '#7dff9a', t: 70 }); }
+    if (h > 0) {
+      // Healing Fatigue (Priest Nerf V6): while it lasts, healing a class with 'fatigue' gives itself is cut by that %
+      // (heals on allies are not). Heal (a 'fatigues' skill) on yourself starts it or refreshes it; it never stacks.
+      const self = t === p && p.c.fatigue > 0, tired = self && p.fatigue > 0;
+      const hh = tired ? Math.round(h * (1 - p.c.fatigue / 100)) : h;
+      const got = Math.min(t.maxHp - t.hp, hh); stAdd(p.i, 'heal', got); stAdd(t.i, 'healRecv', got); t.hp += got;
+      fx.texts.push({ x: t.x, y: t.y - 50, s: '+' + hh + (tired ? ' (เหนื่อยฮีล)' : ''), col: '#7dff9a', t: 70 });
+      if (self) { stAdd(p.i, tired ? 'selfHealFat' : 'selfHealFull', 1); if (tired) stAdd(p.i, 'healCutFat', Math.min(t.maxHp - t.hp + got, h) - got); }
+      if (sk === p.c.sk.b) stAdd(p.i, t === p ? 'sanctSelf' : 'sanctAlly', got);
+      else if (sk.purge && t === p) stAdd(p.i, 'purgeSelf', got);
+      else if (t === p) stAdd(p.i, 'healSelf', got);
+      if (self && sk.fatigues) { if (!(p.fatigue > 0)) stAdd(p.i, 'fatTurns', 1); p.fatigue = p.c.fatigueTurns || 3; say(p, 'Healing Fatigue ' + p.fatigue + ' เทิร์น', '#c8d0e0', 80, 84); }
+    }
     const s = Math.round((t.maxHp * (sk.shieldPct || 0) / 100 + statOf(p, 'matk') * (sk.shieldMatk || 0) / 100 * HEAL_K) * more);
     if (s > 0) { const got = addShield(t, s, p.i); stAdd(p.i, sk === p.c.sk.b ? 'shUlt' : 'shSkill', got); say(t, got < s ? 'โล่ +' + got + ' (เต็ม)' : 'โล่ +' + got, '#7fd8ff', 70, 64); }
     if (sk.bAtk || sk.bMatk || sk.bDef || sk.bMdef || sk.bTaken || sk.bNext || sk.bNextMagic) addBuff(t, sk);
@@ -795,6 +808,7 @@ function drawStatus(p, x, y) {
   for (const m of p.marks || []) chips.push(['◆ ' + ELEM[m.e].n, ELEM[m.e].col]);
   if (p.shield > 0) chips.push(['โล่ ' + Math.round(p.shield), '#7fd8ff']);
   if (p.hidden > 0) chips.push(['ล่องหน ' + p.hidden, '#d9c8ff']);
+  if (p.fatigue > 0) chips.push(['เหนื่อยฮีล ' + p.fatigue, '#c8d0e0']);
   if (!chips.length) return;
   ctx.font = `600 9px ${FONT}`; ctx.textAlign = 'center';
   const rows = [[]]; let rw = 0;
@@ -970,7 +984,7 @@ function newMatch(demo) {
   const mk = (i, k, x, bot) => {
     const c = CLASSES[k];
     return { i, k, c, x, y: surfaceY(x), vy: 0, hp: c.hp, maxHp: c.hp, face: i === 0 ? 1 : -1, angle: 45, energy: c.maxEn, maxEn: c.maxEn,
-      cds: [0, 0, 0, 0, 0, 0], warpCd: 0, frozen: 0, cck: '', ccRes: 0, bind: 0, shield: 0, buffs: [], debs: [], dots: [], marks: [], hidden: 0, seenX: x, once: {},
+      cds: [0, 0, 0, 0, 0, 0], warpCd: 0, frozen: 0, cck: '', ccRes: 0, bind: 0, shield: 0, buffs: [], debs: [], dots: [], marks: [], hidden: 0, seenX: x, fatigue: 0, once: {},
       walk: 0, armed: null, rage: 0, dmgAcc: 0, lossAcc: 0, iron: false, bot, alive: true, lastPower: null, items: 2, boost: false,
       name: bot ? 'บอท' : (vsBot ? 'คุณ' : 'ผู้เล่น ' + (i + 1)),
       guild: bot ? 'หุ่นเหล็ก' : i === 0 ? 'ฟ้าคราม' : 'ลมใต้', level: bot ? 15 : i === 0 ? 12 : 10 };
@@ -4099,7 +4113,7 @@ $m('maker-btn').onclick = () => { openMaker(); };
 // Runs whole matches at full speed (no drawing, no waits, no sound) with sharper bots than the easy one you play against:
 // they read the wind right, aim with only a little error and hit at full strength. Sides swap every match.
 const SIM_MAX_TURNS = 200;
-function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, shieldAbs: 0, shieldCut: 0, dmgNormal: 0, dmgSkill: 0, dmgUlt: 0, dmgCrit: 0, useNormal: 0, useSkillShot: 0, useUltShot: 0, hitNormal: 0, hitSkill: 0, hitUlt: 0, shSkill: 0, shUlt: 0, shGuard: 0, cc: 0, ccTurns: 0, poisonAp: 0, bleedAp: 0, burnAp: 0, react: 0, ult: 0, enSkill: 0, enMove: 0, myTurns: 0, gSummon: 0, gLife: 0, gDmg: 0, gMelee: 0, gSpirit: 0, gReactDmg: 0, gReact: 0, gStun: 0, gShield: 0, gOwnerShield: 0, gWarp: 0, gSpiritN: 0, gSpiritHit: 0, gMeleeN: 0, gMeleeHit: 0, gGuardN: 0, gRxFT: 0, gRxWT: 0, gRxWN: 0, gRxFN: 0, gKills: 0, gShots: 0, gHits: 0, gTaken: 0, gDeath: 0, skills: {} }; }
+function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, shieldAbs: 0, shieldCut: 0, selfHealFull: 0, selfHealFat: 0, healCutFat: 0, healSelf: 0, sanctSelf: 0, sanctAlly: 0, purgeSelf: 0, fatTurns: 0, dmgNormal: 0, dmgSkill: 0, dmgUlt: 0, dmgCrit: 0, useNormal: 0, useSkillShot: 0, useUltShot: 0, hitNormal: 0, hitSkill: 0, hitUlt: 0, shSkill: 0, shUlt: 0, shGuard: 0, cc: 0, ccTurns: 0, poisonAp: 0, bleedAp: 0, burnAp: 0, react: 0, ult: 0, enSkill: 0, enMove: 0, myTurns: 0, gSummon: 0, gLife: 0, gDmg: 0, gMelee: 0, gSpirit: 0, gReactDmg: 0, gReact: 0, gStun: 0, gShield: 0, gOwnerShield: 0, gWarp: 0, gSpiritN: 0, gSpiritHit: 0, gMeleeN: 0, gMeleeHit: 0, gGuardN: 0, gRxFT: 0, gRxWT: 0, gRxWN: 0, gRxFN: 0, gKills: 0, gShots: 0, gHits: 0, gTaken: 0, gDeath: 0, skills: {} }; }
 function simPairs(a, b) {
   const keys = Object.keys(CLASSES), out = [];
   if (a && b) out.push([a, b]);
