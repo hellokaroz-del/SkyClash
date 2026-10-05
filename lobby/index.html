@@ -144,7 +144,7 @@ button, input { font: inherit; color: inherit; }
 #auth { position: fixed; inset: 0; z-index: 25; overflow: hidden; background: #0b1020; }
 #auth[hidden] { display: none; }
 #auth::before { content: ""; position: absolute; inset: -40px; background: url("img/login-bg.webp") center / cover; filter: blur(18px) brightness(.6); }
-.astage { position: absolute; left: 0; top: 0; width: 1672px; height: 941px; transform-origin: 0 0; background: url("img/login-bg.webp") 0 0 / 100% 100%; }
+.astage { position: absolute; left: 0; top: 0; width: 1672px; height: 941px; transform-origin: 0 0; z-index: 1; box-shadow: 0 0 40px rgba(0, 0, 0, .7); background: url("img/login-bg.webp") 0 0 / 100% 100%; }
 .astage > * { position: absolute; }
 .apatch { background: 0 0 / 100% 100% no-repeat; display: none; }
 .afld { background: none; border: 0; outline: none; color: #f6ead0; font-size: 24px; padding: 0 0 0 14px; caret-color: #f5c64a; text-shadow: 0 1px 2px #000; }
@@ -182,11 +182,36 @@ button, input { font: inherit; color: inherit; }
 #auth.m-up #a-submit, #auth.m-forgot #a-submit { font-size: 32px; }
 #auth.m-forgot #a-submit { font-size: 27px; }
 #auth:not(.m-in) #a-switch { font-size: 22px; }
+/* white Roman columns that fill the side gaps when the window is wider than the login art */
+.acol { position: absolute; top: 0; bottom: 0; width: var(--g, 0px); display: none; justify-content: center; pointer-events: none; overflow: hidden; z-index: 0;
+  background: radial-gradient(ellipse at 50% 40%, rgba(255, 236, 190, .18), transparent 70%); }
+#auth.cols .acol { display: flex; }
+.acol.l { left: 0; } .acol.r { right: 0; }
+.acol-in { position: relative; width: min(84%, 300px); height: 100%; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 0 18px rgba(0, 0, 0, .55)); }
+.acol-in svg { display: block; width: 100%; height: auto; flex: none; }
+.acap { animation: capglow 4s ease-in-out infinite; }
+@keyframes capglow { 50% { filter: drop-shadow(0 0 14px rgba(255, 214, 120, .75)); } }
+.ashaft { position: relative; flex: 1; width: 62.5%; overflow: hidden;
+  background: linear-gradient(90deg, rgba(120, 104, 84, .45), rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, .25) 45%, rgba(0, 0, 0, 0) 60%, rgba(90, 76, 60, .5)),
+    repeating-linear-gradient(90deg, #f7f3ea 0, #fffdf8 4%, #e3dccd 8.5%, #c8bfae 10%, #f7f3ea 11.1%); }
+.ashaft::before, .ashaft::after { content: ""; position: absolute; left: 0; right: 0; }
+.ashaft::before { top: 0; height: 12px; border-top: 3px solid #d9b25a; border-bottom: 2px solid #d9b25a; background: linear-gradient(#fff6dc, #e8d8b0); box-shadow: 0 0 10px rgba(255, 210, 110, .7); animation: bandglow 3s ease-in-out infinite; }
+.ashaft::after { top: -40%; height: 40%; background: linear-gradient(170deg, transparent 20%, rgba(255, 255, 255, .7) 48%, rgba(255, 245, 210, .35) 55%, transparent 80%); animation: shine 7s ease-in-out infinite; mix-blend-mode: screen; }
+.acol.r .ashaft::after { animation-delay: 3.5s; }
+@keyframes shine { 0% { top: -40%; } 55%, 100% { top: 110%; } }
+@keyframes bandglow { 50% { box-shadow: 0 0 22px rgba(255, 214, 120, 1); } }
+.aspark { position: absolute; bottom: -10px; width: 6px; height: 6px; border-radius: 50%; background: #fff6cf;
+  box-shadow: 0 0 6px 2px rgba(255, 210, 110, .9), 0 0 14px 4px rgba(120, 180, 255, .35); opacity: 0; animation: rise linear infinite; }
+.aspark.star { width: 12px; height: 12px; border-radius: 0; background: #fff3c0; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); box-shadow: none; filter: drop-shadow(0 0 4px #ffd36b); }
+@keyframes rise { 0% { transform: translate(0, 0) scale(.6); opacity: 0; } 10% { opacity: 1; } 80% { opacity: .9; } 100% { transform: translate(var(--dx, 0px), calc(-100vh - 20px)) scale(1.1); opacity: 0; } }
+.afeather { position: absolute; top: -60px; width: 34px; opacity: .9; animation: fall linear infinite; filter: drop-shadow(0 0 6px rgba(255, 255, 255, .7)); }
+.afeather svg { display: block; width: 100%; }
+@keyframes fall { 0% { transform: translate(0, 0) rotate(-20deg); } 25% { transform: translate(var(--dx, 30px), 25vh) rotate(25deg); } 50% { transform: translate(0, 50vh) rotate(-15deg); }
+  75% { transform: translate(var(--dx, 30px), 75vh) rotate(20deg); } 100% { transform: translate(0, calc(100vh + 80px)) rotate(-10deg); } }
+@media (prefers-reduced-motion: reduce) { .acap, .ashaft::before, .ashaft::after, .aspark, .afeather { animation: none; } .aspark, .afeather { display: none; } }
 .alegal { position: fixed; left: 0; right: 0; bottom: 6px; text-align: center; font-size: 13px; color: rgba(255, 236, 200, .85); text-shadow: 0 1px 3px #000; z-index: 1; }
 .alegal a { color: #f0c766; }
-.aver { position: fixed; left: 14px; bottom: 6px; font-size: 13px; color: rgba(255, 236, 200, .75); text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 1; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-@media (max-width: 760px) { .aver { display: none; } }
 @media (max-height: 560px) { .alegal { display: none; } }
 .card label { display: block; font-size: 14px; color: var(--muted); margin: 0 0 4px; }
 .card .ok { color: #8fe39a; min-height: 1.3em; margin: 0; font-size: 14px; }
@@ -281,6 +306,56 @@ button, input { font: inherit; color: inherit; }
 </div>
 
 <div id="auth" class="m-in" hidden role="dialog" aria-modal="true" aria-labelledby="a-title">
+  <div class="acol l" aria-hidden="true"><div class="acol-in">
+      <svg class="acap" viewBox="0 0 240 120" aria-hidden="true"><defs>
+        <linearGradient id="mb" x1="0" x2="1"><stop offset="0" stop-color="#cfc6b6"/><stop offset=".35" stop-color="#fffdf8"/><stop offset=".7" stop-color="#ece6da"/><stop offset="1" stop-color="#b9b0a0"/></linearGradient>
+        <linearGradient id="gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset=".5" stop-color="#e3b450"/><stop offset="1" stop-color="#9a6a1c"/></linearGradient></defs>
+        <rect x="6" y="2" width="228" height="18" rx="3" fill="url(#mb)" stroke="#a89c88"/>
+        <rect x="6" y="18" width="228" height="4" fill="url(#gd)"/>
+        <path d="M40 24 H200 V58 Q120 72 40 58 Z" fill="url(#mb)" stroke="#a89c88"/>
+        <g fill="none" stroke="#a89c88" stroke-width="2.5"><circle cx="40" cy="50" r="27" fill="url(#mb)"/><circle cx="40" cy="50" r="19"/><circle cx="40" cy="50" r="11"/>
+        <circle cx="200" cy="50" r="27" fill="url(#mb)"/><circle cx="200" cy="50" r="19"/><circle cx="200" cy="50" r="11"/></g>
+        <circle cx="40" cy="50" r="5" fill="url(#gd)"/><circle cx="200" cy="50" r="5" fill="url(#gd)"/>
+        <g fill="#efe8da" stroke="#a89c88" stroke-width="1.5"><ellipse cx="82" cy="44" rx="9" ry="12"/><ellipse cx="106" cy="44" rx="9" ry="12"/><ellipse cx="134" cy="44" rx="9" ry="12"/><ellipse cx="158" cy="44" rx="9" ry="12"/></g>
+        <path d="M120 30 l5 9 l-5 9 l-5 -9 z" fill="url(#gd)"/>
+        <path d="M60 70 H180 L172 92 H68 Z" fill="url(#mb)" stroke="#a89c88"/>
+        <rect x="45" y="92" width="150" height="10" fill="url(#mb)" stroke="#a89c88"/>
+        <rect x="45" y="102" width="150" height="5" fill="url(#gd)"/>
+        <rect x="45" y="107" width="150" height="13" fill="url(#mb)"/></svg>
+      <div class="ashaft"></div>
+      <svg viewBox="0 0 240 92" aria-hidden="true">
+        <rect x="45" y="0" width="150" height="6" fill="url(#gd)"/>
+        <rect x="38" y="6" width="164" height="18" rx="9" fill="url(#mb)" stroke="#a89c88"/>
+        <rect x="48" y="24" width="144" height="8" fill="url(#mb)" stroke="#a89c88"/>
+        <rect x="28" y="32" width="184" height="22" rx="11" fill="url(#mb)" stroke="#a89c88"/>
+        <rect x="14" y="54" width="212" height="4" fill="url(#gd)"/>
+        <rect x="14" y="58" width="212" height="34" fill="url(#mb)" stroke="#a89c88"/></svg>
+  </div></div>
+  <div class="acol r" aria-hidden="true"><div class="acol-in">
+      <svg class="acap" viewBox="0 0 240 120" aria-hidden="true"><defs>
+        <linearGradient id="mb2" x1="0" x2="1"><stop offset="0" stop-color="#cfc6b6"/><stop offset=".35" stop-color="#fffdf8"/><stop offset=".7" stop-color="#ece6da"/><stop offset="1" stop-color="#b9b0a0"/></linearGradient>
+        <linearGradient id="gd2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset=".5" stop-color="#e3b450"/><stop offset="1" stop-color="#9a6a1c"/></linearGradient></defs>
+        <rect x="6" y="2" width="228" height="18" rx="3" fill="url(#mb2)" stroke="#a89c88"/>
+        <rect x="6" y="18" width="228" height="4" fill="url(#gd2)"/>
+        <path d="M40 24 H200 V58 Q120 72 40 58 Z" fill="url(#mb2)" stroke="#a89c88"/>
+        <g fill="none" stroke="#a89c88" stroke-width="2.5"><circle cx="40" cy="50" r="27" fill="url(#mb2)"/><circle cx="40" cy="50" r="19"/><circle cx="40" cy="50" r="11"/>
+        <circle cx="200" cy="50" r="27" fill="url(#mb2)"/><circle cx="200" cy="50" r="19"/><circle cx="200" cy="50" r="11"/></g>
+        <circle cx="40" cy="50" r="5" fill="url(#gd2)"/><circle cx="200" cy="50" r="5" fill="url(#gd2)"/>
+        <g fill="#efe8da" stroke="#a89c88" stroke-width="1.5"><ellipse cx="82" cy="44" rx="9" ry="12"/><ellipse cx="106" cy="44" rx="9" ry="12"/><ellipse cx="134" cy="44" rx="9" ry="12"/><ellipse cx="158" cy="44" rx="9" ry="12"/></g>
+        <path d="M120 30 l5 9 l-5 9 l-5 -9 z" fill="url(#gd2)"/>
+        <path d="M60 70 H180 L172 92 H68 Z" fill="url(#mb2)" stroke="#a89c88"/>
+        <rect x="45" y="92" width="150" height="10" fill="url(#mb2)" stroke="#a89c88"/>
+        <rect x="45" y="102" width="150" height="5" fill="url(#gd2)"/>
+        <rect x="45" y="107" width="150" height="13" fill="url(#mb2)"/></svg>
+      <div class="ashaft"></div>
+      <svg viewBox="0 0 240 92" aria-hidden="true">
+        <rect x="45" y="0" width="150" height="6" fill="url(#gd2)"/>
+        <rect x="38" y="6" width="164" height="18" rx="9" fill="url(#mb2)" stroke="#a89c88"/>
+        <rect x="48" y="24" width="144" height="8" fill="url(#mb2)" stroke="#a89c88"/>
+        <rect x="28" y="32" width="184" height="22" rx="11" fill="url(#mb2)" stroke="#a89c88"/>
+        <rect x="14" y="54" width="212" height="4" fill="url(#gd2)"/>
+        <rect x="14" y="58" width="212" height="34" fill="url(#mb2)" stroke="#a89c88"/></svg>
+  </div></div>
   <form class="astage" id="a-form" autocomplete="on" novalidate>
     <h1 class="sr" id="a-title">Ages of Aether เข้าสู่ระบบ</h1>
     <label class="sr" for="a-email">อีเมล</label>
@@ -298,7 +373,6 @@ button, input { font: inherit; color: inherit; }
     <button type="button" class="abtn" id="a-switch">สร้างบัญชีใหม่</button>
   </form>
   <p class="alegal">การเข้าสู่ระบบถือว่ายอมรับ <a href="terms.html" target="_blank" rel="noopener">ข้อตกลงการใช้งาน</a> และ <a href="privacy.html" target="_blank" rel="noopener">นโยบายความเป็นส่วนตัว</a></p>
-  <div class="aver">Ages of Aether · เมืองทดสอบ</div>
 </div>
 
 <div class="modal" id="m-acct" hidden role="dialog" aria-modal="true" aria-labelledby="t-acct">
@@ -750,7 +824,7 @@ function authErr(e) {
 const aMsg = (err, ok) => { $('a-err').textContent = err || ''; $('a-ok').textContent = ok || ''; $('a-msg').classList.toggle('on', !!(err || ok)); };
 function setAuthMode(m) {
   authMode = m;
-  $('auth').className = 'm-' + m;
+  ['in', 'up', 'forgot'].forEach(k => $('auth').classList.toggle('m-' + k, k === m));
   $('a-title').textContent = 'Ages of Aether ' + (m === 'up' ? 'สร้างบัญชีใหม่' : m === 'forgot' ? 'ลืมรหัสผ่าน' : 'เข้าสู่ระบบ');
   $('a-pass').autocomplete = m === 'up' ? 'new-password' : 'current-password';
   $('a-submit').textContent = m === 'up' ? 'สมัครสมาชิก' : m === 'forgot' ? 'ส่งลิงก์ตั้งรหัสผ่านใหม่' : 'เข้าสู่ระบบ';
@@ -766,9 +840,34 @@ $('a-eye').onclick = () => {
 // the painted login art is a fixed 1672x941 stage: fit it to the window, keeping the whole panel visible
 function fitAuth() {
   const W = innerWidth, H = innerHeight, k = Math.min(Math.max(W / 1672, H / 941), W / 760, H / 941);
-  $('a-form').style.transform = `translate(${(W - 1672 * k) / 2}px, ${(H - 941 * k) / 2}px) scale(${k})`;
+  const g = (W - 1672 * k) / 2;
+  $('a-form').style.transform = `translate(${g}px, ${(H - 941 * k) / 2}px) scale(${k})`;
+  $('auth').style.setProperty('--g', Math.ceil(g) + 'px');
+  $('auth').classList.toggle('cols', g > 40);
 }
 addEventListener('resize', fitAuth); fitAuth();
+// sparkles rising and feathers drifting along the side columns
+const FEATHER = '<svg viewBox="0 0 40 120"><path d="M20 2 C34 30 36 70 22 116 C21 118 19 118 18 116 C4 70 6 30 20 2 Z" fill="#fffaf0" stroke="#e8d6a8" stroke-width="2"/><path d="M20 10 V116" stroke="#d9b25a" stroke-width="2"/></svg>';
+document.querySelectorAll('.acol').forEach(col => {
+  for (let i = 0; i < 16; i++) {
+    const sp = document.createElement('i');
+    sp.className = 'aspark' + (i % 4 ? '' : ' star');
+    sp.style.left = (8 + Math.random() * 84) + '%';
+    sp.style.setProperty('--dx', (Math.random() * 60 - 30) + 'px');
+    sp.style.animationDuration = (6 + Math.random() * 6) + 's';
+    sp.style.animationDelay = (-Math.random() * 12) + 's';
+    col.append(sp);
+  }
+  for (let i = 0; i < 3; i++) {
+    const f = document.createElement('i');
+    f.className = 'afeather'; f.innerHTML = FEATHER;
+    f.style.left = (10 + Math.random() * 60) + '%';
+    f.style.setProperty('--dx', (20 + Math.random() * 40) + 'px');
+    f.style.animationDuration = (14 + Math.random() * 10) + 's';
+    f.style.animationDelay = (-Math.random() * 24) + 's';
+    col.append(f);
+  }
+});
 $('a-switch').onclick = () => setAuthMode(authMode === 'in' ? 'up' : 'in');
 $('a-forgot').onclick = () => setAuthMode('forgot');
 
