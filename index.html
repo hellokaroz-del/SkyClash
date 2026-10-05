@@ -1744,10 +1744,8 @@ function settlePlayers() {
       continue;
     }
     if (!solid(p.x, p.y)) { p.vy = Math.min(8, p.vy + 0.35); p.y += p.vy; moving = true;
-      if (p.y > WH + 40 && ADMIN.god && !NET.on && !p.bot) { // immortal: drop back onto the nearest ground
-        let nx = p.x; for (let d = 0; d < WW; d += 6) { if (surfaceY(p.x + d) < WH - 20) { nx = p.x + d; break; } if (surfaceY(p.x - d) < WH - 20) { nx = p.x - d; break; } }
-        p.x = Math.max(4, Math.min(WW - 5, nx)); p.y = surfaceY(p.x); p.vy = 0; fx.texts.push({ x: p.x, y: p.y - 60, s: 'อมตะ', col: '#9fe0ff', t: 60 });
-      } else if (p.y > WH + 40) { p.alive = false; p.hp = 0; fx.texts.push({ x: p.x, y: WH - 60, s: 'ตกหมอก!', col: '#ffffff', t: 80 }); }
+      // falling through a hole off the map always kills, even with Admin immortal on (Karoz)
+      if (p.y > WH + 40) { p.alive = false; p.hp = 0; fx.texts.push({ x: p.x, y: WH - 60, s: 'ตกหมอก!', col: '#ffffff', t: 80 }); }
     } else {
       p.vy = 0;
       while (solid(p.x, p.y - 1) && p.y > 0) p.y--; // pop out if buried
