@@ -59,10 +59,14 @@ button, input { font: inherit; color: inherit; }
 .cr-info h2 { margin: 0; font-size: 44px; color: #f5c64a; line-height: 1.1; }
 .cr-info h2 small { font-size: 24px; color: #d8cfe6; font-weight: 600; margin-left: 8px; }
 .cr-info p { margin: 10px 0 18px; font-size: 22px; line-height: 1.45; color: #ece4f7; }
-.cr-stat { display: grid; grid-template-columns: 76px 1fr; align-items: center; gap: 12px; margin: 9px 0; font-size: 20px; }
-.cr-stat span { color: #d8cfe6; font-weight: 700; }
-.cr-stat i { display: block; height: 14px; border-radius: 7px; background: rgba(255, 255, 255, .1); overflow: hidden; }
-.cr-stat i u { display: block; height: 100%; border-radius: 7px; background: linear-gradient(90deg, #b9861b, #ffe08a); transition: width .3s; }
+.cr-diff { display: flex; align-items: center; gap: 4px; margin: 0 0 18px; font-size: 30px; line-height: 1; }
+.cr-diff span { font-size: 20px; font-weight: 700; color: #d8cfe6; margin-right: 10px; }
+.cr-diff i { font-style: normal; color: rgba(255, 255, 255, .16); }
+.cr-diff i.on { color: #f5c64a; text-shadow: 0 0 8px rgba(245, 198, 74, .6); }
+.cr-info h3 { margin: 0 0 8px; font-size: 22px; color: #f5c64a; }
+.cr-pros { margin: 0; padding: 0; list-style: none; }
+.cr-pros li { position: relative; padding-left: 26px; margin: 8px 0; font-size: 21px; line-height: 1.4; color: #ece4f7; }
+.cr-pros li::before { content: '◆'; position: absolute; left: 0; top: 1px; color: #f5c64a; font-size: 16px; }
 .cr-name { left: 560px; top: 930px; width: 800px; display: flex; gap: 14px; }
 .cr-name input { flex: 1; min-width: 0; height: 70px; padding: 0 22px; border-radius: 14px; border: 2px solid rgba(245, 198, 74, .55); background: rgba(15, 12, 24, .92);
   font-size: 28px; color: #fff; }
@@ -282,7 +286,7 @@ button, input { font: inherit; color: inherit; }
       <p class="sub">เลือกอาชีพและตั้งชื่อ แล้วออกเดินทางสู่ Ages of Aether</p>
       <div class="cr-list" id="cr-list" role="radiogroup" aria-label="อาชีพ"></div>
       <div class="cr-stage" aria-hidden="true"><div class="ring"></div><img id="cr-img" alt=""></div>
-      <div class="cr-info" aria-live="polite"><h2 id="cr-job"></h2><p id="cr-desc"></p><div id="cr-stats"></div></div>
+      <div class="cr-info" aria-live="polite"><h2 id="cr-job"></h2><p id="cr-desc"></p><div id="cr-diff" class="cr-diff"></div><h3>จุดเด่น</h3><ul id="cr-pros" class="cr-pros"></ul></div>
       <div class="cr-name"><input id="cr-name" maxlength="16" placeholder="ตั้งชื่อในเกม (ไม่เกิน 16 ตัว)" aria-label="ชื่อในเกม" required><button type="submit" id="cr-go">เริ่มการผจญภัย</button></div>
       <p id="cr-err" role="status"></p>
     </form>
@@ -604,25 +608,25 @@ $('nameform').onsubmit = async e => {
 renderProf();
 
 // ---------- character creation: new players pick a job and a name ----------
-// stats come from the game's own game-data.json when it loads; these are the fallback (balance v2)
+// diff = how hard the job is to play (1-5 stars); pros = its strong points
 const JOBS = [
-  { k: 'blade', th: 'นักดาบ', name: 'Swordman', desc: 'ทนที่สุด HP และ DEF สูง', hp: 1300, atk: 60, matk: 10, def: 70, mdef: 40, spd: 45, luk: 30 },
-  { k: 'mage', th: 'นักเวท', name: 'Mage', desc: 'เวทแรงที่สุด แช่แข็ง ระเบิดวงกว้าง แต่ HP ต่ำ', hp: 800, atk: 10, matk: 100, def: 20, mdef: 70, spd: 55, luk: 40 },
-  { k: 'archer', th: 'นักธนู', name: 'Archer', desc: 'ยิงธรรมดาแรงที่สุด แม่นและยิงไกล', hp: 950, atk: 75, matk: 10, def: 35, mdef: 35, spd: 60, luk: 50 },
-  { k: 'cleric', th: 'นักบวช', name: 'Priest', desc: 'ฮีลดีที่สุด บัฟ โล่ และล้างสถานะ', hp: 1000, atk: 15, matk: 75, def: 40, mdef: 70, spd: 50, luk: 40 },
-  { k: 'thief', th: 'นักฆ่า', name: 'Assassin', desc: 'ดาเมจระเบิด พิษ เลือดไหล ล่องหน คริติคอลสูง แต่ HP ต่ำ', hp: 900, atk: 65, matk: 10, def: 30, mdef: 30, spd: 75, luk: 70 },
-  { k: 'merchant', th: 'พ่อค้า', name: 'Merchant', desc: 'ถึกพอตัว มียา โล่ และบัฟตัวเอง', hp: 1150, atk: 50, matk: 20, def: 55, mdef: 45, spd: 45, luk: 60 },
-  { k: 'doram', admin: true, th: 'โดรัม', name: 'Doram', desc: 'คอมโบธาตุ ติดมาร์ค 2 ธาตุแล้วจุดปฏิกิริยา', hp: 900, atk: 20, matk: 70, def: 30, mdef: 60, spd: 60, luk: 50 },
+  { k: 'blade', th: 'นักดาบ', name: 'Swordman', diff: 1, desc: 'นักสู้แนวหน้า ยืนรับดาเมจแทนทีม',
+    pros: ['HP และ DEF สูงที่สุด ตายยาก', 'ตีกายภาพแรงสม่ำเสมอ', 'เล่นง่าย เหมาะกับมือใหม่'] },
+  { k: 'mage', th: 'นักเวท', name: 'Mage', diff: 3, desc: 'จอมเวทพลังทำลายล้างสูง',
+    pros: ['MATK แรงที่สุดในเกม', 'แช่แข็งศัตรูให้เสียเทิร์น', 'ระเบิดวงกว้าง โดนหลายคนพร้อมกัน'] },
+  { k: 'archer', th: 'นักธนู', name: 'Archer', diff: 2, desc: 'มือแม่นระยะไกล',
+    pros: ['ยิงธรรมดาแรงที่สุด', 'ลูกธนูเร็ว เล็งง่าย ยิงได้ไกล', 'กดดันศัตรูได้ทุกเทิร์น'] },
+  { k: 'cleric', th: 'นักบวช', name: 'Priest', diff: 3, desc: 'ผู้ช่วยสายศักดิ์สิทธิ์',
+    pros: ['ฮีลเก่งที่สุด อยู่รอดได้นาน', 'สร้างโล่และบัฟให้ตัวเอง', 'ล้างสถานะผิดปกติได้'] },
+  { k: 'thief', th: 'นักฆ่า', name: 'Assassin', diff: 4, desc: 'นักล่าเงียบ ปิดเกมไว',
+    pros: ['ดาเมจระเบิดและคริติคอลสูง', 'ล่องหน ศัตรูมองไม่เห็นตัว', 'พิษและเลือดไหลกัดกินทีละเทิร์น'] },
+  { k: 'merchant', th: 'พ่อค้า', name: 'Merchant', diff: 2, desc: 'สายถึก ของครบ ยืนระยะเก่ง',
+    pros: ['ถึกพอตัว HP และ DEF ดี', 'มียาและโล่ช่วยให้อยู่รอด', 'บัฟตัวเองให้ตีแรงขึ้น'] },
+  { k: 'doram', admin: true, th: 'โดรัม', name: 'Doram', diff: 5, desc: 'นักเวทแมวสายคอมโบธาตุ',
+    pros: ['ติดมาร์ค 2 ธาตุแล้วจุดปฏิกิริยา', 'อัญเชิญโกเลมสี่ธาตุ', 'คอมโบแรงมากเมื่อวางแผนดี'] },
 ];
 const JOB = Object.fromEntries(JOBS.map(j => [j.k, j]));
 const isAdmin = () => !!(online.me && online.me.is_admin); // Doram is not released yet: admins only
-const STATS = [['hp', 'HP', 1400], ['atk', 'ATK', 110], ['matk', 'MATK', 110], ['def', 'DEF', 90], ['mdef', 'MDEF', 90], ['spd', 'SPD', 90], ['luk', 'LUK', 90]];
-fetch('../game-data.json').then(r => r.ok ? r.json() : null).then(d => {
-  const cl = d && d.classes; if (!cl) return;
-  for (const j of JOBS) if (cl[j.k]) for (const [s] of STATS) if (typeof cl[j.k][s] === 'number') j[s] = cl[j.k][s];
-  for (const j of JOBS) if (cl[j.k] && cl[j.k].desc) j.desc = cl[j.k].desc;
-  if (crJob) pickJob(crJob);
-}).catch(() => {});
 let crJob = null, crWait = null;
 for (const j of JOBS) {
   const b = document.createElement('button');
@@ -637,8 +641,9 @@ function pickJob(k) {
   if (changed) { img.src = `img/cls-${k}.webp?v=${ART_V}`; img.classList.remove('in'); void img.offsetWidth; img.classList.add('in'); }
   $('cr-job').innerHTML = ''; $('cr-job').append(j.th); const sm = document.createElement('small'); sm.textContent = j.name; $('cr-job').appendChild(sm);
   $('cr-desc').textContent = j.desc;
-  $('cr-stats').innerHTML = STATS.map(([s, label, max]) =>
-    `<div class="cr-stat"><span>${label}</span><i><u style="width:${Math.min(100, j[s] / max * 100).toFixed(0)}%"></u></i></div>`).join('');
+  $('cr-diff').innerHTML = '<span>ความยาก</span>' + [1, 2, 3, 4, 5].map(n => `<i class="${n <= j.diff ? 'on' : ''}">★</i>`).join('');
+  $('cr-diff').setAttribute('aria-label', `ความยาก ${j.diff} จาก 5 ดาว`);
+  $('cr-pros').innerHTML = ''; for (const t of j.pros) { const li = document.createElement('li'); li.textContent = t; $('cr-pros').appendChild(li); }
 }
 // resolves with { name, job }; nameLocked keeps an existing player's name
 function createChar(name, nameLocked) {
