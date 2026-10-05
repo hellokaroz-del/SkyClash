@@ -27,6 +27,52 @@ button, input { font: inherit; color: inherit; }
 #world { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0;
   background: #24402a url("img/town.webp") center / 100% 100% no-repeat; overflow: hidden; user-select: none; }
 
+/* character creation (new players) */
+#create { position: absolute; inset: 0; z-index: 30; overflow: hidden; color: #fff;
+  background: radial-gradient(ellipse at 50% 55%, rgba(60, 40, 110, .35), rgba(8, 6, 16, .92) 70%), url("img/login-bg.webp") center / cover; }
+#create::before { content: ""; position: absolute; inset: 0; backdrop-filter: blur(6px) brightness(.55); }
+#create > * { position: absolute; }
+#create h1 { left: 0; right: 0; top: 34px; margin: 0; text-align: center; font-size: 60px; font-weight: 800; letter-spacing: 1px;
+  background: linear-gradient(#fff6cf, #f5c64a 55%, #b9861b); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 3px 0 #3a2506) drop-shadow(0 0 18px rgba(245, 198, 74, .45)); }
+#create .sub { left: 0; right: 0; top: 120px; margin: 0; text-align: center; font-size: 24px; color: #e8dcc0; text-shadow: 0 2px 4px #000; }
+.cr-list { left: 70px; top: 180px; width: 470px; display: flex; flex-direction: column; gap: 10px; }
+.cr-job { display: flex; align-items: center; gap: 16px; height: 98px; padding: 0 18px 0 8px; border-radius: 16px; cursor: pointer; text-align: left;
+  border: 2px solid rgba(245, 198, 74, .35); background: linear-gradient(90deg, rgba(34, 27, 49, .92), rgba(34, 27, 49, .6)); transition: transform .15s, border-color .15s, background .15s; }
+.cr-job:hover { transform: translateX(6px); border-color: rgba(245, 198, 74, .8); }
+.cr-job[aria-checked="true"] { border-color: #f5c64a; background: linear-gradient(90deg, rgba(120, 84, 20, .95), rgba(60, 40, 12, .7)); box-shadow: 0 0 18px rgba(245, 198, 74, .45); transform: translateX(10px); }
+.cr-job .face { flex: none; width: 84px; height: 84px; border-radius: 12px; background: #15111f no-repeat 50% 8% / 210% auto; border: 2px solid rgba(255, 255, 255, .15); }
+.cr-job b { display: block; font-size: 28px; line-height: 1.1; color: #ffe7a0; }
+.cr-job small { display: block; font-size: 20px; color: #d8cfe6; }
+.cr-stage { left: 560px; top: 150px; width: 800px; height: 760px; }
+.cr-stage .ring { position: absolute; left: 150px; bottom: 40px; width: 500px; height: 120px; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(245, 198, 74, .55), rgba(245, 198, 74, .12) 55%, transparent 70%); animation: crRing 3s ease-in-out infinite; }
+.cr-stage img { position: absolute; left: 50%; bottom: 90px; height: 600px; transform: translateX(-50%); filter: drop-shadow(0 12px 18px rgba(0, 0, 0, .6));
+  animation: crFloat 3s ease-in-out infinite; }
+.cr-stage img.in { animation: crIn .35s ease-out, crFloat 3s ease-in-out .35s infinite; }
+@keyframes crFloat { 50% { transform: translateX(-50%) translateY(-12px); } }
+@keyframes crRing { 50% { opacity: .65; transform: scale(.94); } }
+@keyframes crIn { from { opacity: 0; transform: translateX(-50%) scale(.9); } }
+.cr-info { left: 1380px; top: 180px; width: 470px; padding: 26px 30px; border-radius: 20px; background: rgba(20, 16, 30, .85); border: 2px solid rgba(245, 198, 74, .5); }
+.cr-info h2 { margin: 0; font-size: 44px; color: #f5c64a; line-height: 1.1; }
+.cr-info h2 small { font-size: 24px; color: #d8cfe6; font-weight: 600; margin-left: 8px; }
+.cr-info p { margin: 10px 0 18px; font-size: 22px; line-height: 1.45; color: #ece4f7; }
+.cr-stat { display: grid; grid-template-columns: 76px 1fr 64px; align-items: center; gap: 12px; margin: 9px 0; font-size: 20px; }
+.cr-stat span { color: #d8cfe6; font-weight: 700; }
+.cr-stat i { display: block; height: 14px; border-radius: 7px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.cr-stat i u { display: block; height: 100%; border-radius: 7px; background: linear-gradient(90deg, #b9861b, #ffe08a); transition: width .3s; }
+.cr-stat em { font-style: normal; text-align: right; color: #ffe7a0; }
+.cr-name { left: 560px; top: 930px; width: 800px; display: flex; gap: 14px; }
+.cr-name input { flex: 1; min-width: 0; height: 70px; padding: 0 22px; border-radius: 14px; border: 2px solid rgba(245, 198, 74, .55); background: rgba(15, 12, 24, .92);
+  font-size: 28px; color: #fff; }
+.cr-name input:focus { outline: none; border-color: #f5c64a; box-shadow: 0 0 14px rgba(245, 198, 74, .4); }
+.cr-name input:read-only { color: #d8cfe6; }
+.cr-name button { width: 300px; height: 70px; border-radius: 14px; border: 2px solid #f0c766; cursor: pointer; font-size: 28px; font-weight: 800; color: #fff7dc;
+  background: linear-gradient(#c9452e, #8a2414); box-shadow: 0 4px 0 #4a1208, 0 0 18px rgba(240, 120, 60, .35); text-shadow: 0 2px 2px rgba(0, 0, 0, .5); }
+.cr-name button:hover { filter: brightness(1.12); }
+.cr-name button:disabled { filter: grayscale(.6) brightness(.8); cursor: wait; }
+#cr-err { left: 560px; top: 1010px; width: 800px; margin: 0; text-align: center; font-size: 22px; color: #ff9a8a; text-shadow: 0 1px 3px #000; min-height: 30px; }
+
 /* buildings */
 .bld { position: absolute; border: 0; padding: 0; background: none; cursor: pointer; }
 .hl { position: absolute; pointer-events: none; opacity: 0; transition: opacity .2s; }
@@ -61,7 +107,7 @@ button, input { font: inherit; color: inherit; }
   background: rgba(32, 30, 38, .86); box-shadow: 0 6px 18px rgba(0, 0, 0, .4); }
 #prof .ava { position: absolute; left: 10px; top: 0; width: 170px; height: 170px; border-radius: 50%;
   background: #3a3646; border: 6px solid #4a4658; display: grid; place-items: center; font-size: 80px; font-weight: 800; color: #e9e4f5;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .45); background-repeat: no-repeat; background-position: 50% 8%; background-size: 210% auto; }
 #prof .lv { position: absolute; left: 200px; top: 42px; font-size: 38px; font-weight: 800; letter-spacing: 1px; }
 #prof .expbar { position: absolute; left: 200px; top: 100px; width: 220px; height: 16px; border-radius: 8px; background: #1a1822; border: 2px solid #55516a; overflow: hidden; }
 #prof .expbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #4cd964, #a8f07a); }
@@ -230,6 +276,15 @@ button, input { font: inherit; color: inherit; }
     <img class="bar" src="img/topbar.png" alt="" style="left:1060px;top:0;width:860px;height:115px">
     <img class="bar" src="img/botbar.png" alt="" style="left:1140px;top:937px;width:780px;height:143px">
 
+    <form id="create" hidden autocomplete="off" aria-labelledby="cr-title">
+      <h1 id="cr-title">สร้างตัวละคร</h1>
+      <p class="sub">เลือกอาชีพและตั้งชื่อ แล้วออกเดินทางสู่ Ages of Aether</p>
+      <div class="cr-list" id="cr-list" role="radiogroup" aria-label="อาชีพ"></div>
+      <div class="cr-stage" aria-hidden="true"><div class="ring"></div><img id="cr-img" alt=""></div>
+      <div class="cr-info" aria-live="polite"><h2 id="cr-job"></h2><p id="cr-desc"></p><div id="cr-stats"></div></div>
+      <div class="cr-name"><input id="cr-name" maxlength="16" placeholder="ตั้งชื่อในเกม (ไม่เกิน 16 ตัว)" aria-label="ชื่อในเกม" required><button type="submit" id="cr-go">เริ่มการผจญภัย</button></div>
+      <p id="cr-err" role="status"></p>
+    </form>
     <section id="chat" aria-label="แชท">
       <button type="button" id="c-min" aria-expanded="true" title="ย่อแชท" aria-label="ย่อแชท">▼<i class="dot"></i></button>
       <div class="side">
@@ -521,7 +576,8 @@ try { Object.assign(prof, JSON.parse(localStorage.getItem(PROF_KEY) || '{}')); }
 const saveProf = () => { try { localStorage.setItem(PROF_KEY, JSON.stringify(prof)); } catch (_) {} };
 function renderProf() {
   $('nm').textContent = prof.name || 'NAME';
-  $('ava').textContent = (prof.name || '?').trim().charAt(0).toUpperCase() || '?';
+  $('ava').textContent = prof.job ? '' : (prof.name || '?').trim().charAt(0).toUpperCase() || '?';
+  $('ava').style.backgroundImage = prof.job ? `url(img/cls-${prof.job}.webp)` : '';
   $('lv').textContent = 'LV.' + prof.level;
   const pct = Math.max(0, Math.min(99, prof.exp | 0));
   $('expfill').style.width = pct + '%'; $('exp').textContent = `EXP ${pct}%`;
@@ -538,12 +594,73 @@ $('nameform').onsubmit = async e => {
   e.preventDefault();
   const n = $('name-in').value.trim().replace(/\s+/g, ' ').slice(0, 16);
   if (!n) { $('name-err').textContent = 'ใส่ชื่ออย่างน้อย 1 ตัวอักษร'; return; }
+  if (online.me && n !== online.me.name && await nameTaken(n)) { $('name-err').textContent = 'ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น'; return; }
   delete $('m-name').dataset.lock; closeModal($('m-name'));
   prof.name = n; saveProf(); renderProf();
   if (nameWait) { const r = nameWait; nameWait = null; r(n); return; }
   if (online.me) { if (await setProfile({ name: n })) { online.me.name = n; chatState(`ออนไลน์ ในชื่อ ${n}`, true); } }
 };
 renderProf();
+
+// ---------- character creation: new players pick a job and a name ----------
+// stats come from the game's own game-data.json when it loads; these are the fallback (balance v2)
+const JOBS = [
+  { k: 'blade', th: 'นักดาบ', name: 'Swordman', desc: 'ทนที่สุด HP และ DEF สูง', hp: 1300, atk: 60, matk: 10, def: 70, mdef: 40, spd: 45, luk: 30 },
+  { k: 'mage', th: 'นักเวท', name: 'Mage', desc: 'เวทแรงที่สุด แช่แข็ง ระเบิดวงกว้าง แต่ HP ต่ำ', hp: 800, atk: 10, matk: 100, def: 20, mdef: 70, spd: 55, luk: 40 },
+  { k: 'archer', th: 'นักธนู', name: 'Archer', desc: 'ยิงธรรมดาแรงที่สุด แม่นและยิงไกล', hp: 950, atk: 75, matk: 10, def: 35, mdef: 35, spd: 60, luk: 50 },
+  { k: 'cleric', th: 'นักบวช', name: 'Priest', desc: 'ฮีลดีที่สุด บัฟ โล่ และล้างสถานะ', hp: 1000, atk: 15, matk: 75, def: 40, mdef: 70, spd: 50, luk: 40 },
+  { k: 'thief', th: 'นักฆ่า', name: 'Assassin', desc: 'ดาเมจระเบิด พิษ เลือดไหล ล่องหน คริติคอลสูง แต่ HP ต่ำ', hp: 900, atk: 65, matk: 10, def: 30, mdef: 30, spd: 75, luk: 70 },
+  { k: 'merchant', th: 'พ่อค้า', name: 'Merchant', desc: 'ถึกพอตัว มียา โล่ และบัฟตัวเอง', hp: 1150, atk: 50, matk: 20, def: 55, mdef: 45, spd: 45, luk: 60 },
+  { k: 'doram', th: 'โดรัม', name: 'Doram', desc: 'คอมโบธาตุ ติดมาร์ค 2 ธาตุแล้วจุดปฏิกิริยา', hp: 900, atk: 20, matk: 70, def: 30, mdef: 60, spd: 60, luk: 50 },
+];
+const JOB = Object.fromEntries(JOBS.map(j => [j.k, j]));
+const STATS = [['hp', 'HP', 1400], ['atk', 'ATK', 110], ['matk', 'MATK', 110], ['def', 'DEF', 90], ['mdef', 'MDEF', 90], ['spd', 'SPD', 90], ['luk', 'LUK', 90]];
+fetch('../game-data.json').then(r => r.ok ? r.json() : null).then(d => {
+  const cl = d && d.classes; if (!cl) return;
+  for (const j of JOBS) if (cl[j.k]) for (const [s] of STATS) if (typeof cl[j.k][s] === 'number') j[s] = cl[j.k][s];
+  for (const j of JOBS) if (cl[j.k] && cl[j.k].desc) j.desc = cl[j.k].desc;
+  if (crJob) pickJob(crJob);
+}).catch(() => {});
+let crJob = null, crWait = null;
+for (const j of JOBS) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'cr-job'; b.dataset.k = j.k; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', 'false');
+  b.innerHTML = `<i class="face" style="background-image:url(img/cls-${j.k}.webp)"></i><span><b>${j.th}</b><small>${j.name}</small></span>`;
+  b.onclick = () => pickJob(j.k);
+  $('cr-list').appendChild(b);
+}
+function pickJob(k) {
+  const j = JOB[k], img = $('cr-img'), changed = crJob !== k; crJob = k;
+  for (const b of $('cr-list').children) b.setAttribute('aria-checked', String(b.dataset.k === k));
+  if (changed) { img.src = `img/cls-${k}.webp`; img.classList.remove('in'); void img.offsetWidth; img.classList.add('in'); }
+  $('cr-job').innerHTML = ''; $('cr-job').append(j.th); const sm = document.createElement('small'); sm.textContent = j.name; $('cr-job').appendChild(sm);
+  $('cr-desc').textContent = j.desc;
+  $('cr-stats').innerHTML = STATS.map(([s, label, max]) =>
+    `<div class="cr-stat"><span>${label}</span><i><u style="width:${Math.min(100, j[s] / max * 100).toFixed(0)}%"></u></i><em>${j[s]}</em></div>`).join('');
+}
+// resolves with { name, job }; nameLocked keeps an existing player's name
+function createChar(name, nameLocked) {
+  $('cr-name').value = name || ''; $('cr-name').readOnly = !!nameLocked; $('cr-err').textContent = '';
+  pickJob(crJob || 'blade');
+  $('create').hidden = false; setTimeout(() => (nameLocked ? $('cr-go') : $('cr-name')).focus(), 50);
+  return new Promise(r => { crWait = r; });
+}
+async function nameTaken(n) {
+  if (PREVIEW) return false;
+  const { data, error } = await online.sb.from('profiles').select('id').ilike('name', n.replace(/[\\%_]/g, '\\$&')).limit(1);
+  return !error && data && data.length && data[0].id !== online.user.id;
+}
+$('create').onsubmit = async e => {
+  e.preventDefault();
+  const n = $('cr-name').value.trim().replace(/\s+/g, ' ').slice(0, 16);
+  if (!n) { $('cr-err').textContent = 'ตั้งชื่ออย่างน้อย 1 ตัวอักษร'; $('cr-name').focus(); return; }
+  if (!crJob) { $('cr-err').textContent = 'เลือกอาชีพก่อน'; return; }
+  $('cr-go').disabled = true; $('cr-err').textContent = '';
+  try {
+    if (!$('cr-name').readOnly && await nameTaken(n)) { $('cr-err').textContent = 'ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น'; $('cr-name').focus(); return; }
+    const r = crWait; crWait = null; $('create').hidden = true; r && r({ name: n, job: crJob });
+  } finally { $('cr-go').disabled = false; }
+};
 
 // ---------- chat (Supabase): world, guild, whisper, room, announce ----------
 const CH = {
@@ -658,15 +775,28 @@ async function loadProfile() {
   if (error) throw error;
   if (data) online.me = data;
   else {
+    // new player: pick a job and a name on the character creation screen
     const meta = online.user.user_metadata || {};
     const suggested = prof.uid === id && prof.name ? prof.name : String(meta.full_name || meta.name || '').slice(0, 16);
-    prof.name = suggested;
-    const name = await askName();
-    const r = await sb.from('profiles').insert({ id, name }).select('*').single();
-    if (r.error) throw r.error;
-    online.me = r.data;
+    for (;;) {
+      const c = await createChar(suggested);
+      let r = await sb.from('profiles').insert({ id, name: c.name, job: c.job }).select('*').single();
+      if (r.error && /job/.test(r.error.message)) {
+        // the character SQL has not been run yet: keep the name, the job is remembered on this device only
+        r = await sb.from('profiles').insert({ id, name: c.name }).select('*').single();
+        if (!r.error) { r.data.job = c.job; toast('ต้องรัน SQL ตัวละครใน Supabase ก่อน อาชีพถึงจะบันทึกถาวร'); }
+      }
+      if (r.error && /duplicate|unique|profiles_name/.test(r.error.message)) { toast('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น'); continue; }
+      if (r.error) throw r.error;
+      online.me = r.data; break;
+    }
   }
-  Object.assign(prof, { uid: id, name: online.me.name, level: online.me.level || 1, exp: online.me.exp || 0 });
+  if ('job' in online.me && !online.me.job) {
+    // players from before character creation keep their name and pick a job once
+    const c = await createChar(online.me.name, true);
+    if (await setProfile({ job: c.job })) online.me.job = c.job;
+  }
+  Object.assign(prof, { uid: id, name: online.me.name, job: online.me.job || prof.job || '', level: online.me.level || 1, exp: online.me.exp || 0 });
   saveProf(); renderProf();
   online.v2 = 'guild' in online.me;
 }
@@ -884,9 +1014,11 @@ function enterTown(session) {
 }
 // the Claude preview page cannot sign in (Google and Supabase only accept the real site), so it gets a button to look at the town
 const PREVIEW = !/(^|\.)github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
-function previewTown() {
+async function previewTown() {
   entered = true; $('auth').hidden = true;
-  prof.name = prof.name || 'ผู้ชม'; renderProf();
+  online.user = { id: 'preview' };
+  const c = await createChar('');
+  Object.assign(prof, { name: c.name, job: c.job }); renderProf();
   chatState('หน้าตัวอย่าง แชทใช้ได้เฉพาะบนเว็บจริง', false);
 }
 async function boot() {
