@@ -50,3 +50,7 @@ Supabase > **Authentication** > **Sign In / Providers** > **Google**
 ```
 update public.profiles set is_admin = true where name = 'GM_Karoz';
 ```
+
+## ถ้าเว็บไม่อัปเดตหลัง merge
+
+GitHub Pages อัปเดตผ่าน GitHub Actions ถ้างาน "pages build and deployment" ค้างที่ Queued นานผิดปกติ ให้ดู githubstatus.com ก่อน ถ้า Actions มีปัญหา ต้องรอ GitHub แก้ แล้ว merge งานใหม่หรือกด Re-run เพื่อเริ่มรอบใหม่
