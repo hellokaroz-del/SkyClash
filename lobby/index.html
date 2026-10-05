@@ -41,10 +41,10 @@ button, input { font: inherit; color: inherit; }
 #tip::after { content: ""; position: absolute; top: 40px; width: 26px; height: 26px; background: #f6e7bd; border: 4px solid #8a5a22; }
 #tip.r::after { left: -17px; border-width: 0 0 4px 4px; transform: rotate(45deg); }
 #tip.l::after { right: -17px; border-width: 4px 4px 0 0; transform: rotate(45deg); }
-.lbl { position: absolute; transform: translate(-50%, -50%); width: 250px; pointer-events: none; text-align: center;
-  transition: transform .18s, filter .18s; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .45)); }
+.lbl { position: absolute; transform: translate(-50%, -50%) scale(.85); width: 250px; pointer-events: none; text-align: center;
+  opacity: 0; transition: transform .18s, opacity .18s, filter .18s; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .45)); }
 .lbl img { display: block; width: 100%; }
-.bld:hover + .lbl, .bld:focus-visible + .lbl { transform: translate(-50%, -50%) scale(1.08); filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .5)) brightness(1.12); }
+.bld:hover + .lbl, .bld:focus-visible + .lbl { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .5)) brightness(1.12); }
 .lbl small { display: inline-block; margin-top: -10px; padding: 1px 12px; border-radius: 8px; background: rgba(20, 16, 30, .6);
   font-size: 18px; font-weight: 600; color: #ffd76a; text-shadow: 0 1px 2px #000; white-space: nowrap; }
 .bld:focus-visible { outline: none; }
