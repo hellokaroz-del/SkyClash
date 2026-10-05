@@ -74,7 +74,13 @@ button, input { font: inherit; color: inherit; }
 /* chat (layout follows Karoz's reference: side buttons, channel tabs, channel picker) */
 #chat { position: absolute; left: 20px; top: 728px; width: 650px; height: 336px; border-radius: 18px; background: var(--panel);
   border: 3px solid rgba(214, 170, 80, .55); display: grid; grid-template-columns: 54px 1fr 92px; grid-template-rows: 34px 1fr 60px;
-  gap: 6px 8px; padding: 10px; backdrop-filter: blur(3px); }
+  gap: 6px 8px; padding: 10px; backdrop-filter: blur(3px); transition: transform .25s ease; }
+#chat.min { transform: translateY(352px); } /* only the tab stays on screen (world is 1080 tall, chat top is 728) */
+#c-min { position: absolute; left: 50%; top: -33px; width: 96px; height: 30px; margin-left: -48px; padding: 0; border: 3px solid rgba(214, 170, 80, .55);
+  border-bottom: 0; border-radius: 14px 14px 0 0; background: var(--panel); color: #ffe7a0; font-size: 18px; cursor: pointer; backdrop-filter: blur(3px); }
+#c-min:hover { color: #fff; background: rgba(90, 67, 32, .9); }
+#c-min .dot { display: none; position: absolute; right: 8px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: #ff5a4a; box-shadow: 0 0 6px #ff5a4a; }
+#chat.min.unread #c-min .dot { display: block; }
 #chat .side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 8px; }
 #chat .side button, #chat .tabs button { border: 2px solid #b8862e; background: linear-gradient(#5a4320, #3a2a12); color: #ffe7a0;
   border-radius: 9px; cursor: pointer; font-weight: 800; padding: 0; }
@@ -223,6 +229,7 @@ button, input { font: inherit; color: inherit; }
     <img class="bar" src="img/botbar.png" alt="" style="left:1140px;top:937px;width:780px;height:143px">
 
     <section id="chat" aria-label="แชท">
+      <button type="button" id="c-min" aria-expanded="true" title="ย่อแชท" aria-label="ย่อแชท">▼<i class="dot"></i></button>
       <div class="side">
         <button type="button" id="c-lock" aria-pressed="false" title="ล็อกไม่ให้เลื่อนลงเอง" aria-label="ล็อกการเลื่อน">🔓</button>
         <button type="button" id="c-clear" title="ล้างข้อความบนจอ" aria-label="ล้างข้อความบนจอ">C</button>
@@ -575,6 +582,7 @@ function addMsg(m) {
   const replyTo = ch === 'whisper' ? (mine ? { id: m.to_id, name: m.to_name } : { id: m.user_id, name: m.name }) : (mine ? null : { id: m.user_id, name: m.name });
   if (replyTo && replyTo.id) { b.title = `กระซิบหา ${replyTo.name}`; b.onclick = () => setSend('whisper', replyTo); }
   p.append(tag, b, document.createTextNode(m.body)); addLine(p, ch);
+  if (chatEl.classList.contains('min')) chatEl.classList.add('unread');
 }
 
 // tabs on the right filter what the log shows
@@ -596,6 +604,15 @@ for (const [k, label] of TABS) {
 $('c-lock').onclick = () => { chat.lock = !chat.lock; $('c-lock').setAttribute('aria-pressed', String(chat.lock)); $('c-lock').textContent = chat.lock ? '🔒' : '🔓'; };
 $('c-lock').textContent = '🔓';
 $('c-clear').onclick = () => { log.textContent = ''; };
+const MIN_KEY = 'sky-lobby-chat-min';
+function setChatMin(on) {
+  chatEl.classList.toggle('min', on); if (!on) chatEl.classList.remove('unread');
+  const b = $('c-min'); b.firstChild.textContent = on ? '▲' : '▼'; b.setAttribute('aria-expanded', String(!on));
+  b.title = on ? 'เปิดแชท' : 'ย่อแชท'; b.setAttribute('aria-label', b.title);
+  try { localStorage.setItem(MIN_KEY, on ? '1' : ''); } catch {}
+}
+$('c-min').onclick = () => setChatMin(!chatEl.classList.contains('min'));
+try { if (localStorage.getItem(MIN_KEY)) setChatMin(true); } catch {}
 $('c-up').onclick = () => { log.scrollTop -= log.clientHeight * 0.8; };
 $('c-down').onclick = () => { log.scrollTop += log.clientHeight * 0.8; };
 $('c-end').onclick = () => { log.scrollTop = log.scrollHeight; };
@@ -656,18 +673,12 @@ async function setProfile(patch) {
 // remember the Stadium room code so /r reaches the people in that room
 async function setRoom(code) { if (online.v2 && online.me && online.me.room !== code) await setProfile({ room: code }); }
 
-async function loadHistory() {
-  const cols = online.v2 ? 'id, user_id, name, body, channel, to_id, to_name, created_at' : 'id, user_id, name, body, created_at';
-  const { data, error } = await online.sb.from('chat_messages').select(cols).order('created_at', { ascending: false }).limit(60);
-  if (error) throw error;
-  data.reverse().forEach(addMsg);
-}
 async function startChat() {
   chatState('กำลังเชื่อมต่อ...', false);
   try {
     const sb = online.sb;
     await loadProfile();
-    await loadHistory();
+    // no history: each visit (and each refresh) starts with an empty chat and shows only new messages
     if (!online.v2) sysLine('ตอนนี้ใช้ได้แค่ช่องโลก ต้องรัน SQL ช่องแชทใน Supabase ก่อน');
     else if (online.me.guild) sysLine(`คุณอยู่กิลด์ ${online.me.guild}`);
     sb.channel('town-chat')
