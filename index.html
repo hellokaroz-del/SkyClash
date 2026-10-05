@@ -467,7 +467,7 @@ const DEFAULT_DATA = {
     pr_heal: { name: 'Heal', cd: 4, type: 'self', healMatk: 70, short: 'ฟื้น HP 70% MATK' },
     pr_bless: { name: 'Blessing', cd: 4, type: 'self', team: true, bAtk: 15, bMatk: 15, bTurns: 2, short: 'ATK และ MATK +15% 2 เทิร์น (ทั้งทีม)' },
     pr_angelus: { name: 'Angelus', cd: 4, type: 'self', team: true, bDef: 20, bMdef: 20, bTurns: 2, short: 'DEF และ MDEF +20% 2 เทิร์น (ทั้งทีม)' },
-    pr_barrier: { name: 'Holy Barrier', cd: 4, type: 'self', shieldMatk: 75, short: 'ได้โล่ 75% MATK' },
+    pr_barrier: { name: 'Holy Barrier', cd: 4, type: 'self', shieldMatk: 50, short: 'ได้โล่ 50% MATK' },
     pr_purge: { name: 'Purge', cd: 4, type: 'self', purge: true, healMatk: 35, short: 'ล้างสถานะผิดปกติ 1 อย่าง และฟื้น 35% MATK', tip: 'ล้างสถานะผิดปกติ 1 อย่าง (แข็ง มึน ตรึง ดีบัฟ หรือพิษ) และฟื้น HP 35% MATK ใช้ได้แม้ตอนโดนแข็งหรือมึน แต่ถ้าล้างแข็งหรือมึน เทิร์นนั้นจะจบทันที' },
     pr_sanct: { name: 'Sanctuary', type: 'self', team: true, healMatk: 100, shieldMatk: 30, short: 'ฟื้น 100% MATK และโล่ 30% MATK ทั้งทีม' },
     // Doram
@@ -682,7 +682,7 @@ function lowHp(pl) {
   const pv = pl.c.pv || {};
   if (!pl.alive) return;
   if (pv.guardian && !pl.once.guardian && pl.hp < pl.maxHp * pv.guardianHp / 100) {
-    pl.once.guardian = true; const s = addShield(pl, Math.round(pl.maxHp * pv.guardian / 100), pl.i); say(pl, 'Guardian Angel โล่ +' + s, '#9fe0ff', 90, 104);
+    pl.once.guardian = true; const s = addShield(pl, Math.round(pl.maxHp * pv.guardian / 100), pl.i); stAdd(pl.i, 'shGuard', s); say(pl, 'Guardian Angel โล่ +' + s, '#9fe0ff', 90, 104);
   }
   if (pv.nineLives && !pl.once.nine && pl.hp < pl.maxHp * pv.nineLivesHp / 100) { pl.once.nine = true; pl.nineNext = true; say(pl, 'Nine Lives!', '#ffd36a', 90, 104); }
 }
@@ -738,7 +738,7 @@ function selfSkill(p, sk) {
     const h = Math.round((t.maxHp * (sk.heal || 0) / 100 + statOf(p, 'matk') * (sk.healMatk || 0) / 100 * HEAL_K) * more * (1 + (pv.healBonus || 0) / 100));
     if (h > 0) { const got = Math.min(t.maxHp - t.hp, h); stAdd(p.i, 'heal', got); stAdd(t.i, 'healRecv', got); t.hp += got; fx.texts.push({ x: t.x, y: t.y - 50, s: '+' + h, col: '#7dff9a', t: 70 }); }
     const s = Math.round((t.maxHp * (sk.shieldPct || 0) / 100 + statOf(p, 'matk') * (sk.shieldMatk || 0) / 100 * HEAL_K) * more);
-    if (s > 0) { const got = addShield(t, s, p.i); say(t, got < s ? 'โล่ +' + got + ' (เต็ม)' : 'โล่ +' + got, '#7fd8ff', 70, 64); }
+    if (s > 0) { const got = addShield(t, s, p.i); stAdd(p.i, sk === p.c.sk.b ? 'shUlt' : 'shSkill', got); say(t, got < s ? 'โล่ +' + got + ' (เต็ม)' : 'โล่ +' + got, '#7fd8ff', 70, 64); }
     if (sk.bAtk || sk.bMatk || sk.bDef || sk.bMdef || sk.bTaken || sk.bNext || sk.bNextMagic) addBuff(t, sk);
   }
   if (sk.guard > 0) { p.iron = true; p.guard = sk.guard; }
@@ -1474,6 +1474,7 @@ function golemHit(g, pl, dmg, crit, tag) {
   else lowHp(pl);
   return dmg;
 }
+const RX_STAT = { 'fire+thunder': 'gRxFT', 'thunder+water': 'gRxWT', 'nature+water': 'gRxWN', 'fire+nature': 'gRxFN' }; // reaction counters for the auto battle test
 const golemRx = (a, b) => a && b && a !== b ? REACTIONS[[a, b].sort().join('+')] || null : null;
 // how much a reaction is worth right now (in rough damage points)
 function golemRxValue(rx, e) {
@@ -1491,13 +1492,13 @@ function golemSpiritLands(g, pl, el, q) {
   let dmg = hitDamage(g, pl, 'matk', 70, 0, q.up), rxd = 0;
   if (rx && rx.bonus) rxd = hitDamage(g, pl, 'matk', rx.bonus, 0, q.up);
   const crit = Math.random() < critChance(g); if (crit) { dmg *= critMul(g); rxd *= critMul(g); }
-  stAdd(g.owner, 'gHits', 1);
+  stAdd(g.owner, 'gHits', 1); stAdd(g.owner, 'gSpiritHit', 1);
   const total = golemHit(g, pl, dmg + rxd, crit, 'gSpirit');
   if (rxd > 0 && total > 0) { const share = Math.round(total * rxd / (dmg + rxd)); stAdd(g.owner, 'gReactDmg', share); stAdd(g.owner, 'gSpirit', -share); }
   if (!pl.alive) return;
   if (rx) {
     pl.marks = pl.marks.filter(m => m.by !== g.i); // the reaction uses the marks up
-    stAdd(g.owner, 'gReact', 1); if (rx.stun) stAdd(g.owner, 'gStun', 1);
+    stAdd(g.owner, 'gReact', 1); if (rx.stun) stAdd(g.owner, 'gStun', 1); stAdd(g.owner, RX_STAT[[last, el].sort().join('+')], 1);
     gfx({ k: 'rx', x: pl.x, y: pl.y - 20, dur: 46, c: [last, el].join('+') });
     applyReaction(g, pl, rx);
   } else addMark(pl, el, g);
@@ -1582,8 +1583,9 @@ function golemDecide(g) {
     el = e.frozen > 0 || e.ccRes > 0 || e.hp < e.maxHp * 0.35 ? 'fire' : 'water';
   gp.act = act; gp.el = el; gp.e = e; gp.t = 0; gp.phase = 'act';
   if (act === 'warp') gp.to = golemWarpSpot(g, e);
-  if (act === 'spirit') { gp.aim = golemAim(g, e); stAdd(g.owner, 'gShots', 1); }
-  if (act === 'melee') stAdd(g.owner, 'gShots', 1);
+  if (act === 'spirit') { gp.aim = golemAim(g, e); stAdd(g.owner, 'gShots', 1); stAdd(g.owner, 'gSpiritN', 1); }
+  if (act === 'melee') { stAdd(g.owner, 'gShots', 1); stAdd(g.owner, 'gMeleeN', 1); }
+  if (act === 'guard') stAdd(g.owner, 'gGuardN', 1);
   const nm = { spirit: (ELEM[el] ? ELEM[el].n : '') + ' Spirit', melee: 'Golem Smash', guard: 'Elemental Guard', warp: 'Elemental Warp' }[act];
   say(g, nm + '!', act === 'spirit' ? ELEM[el].col : '#ffd36a', 70, 104);
   g.anim = { k: act === 'melee' ? 'atk' : act === 'guard' ? 'guard' : act === 'warp' ? 'walk' : 'cast', t: 0 };
@@ -1594,7 +1596,7 @@ function golemMelee(g, e) {
   if (!SIM) cam.shake = Math.max(cam.shake, 12);
   if (!e.alive || Math.abs(e.x - g.x) > g.melee + 10) { say(g, 'พลาด!', '#c8d0e0', 60, 90); return; }
   if (Math.random() >= g.acc) { say(e, 'หลบได้!', '#c8d0e0', 60, 90); return; }
-  stAdd(g.owner, 'gHits', 1);
+  stAdd(g.owner, 'gHits', 1); stAdd(g.owner, 'gMeleeHit', 1);
   let dmg = hitDamage(g, e, 'atk', 100); const crit = Math.random() < critChance(g); if (crit) dmg *= critMul(g);
   golemHit(g, e, dmg, crit, 'gMelee');
 }
@@ -4094,7 +4096,7 @@ $m('maker-btn').onclick = () => { openMaker(); };
 // Runs whole matches at full speed (no drawing, no waits, no sound) with sharper bots than the easy one you play against:
 // they read the wind right, aim with only a little error and hit at full strength. Sides swap every match.
 const SIM_MAX_TURNS = 200;
-function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, shieldAbs: 0, shieldCut: 0, cc: 0, ccTurns: 0, poisonAp: 0, bleedAp: 0, burnAp: 0, react: 0, ult: 0, enSkill: 0, enMove: 0, myTurns: 0, gSummon: 0, gLife: 0, gDmg: 0, gMelee: 0, gSpirit: 0, gReactDmg: 0, gReact: 0, gStun: 0, gShield: 0, gOwnerShield: 0, gWarp: 0, gKills: 0, gShots: 0, gHits: 0, gTaken: 0, gDeath: 0, skills: {} }; }
+function newStat() { return { dmg: 0, taken: 0, heal: 0, healRecv: 0, shield: 0, shieldAbs: 0, shieldCut: 0, shSkill: 0, shUlt: 0, shGuard: 0, cc: 0, ccTurns: 0, poisonAp: 0, bleedAp: 0, burnAp: 0, react: 0, ult: 0, enSkill: 0, enMove: 0, myTurns: 0, gSummon: 0, gLife: 0, gDmg: 0, gMelee: 0, gSpirit: 0, gReactDmg: 0, gReact: 0, gStun: 0, gShield: 0, gOwnerShield: 0, gWarp: 0, gSpiritN: 0, gSpiritHit: 0, gMeleeN: 0, gMeleeHit: 0, gGuardN: 0, gRxFT: 0, gRxWT: 0, gRxWN: 0, gRxFN: 0, gKills: 0, gShots: 0, gHits: 0, gTaken: 0, gDeath: 0, skills: {} }; }
 function simPairs(a, b) {
   const keys = Object.keys(CLASSES), out = [];
   if (a && b) out.push([a, b]);
