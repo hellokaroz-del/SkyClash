@@ -309,13 +309,13 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .slot .tag { position: absolute; left: 6px; bottom: 6px; font-style: normal; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #7a1d0f; color: #fff; }
 .slot .tag.you { left: auto; right: 6px; background: #2f6a8a; }
 /* Karoz's slot art: gold card = player, dark card = waiting, dark card with X = closed (its text is in the art) */
-.slot, .slot.full, .slot.open, .slot.shut { border: 0; border-radius: 0; background: url("img/slot-wait.webp?v=1") center / 100% 100% no-repeat; color: #e8d3a8; }
+.slot, .slot.full, .slot.open, .slot.shut { border: 0; border-radius: 0; background: url("img/slot-wait.webp?v=2") center / 100% 100% no-repeat; color: #e8d3a8; }
 .slot.full { background-image: url("img/slot-full.webp?v=1"); }
 .slot.shut { background-image: url("img/slot-shut.webp?v=1"); }
 .slot.shut .ic, .slot.shut .tx { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .slot.open { justify-content: flex-end; padding-bottom: 16%; }
 .slot.open .ic { display: none; }
-.slot.open .tx { text-shadow: 0 2px 2px rgba(0, 0, 0, .6); }
+.slot.open .tx { color: #7a5a30; text-shadow: 0 1px 0 rgba(255, 255, 255, .8); }
 .slot:not(:disabled):hover, .slot:not(:disabled):focus-visible { filter: brightness(1.12) drop-shadow(0 0 6px rgba(255, 210, 110, .7)); }
 .slot .ar { inset: 14px 12px 12px; overflow: hidden; border-radius: 10px; }
 .slot .nm { left: 18px; right: 62px; top: 14px; }
