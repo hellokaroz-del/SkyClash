@@ -349,9 +349,14 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .framed .room .host { font-size: 11px; }
 .framed .co-empty { color: #6a4a24; font-size: 15px; }
 .framed .co-main .err { margin: 4px 0 0; min-height: 1.2em; font-size: 13px; color: #b3261e; }
-.framed .co-foot { position: absolute; left: 0; right: 0; bottom: 4px; margin: 0; gap: 6px; flex-wrap: nowrap; }
+.framed .co-foot { position: absolute; left: 0; right: 0; bottom: -2px; align-items: center; margin: 0; gap: 6px; flex-wrap: nowrap; }
 .framed .co-foot .co-pg { height: 30px; padding: 0 8px; font-size: 12px; white-space: nowrap; color: #ffe2a0; }
-.framed .co-big { height: 46px; font-size: 16px; flex: 1 1 0; white-space: nowrap; }
+.framed .co-big { height: 62px; font-size: 17px; flex: 1 1 0; white-space: nowrap; padding: 0 10px 2px; border: 0; border-radius: 0;
+  background: url("img/btn-brown.webp?v=1") center / 100% 100% no-repeat; color: #ffe2a0; text-shadow: 0 2px 2px rgba(0, 0, 0, .7); filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .35)); }
+.framed #co-pvp { background-image: url("img/btn-brown2.webp?v=1"); font-size: 15px; }
+.framed .co-big.go { background: url("img/btn-gold.webp?v=1") center / 100% 100% no-repeat; color: #5a2e00; text-shadow: 0 1px 0 rgba(255, 240, 200, .8); font-size: 19px; }
+.framed .co-big:hover, .framed .co-big:focus-visible { outline: none; filter: brightness(1.12) drop-shadow(0 0 6px rgba(255, 210, 110, .8)); }
+.framed .co-big:active { transform: translateY(1px); }
 .framed .co-me { position: absolute !important; left: 786px; top: 132px; width: 164px; height: 200px; padding: 2px 4px; background: none !important; }
 .framed .co-me b { font-size: 15px; color: #5a3410; }
 .framed .co-lvbig { width: 54px; height: 30px; margin-top: 0; }
