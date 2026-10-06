@@ -131,6 +131,13 @@ button, input { font: inherit; color: inherit; }
 #prof .badge img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .5)); }
 /* admins wear Karoz's HERO crest instead of a level badge: blue aura, breathing glow, a light sweep across the crest, twinkling stars */
 #prof .badge .spk { display: none; }
+/* admin names glow red everywhere a name shows */
+.adm, #log b.adm { color: #ff3a26 !important; font-weight: 800; text-shadow: 0 1px 1px rgba(60, 0, 0, .9), 0 0 5px rgba(255, 40, 20, .9), 0 0 11px rgba(255, 0, 0, .5); animation: admGlow 1.8s ease-in-out infinite alternate; }
+@keyframes admGlow { from { text-shadow: 0 1px 1px rgba(60, 0, 0, .9), 0 0 3px rgba(255, 40, 20, .7), 0 0 7px rgba(255, 0, 0, .3); } to { text-shadow: 0 1px 1px rgba(60, 0, 0, .9), 0 0 7px rgba(255, 40, 20, 1), 0 0 15px rgba(255, 0, 0, .7); } }
+#log b.me.adm { color: #ff3a26 !important; }
+#prof .nm.adm { color: #ff4a30 !important; text-shadow: 0 3px 3px rgba(60, 0, 0, .9), 0 0 16px rgba(255, 40, 20, .95), 0 0 36px rgba(255, 0, 0, .6); animation: admGlowBig 1.8s ease-in-out infinite alternate; }
+@keyframes admGlowBig { from { text-shadow: 0 3px 3px rgba(60, 0, 0, .9), 0 0 10px rgba(255, 40, 20, .7), 0 0 22px rgba(255, 0, 0, .35); } to { text-shadow: 0 3px 3px rgba(60, 0, 0, .9), 0 0 22px rgba(255, 40, 20, 1), 0 0 48px rgba(255, 0, 0, .75); } }
+@media (prefers-reduced-motion: reduce) { .adm { animation: none; } }
 #prof .badge.hero { left: 650px; top: 205px; width: 470px; height: 260px; }
 #prof .badge.hero::before { content: ""; position: absolute; inset: -6% 2%; border-radius: 50%; z-index: -1;
   background: radial-gradient(closest-side, rgba(150, 210, 255, .95), rgba(80, 130, 255, .5) 50%, rgba(255, 210, 110, .15) 75%, transparent);
@@ -859,7 +866,7 @@ function setShut(i, shut) {
 }
 function townRooms() {
   const ppl = townPeople(), rooms = [];
-  for (const p of ppl) if (p.host && p.room) rooms.push({ code: p.room, host: p.name, mine: p.key === myKey(), mode: MODES[p.mode] ? p.mode : 'duel',
+  for (const p of ppl) if (p.host && p.room) rooms.push({ code: p.room, host: p.name, hostAdm: !!p.admin, mine: p.key === myKey(), mode: MODES[p.mode] ? p.mode : 'duel',
     max: Math.max(1, Math.min(SLOTS, p.max | 0 || 2)), shut: shutOf(p), map: p.map, game: p.game || null, n: ppl.filter(q => q.room === p.room).length });
   return rooms.sort((x, y) => (x.n >= x.max) - (y.n >= y.max) || x.code.localeCompare(y.code));
 }
@@ -892,7 +899,7 @@ function renderColo() {
       <span class="rm${map ? '' : ' rnd'}" style="background-image:url('${(map || MAPS[0]).img}')"><span class="st"></span><span class="map"></span><span class="ppl"></span></span>`;
     b.querySelector('.md').textContent = MODES[r.mode];
     b.querySelector('.no').textContent = 'หมายเลขห้อง ' + r.code;
-    b.querySelector('.host').textContent = 'หัวห้อง ' + r.host;
+    const hn = document.createElement('span'); hn.textContent = r.host; hn.classList.toggle('adm', r.hostAdm); b.querySelector('.host').append('หัวห้อง ', hn);
     b.querySelector('.st').textContent = r.game ? 'กำลังเล่น' : full ? 'เต็ม' : 'รอผู้เล่น';
     b.querySelector('.map').textContent = map ? map.name : 'สุ่มแผนที่';
     b.querySelector('.ppl').textContent = `${r.n}/${r.max}`;
@@ -907,7 +914,7 @@ function renderColo() {
   $('co-prev').disabled = co.page === 0; $('co-next').disabled = co.page >= pages - 1;
   // own character
   const j = jobOf(prof.job);
-  $('co-name').textContent = prof.name || 'ผู้เล่น';
+  $('co-name').textContent = prof.name || 'ผู้เล่น'; $('co-name').classList.toggle('adm', isAdmin());
   setBadge($('co-lv'), { level: prof.level, admin: isAdmin() });
   const art = $('co-art'); art.textContent = ''; const im = artImg(prof.job, 'co-art-im'); if (im) art.appendChild(im);
   $('co-job').textContent = j ? `${j.name} · ${j.th}` : '';
@@ -921,7 +928,7 @@ function renderColo() {
     if (p.key === myKey()) li.className = 'me';
     li.innerHTML = `<img class="lv" alt=""><span></span>` +
       (pj ? `<img class="jb" alt="${pj.name}" title="${pj.name}" src="img/${pj.admin ? 'cls' : 'emb'}-${pj.k}.webp?v=${ART_V}">` : '<i></i>');
-    li.querySelector('span').textContent = p.name; setBadge(li.querySelector('img.lv'), p);
+    li.querySelector('span').textContent = p.name; li.querySelector('span').classList.toggle('adm', !!p.admin); setBadge(li.querySelector('img.lv'), p);
     list.appendChild(li);
   }
   if (!co.live) { const li = document.createElement('li'); li.className = 'note'; li.textContent = 'หน้าตัวอย่าง: ห้องและรายชื่อจริงจะขึ้นบนเว็บจริง'; list.appendChild(li); }
@@ -979,7 +986,7 @@ function renderRoom() {
     if (p) {
       b.className = 'slot full'; b.disabled = true;
       b.innerHTML = '<b class="nm"></b><img class="lv" alt=""><span class="ar"></span>' + (p.host ? '<i class="tag">หัวห้อง</i>' : '') + (p.key === myKey() ? '<i class="tag you">คุณ</i>' : '');
-      b.querySelector('.nm').textContent = p.name;
+      b.querySelector('.nm').textContent = p.name; b.querySelector('.nm').classList.toggle('adm', !!p.admin);
       setBadge(b.querySelector('.lv'), p);
       const im = artImg(p.job, 'sl-art'); if (im) b.querySelector('.ar').appendChild(im);
     } else if (!shut.has(i)) {
@@ -1069,7 +1076,7 @@ let prof = { uid: '', name: '', level: 1, exp: 0 };
 try { Object.assign(prof, JSON.parse(localStorage.getItem(PROF_KEY) || '{}')); } catch (_) {}
 const saveProf = () => { try { localStorage.setItem(PROF_KEY, JSON.stringify(prof)); } catch (_) {} };
 function renderProf() {
-  $('nm').textContent = prof.name || 'NAME';
+  $('nm').textContent = prof.name || 'NAME'; $('nm').classList.toggle('adm', isAdmin());
   const nm = $('nm'); nm.style.fontSize = ''; for (let f = 68; f > 34 && nm.scrollWidth > nm.clientWidth; f -= 4) nm.style.fontSize = f - 4 + 'px';
   const j = JOBS.find(x => x.k === prof.job), e = $('pemb');
   e.hidden = !j; $('ava').textContent = j ? '' : (prof.name || '?').trim().charAt(0).toUpperCase() || '?';
@@ -1203,6 +1210,8 @@ function addMsg(m) {
   if (ch === 'whisper') b.textContent = mine ? `ถึง ${m.to_name || '?'}: ` : `จาก ${m.name}: `;
   else b.textContent = `[${m.name}]: `;
   if (mine && ch !== 'whisper') b.className = 'me';
+  // chat rows carry only the name, so other admins are known from who is online
+  if (ch !== 'whisper' || !mine) { if (mine ? isAdmin() : townPeople().some(q => q.admin && q.name === m.name)) b.classList.add('adm'); }
   const replyTo = ch === 'whisper' ? (mine ? { id: m.to_id, name: m.to_name } : { id: m.user_id, name: m.name }) : (mine ? null : { id: m.user_id, name: m.name });
   if (replyTo && replyTo.id) { b.title = `กระซิบหา ${replyTo.name}`; b.onclick = () => setSend('whisper', replyTo); }
   p.append(tag, b, document.createTextNode(m.body)); addLine(p, ch);
