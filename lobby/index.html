@@ -129,6 +129,36 @@ button, input { font: inherit; color: inherit; }
   font-size: 220px; font-weight: 800; color: #f3e3c0; text-shadow: 0 6px 10px #000; }
 #prof .badge { position: absolute; left: 705px; top: 238px; width: 360px; height: 215px; display: grid; place-items: center; }
 #prof .badge img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .5)); }
+/* admins wear Karoz's HERO crest instead of a level badge: blue aura, breathing glow, a light sweep across the crest, twinkling stars */
+#prof .badge .spk { display: none; }
+#prof .badge.hero { left: 650px; top: 205px; width: 470px; height: 260px; }
+#prof .badge.hero::before { content: ""; position: absolute; inset: -6% 2%; border-radius: 50%; z-index: -1;
+  background: radial-gradient(closest-side, rgba(150, 210, 255, .95), rgba(80, 130, 255, .5) 50%, rgba(255, 210, 110, .15) 75%, transparent);
+  animation: heroAura 2.6s ease-in-out infinite; }
+#prof .badge.hero img { animation: heroGlow 2.6s ease-in-out infinite; }
+#prof .badge.hero::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  -webkit-mask: url("img/lv/hero.webp?v=1") center / contain no-repeat; mask: url("img/lv/hero.webp?v=1") center / contain no-repeat;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .0) 42%, rgba(255, 255, 255, 1) 50%, rgba(255, 246, 200, .0) 58%, transparent 62%) -150% 0 / 250% 100% no-repeat;
+  mix-blend-mode: screen; animation: heroSweep 3.4s ease-in-out infinite; }
+#prof .badge.hero .spk { display: block; position: absolute; width: 80px; height: 80px; pointer-events: none;
+  background: radial-gradient(circle, #fff 0 12%, rgba(255, 255, 255, 0) 13%),
+    linear-gradient(0deg, transparent 44%, #fff 48% 52%, transparent 56%), linear-gradient(90deg, transparent 44%, #fff 48% 52%, transparent 56%);
+  -webkit-mask: radial-gradient(circle, #000 20%, transparent 70%); mask: radial-gradient(circle, #000 20%, transparent 70%);
+  filter: drop-shadow(0 0 14px #9fd0ff) drop-shadow(0 0 24px #ffe9a0); opacity: 0; animation: heroTwinkle 2.4s ease-in-out infinite; }
+#prof .badge.hero .spk:nth-of-type(1) { left: 8%; top: 18%; animation-delay: 0s; }
+#prof .badge.hero .spk:nth-of-type(2) { left: 46%; top: -2%; animation-delay: .5s; width: 100px; height: 100px; }
+#prof .badge.hero .spk:nth-of-type(3) { left: 86%; top: 22%; animation-delay: 1s; }
+#prof .badge.hero .spk:nth-of-type(4) { left: 20%; top: 76%; animation-delay: 1.5s; width: 64px; height: 64px; }
+#prof .badge.hero .spk:nth-of-type(5) { left: 74%; top: 72%; animation-delay: 1.9s; width: 70px; height: 70px; }
+@keyframes heroGlow { 0%, 100% { filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .5)) drop-shadow(0 0 16px rgba(120, 180, 255, .7)); }
+  50% { filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .5)) drop-shadow(0 0 50px rgba(140, 200, 255, 1)) drop-shadow(0 0 24px rgba(255, 220, 120, .9)); } }
+@keyframes heroAura { 0%, 100% { opacity: .45; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.06); } }
+@keyframes heroSweep { 0% { background-position: -150% 0; } 55%, 100% { background-position: 250% 0; } }
+@keyframes heroTwinkle { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0deg); } 45% { opacity: 1; transform: scale(1) rotate(45deg); } 70% { opacity: 0; transform: scale(.4) rotate(90deg); } }
+/* small HERO crests in the Colosseum lists */
+img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
+@keyframes heroGlowSm { 0%, 100% { filter: drop-shadow(0 0 2px rgba(120, 180, 255, .6)); } 50% { filter: drop-shadow(0 0 8px rgba(140, 200, 255, 1)) drop-shadow(0 0 4px rgba(255, 220, 120, .8)); } }
+@media (prefers-reduced-motion: reduce) { #prof .badge.hero *, #prof .badge.hero::before, #prof .badge.hero::after, img.hero-sm { animation: none !important; } }
 #prof .exptrack { position: absolute; left: 692px; top: 483px; width: 648px; height: 59px; overflow: hidden; }
 #prof .exptrack i { display: block; height: 100%; width: 0; background: url("img/exp-fill.webp?v=1") 0 0 / 648px 59px no-repeat; }
 #prof .exp, #prof .nm { position: absolute; font-family: Georgia, "Times New Roman", serif; font-weight: 700; color: #fbf1d8; white-space: nowrap;
@@ -384,7 +414,7 @@ button, input { font: inherit; color: inherit; }
       <span class="pf">
         <img class="emb" id="pemb" alt="" hidden>
         <span class="ava" id="ava">?</span>
-        <span class="badge"><img id="lvimg" alt="LV.1"></span>
+        <span class="badge" id="badge"><img id="lvimg" alt="LV.1"><i class="spk"></i><i class="spk"></i><i class="spk"></i><i class="spk"></i><i class="spk"></i></span>
         <span class="exptrack"><i id="expfill"></i></span>
         <span class="exp" id="exp">EXP 0%</span>
         <span class="nm" id="nm">NAME</span>
@@ -727,7 +757,7 @@ const DEMO = [
   { name: 'Moji', job: 'mage', level: 41 },
 ].map((p, i) => Object.assign({ key: 'demo' + i }, p));
 const myKey = () => co.live ? online.user.id : 'me';
-const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, room: co.room, host: co.host, max: co.max, mode: co.mode, map: co.map, game: co.game });
+const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, admin: isAdmin(), room: co.room, host: co.host, max: co.max, mode: co.mode, map: co.map, game: co.game });
 // everyone in town; this player's own entry is always the local state, so it never lags behind a sync
 function townPeople() {
   const me = Object.assign({ key: myKey() }, myPresence());
@@ -746,6 +776,9 @@ const roomOf = code => townRooms().find(r => r.code === code);
 const membersOf = code => townPeople().filter(p => p.room === code).sort((a, b) => !!b.host - !!a.host);
 const jobOf = k => JOBS.find(x => x.k === k);
 const lvOf = p => Math.max(1, Math.min(100, p.level | 0 || 1));
+// admins show Karoz's HERO crest instead of a level badge
+const HERO_BADGE = 'img/lv/hero.webp?v=1';
+function setBadge(im, p) { const h = !!p.admin; im.src = h ? HERO_BADGE : `img/lv/lv-${lvOf(p)}.webp?v=1`; im.alt = h ? 'HERO' : 'LV.' + lvOf(p); im.classList.toggle('hero-sm', h); }
 // class art stands with its body centred (JOBS foot = where the body is across the picture)
 function artImg(job, cls) {
   const j = jobOf(job); if (!j) return null;
@@ -784,18 +817,18 @@ function renderColo() {
   // own character
   const j = jobOf(prof.job);
   $('co-name').textContent = prof.name || 'ผู้เล่น';
-  $('co-lv').src = `img/lv/lv-${lvOf(prof)}.webp?v=1`; $('co-lv').alt = 'LV.' + lvOf(prof);
+  setBadge($('co-lv'), { level: prof.level, admin: isAdmin() });
   const art = $('co-art'); art.textContent = ''; const im = artImg(prof.job, 'co-art-im'); if (im) art.appendChild(im);
   $('co-job').textContent = j ? `${j.name} · ${j.th}` : '';
   // players in town, highest level first
   const list = $('co-list'); list.textContent = '';
   const ppl = townPeople().sort((x, y) => (y.level | 0) - (x.level | 0) || String(x.name).localeCompare(String(y.name)));
   for (const p of ppl) {
-    const li = document.createElement('li'), pj = jobOf(p.job), plv = lvOf(p);
+    const li = document.createElement('li'), pj = jobOf(p.job);
     if (p.key === myKey()) li.className = 'me';
-    li.innerHTML = `<img class="lv" alt="LV.${plv}" src="img/lv/lv-${plv}.webp?v=1"><span></span>` +
+    li.innerHTML = `<img class="lv" alt=""><span></span>` +
       (pj ? `<img class="jb" alt="${pj.name}" title="${pj.name}" src="img/${pj.admin ? 'cls' : 'emb'}-${pj.k}.webp?v=${ART_V}">` : '<i></i>');
-    li.querySelector('span').textContent = p.name;
+    li.querySelector('span').textContent = p.name; setBadge(li.querySelector('img.lv'), p);
     list.appendChild(li);
   }
   if (!co.live) { const li = document.createElement('li'); li.className = 'note'; li.textContent = 'หน้าตัวอย่าง: ห้องและรายชื่อจริงจะขึ้นบนเว็บจริง'; list.appendChild(li); }
@@ -849,7 +882,7 @@ function renderRoom() {
       b.className = 'slot full'; b.disabled = true;
       b.innerHTML = '<b class="nm"></b><img class="lv" alt=""><span class="ar"></span>' + (p.host ? '<i class="tag">หัวห้อง</i>' : '') + (p.key === myKey() ? '<i class="tag you">คุณ</i>' : '');
       b.querySelector('.nm').textContent = p.name;
-      b.querySelector('.lv').src = `img/lv/lv-${lvOf(p)}.webp?v=1`; b.querySelector('.lv').alt = 'LV.' + lvOf(p);
+      setBadge(b.querySelector('.lv'), p);
       const im = artImg(p.job, 'sl-art'); if (im) b.querySelector('.ar').appendChild(im);
     } else if (i < r.max) {
       b.className = 'slot open'; b.innerHTML = '<span class="ic">♡</span><span class="tx">รอ</span>';
@@ -944,7 +977,8 @@ function renderProf() {
   e.hidden = !j; $('ava').textContent = j ? '' : (prof.name || '?').trim().charAt(0).toUpperCase() || '?';
   if (j) { e.className = j.admin ? 'emb cls' : 'emb'; e.src = `img/${j.admin ? 'cls' : 'emb'}-${j.k}.webp?v=${ART_V}`; }
   const lv = Math.max(1, Math.min(100, prof.level | 0 || 1));
-  $('lvimg').src = `img/lv/lv-${lv}.webp?v=1`; $('lvimg').alt = 'LV.' + lv;
+  const hero = isAdmin(); $('badge').classList.toggle('hero', hero);
+  $('lvimg').src = hero ? HERO_BADGE : `img/lv/lv-${lv}.webp?v=1`; $('lvimg').alt = hero ? 'HERO (แอดมิน)' : 'LV.' + lv;
   const pct = Math.max(0, Math.min(99, prof.exp | 0));
   $('expfill').style.width = pct + '%'; $('exp').textContent = `EXP ${pct}%`;
 }
@@ -985,7 +1019,6 @@ const JOBS = [
   { k: 'doram', admin: true, foot: 0.52, th: 'โดรัม', name: 'Doram', diff: 5, desc: 'นักเวทแมวสายคอมโบธาตุ',
     pros: ['ติดมาร์ค 2 ธาตุแล้วจุดปฏิกิริยา', 'อัญเชิญโกเลมสี่ธาตุ', 'คอมโบแรงมากเมื่อวางแผนดี'] },
 ];
-renderProf();
 const JOB = Object.fromEntries(JOBS.map(j => [j.k, j]));
 const isAdmin = () => !!(online.me && online.me.is_admin); // Doram is not released yet: admins only
 let crJob = null, crWait = null;
@@ -1048,6 +1081,7 @@ const HELP = [
   '/a ข้อความ  ประกาศ (เฉพาะแอดมิน)',
 ];
 const online = { sb: null, user: null, v2: false, seen: new Set(), me: null };
+renderProf(); // first paint of the profile frame (needs JOBS and online)
 const chat = { send: 'world', to: null, view: 'all', lock: false };
 const log = $('log');
 
@@ -1396,7 +1430,7 @@ function enterTown(session) {
 const PREVIEW = !/(^|\.)github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
 async function previewTown() {
   entered = true; $('auth').hidden = true;
-  online.user = { id: 'preview' };
+  online.user = { id: 'preview' }; online.me = { is_admin: true }; // the preview is opened by Karoz (an admin), so it shows the admin view: HERO crest, Doram
   const c = await createChar('');
   Object.assign(prof, { name: c.name, job: c.job }); renderProf();
   chatState('หน้าตัวอย่าง แชทใช้ได้เฉพาะบนเว็บจริง', false);
