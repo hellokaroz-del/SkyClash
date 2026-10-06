@@ -308,6 +308,20 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .sl-art, .co-art-im { position: absolute; left: 50%; bottom: 2px; height: 92%; transform: translateX(var(--fx, -50%)); filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .5)); }
 .slot .tag { position: absolute; left: 6px; bottom: 6px; font-style: normal; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #7a1d0f; color: #fff; }
 .slot .tag.you { left: auto; right: 6px; background: #2f6a8a; }
+/* Karoz's slot art: gold card = player, dark card = waiting, dark card with X = closed (its text is in the art) */
+.slot, .slot.full, .slot.open, .slot.shut { border: 0; border-radius: 0; background: url("img/slot-wait.webp?v=2") center / 100% 100% no-repeat; color: #e8d3a8; }
+.slot.full { background-image: url("img/slot-full.webp?v=1"); }
+.slot.shut { background-image: url("img/slot-shut.webp?v=1"); }
+.slot.shut .ic, .slot.shut .tx { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.slot.open { justify-content: flex-end; padding-bottom: 16%; }
+.slot.open .ic { display: none; }
+.slot.open .tx { color: #7a5a30; text-shadow: 0 1px 0 rgba(255, 255, 255, .8); }
+.slot:not(:disabled):hover, .slot:not(:disabled):focus-visible { filter: brightness(1.12) drop-shadow(0 0 6px rgba(255, 210, 110, .7)); }
+.slot .ar { inset: 14px 12px 12px; overflow: hidden; border-radius: 10px; }
+.slot .nm { left: 18px; right: 62px; top: 14px; }
+.slot .lv { right: 14px; top: 12px; }
+.slot .tag { left: 16px; bottom: 14px; z-index: 1; }
+.slot .tag.you { left: auto; right: 16px; }
 .rm-mid { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .rm-map { position: relative; flex: 1; min-height: 200px; border-radius: 12px; border: 3px solid #b8893a; background: center / cover; display: grid; place-items: center; overflow: hidden; }
 .rm-map .q { display: none; font-size: 110px; font-weight: 900; color: #fff4c8; text-shadow: 0 0 18px #ffb300, 0 4px 0 #8a4d18; z-index: 1; }
@@ -326,7 +340,73 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .rm-state { margin: 0; padding: 10px; border-radius: 10px; background: #4a3626; border: 2px solid #8a6630; color: #ffe2a0; font-size: 15px; text-align: center; }
 .rm-side .err { margin: 0; min-height: 1.2em; color: var(--bad); font-size: 14px; }
 @media (max-width: 760px) { .rm-grid { grid-template-columns: 1fr; } .rm-slots { min-height: 340px; } .rm-side .co-big.go { height: 64px; } }
-@media (max-width: 760px) { .co-grid { grid-template-columns: 1fr; } .co-rooms { grid-template-columns: 1fr; } .co-art { height: 110px; } }
+/* Karoz's Colosseum frame (1612x976 art drawn at 1060x642): the room list sits in the big parchment, own character in the
+   upper right box, online players in the lower right box (its tan strip holds the column names). zoom shrinks it on small screens. */
+.card.colo.framed { position: relative; width: 1060px; height: 642px; max-height: none; overflow: visible; padding: 0; border: 0; border-radius: 0;
+  background: url("img/colo-frame.webp?v=1") 0 0 / 100% 100% no-repeat; box-shadow: none; filter: drop-shadow(0 20px 40px rgba(0, 0, 0, .6)); zoom: var(--k, 1); }
+.card.framed .x { position: absolute; z-index: 2; right: 46px; top: 40px; width: 34px; height: 34px; border-radius: 50%; float: none;
+  background: radial-gradient(#5a2a14, #2a140a); border: 2px solid #e2b55a; color: #ffe2a0; font-size: 18px; display: grid; place-items: center; padding: 0; }
+.card.framed .x:hover { background: radial-gradient(#8a3a1a, #3a1a0a); }
+.framed .co-grid { display: block; }
+.framed .co-side { display: contents; }
+.framed .co-main, .framed .co-side > div { background: none; border: 0; border-radius: 0; box-shadow: none; }
+.framed .co-main { position: absolute; left: 122px; top: 120px; width: 636px; height: 418px; padding: 0; }
+.framed .co-bar { margin-bottom: 8px; gap: 6px; flex-wrap: nowrap; }
+.framed .co-bar b { font-size: 16px; color: #5a3410; white-space: nowrap; }
+.framed .co-bar select, .framed .co-find input { height: 32px; font-size: 13px; border-color: #b8893a; background: #fff8e8; color: #3a2410; }
+.framed .co-bar select { width: 104px; padding: 0 6px; }
+.framed .co-find { flex: 1 1 auto; min-width: 0; }
+.framed .co-bar .btn { height: 32px; padding: 0 10px; font-size: 13px; white-space: nowrap; }
+.framed .co-rooms { grid-auto-rows: 80px; gap: 8px; min-height: 256px; }
+.framed .room .md { font-size: 19px; }
+.framed .room .no { font-size: 12px; }
+.framed .room .host { font-size: 11px; }
+.framed .co-empty { color: #6a4a24; font-size: 15px; }
+.framed .co-main .err { margin: 4px 0 0; min-height: 1.2em; font-size: 13px; color: #b3261e; }
+.framed .co-foot { position: absolute; left: 0; right: 0; bottom: -2px; align-items: center; margin: 0; gap: 6px; flex-wrap: nowrap; }
+.framed .co-foot .co-pg { height: 30px; padding: 0 8px; font-size: 12px; white-space: nowrap; color: #ffe2a0; }
+.framed .co-big { height: 62px; font-size: 17px; flex: 1 1 0; white-space: nowrap; padding: 0 10px 2px; border: 0; border-radius: 0;
+  background: url("img/btn-brown.webp?v=1") center / 100% 100% no-repeat; color: #ffe2a0; text-shadow: 0 2px 2px rgba(0, 0, 0, .7); filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .35)); }
+.framed #co-pvp { background-image: url("img/btn-brown2.webp?v=1"); font-size: 15px; }
+.framed .co-big.go { background: url("img/btn-gold.webp?v=1") center / 100% 100% no-repeat; color: #5a2e00; text-shadow: 0 1px 0 rgba(255, 240, 200, .8); font-size: 19px; }
+.framed .co-big:hover, .framed .co-big:focus-visible { outline: none; filter: brightness(1.12) drop-shadow(0 0 6px rgba(255, 210, 110, .8)); }
+.framed .co-big:active { transform: translateY(1px); }
+.framed .co-me { position: absolute !important; left: 786px; top: 132px; width: 164px; height: 200px; padding: 2px 4px; background: none !important; }
+.framed .co-me b { font-size: 15px; color: #5a3410; }
+.framed .co-lvbig { width: 54px; height: 30px; margin-top: 0; }
+.framed .co-art { height: 116px; margin: 0; }
+.framed .co-me small { position: absolute; left: 0; right: 0; bottom: 16px; font-size: 11px; color: #6a4a24; }
+.framed .co-online { position: absolute; left: 782px; top: 354px; width: 172px; height: 186px; padding: 0; display: block; }
+.framed .co-oh { height: 24px; padding: 0; border: 0; overflow: hidden; color: transparent; } /* the frame's tan strip carries a gem; the column names stay for screen readers only */
+.framed #co-list { max-height: 160px; margin-top: 4px; }
+.framed #co-list li { grid-template-columns: 40px 1fr 24px; gap: 4px; padding: 2px 4px; font-size: 12px; color: #3a2410; border-bottom: 1px solid rgba(120, 80, 30, .2); }
+.framed #co-list li:nth-child(odd) { background: rgba(120, 80, 30, .08); }
+.framed #co-list li.me { background: rgba(245, 198, 74, .45); font-weight: 700; }
+.framed #co-list li img.lv { width: 38px; height: 22px; }
+.framed #co-list li img.jb { width: 22px; height: 22px; }
+.framed #co-list li.note { color: #6a4a24; font-size: 11px; }
+/* waiting room in the same Colosseum frame: players and map in the big parchment, state and invite/back in the upper
+   right box, ลุย in the lower right box */
+.room-card.framed h2 { position: absolute; left: 122px; top: 116px; width: 636px; margin: 0; font-size: 20px; color: #5a3410; }
+.room-card.framed .rm-grid, .room-card.framed .rm-side { display: contents; }
+.room-card.framed .rm-slots { position: absolute; left: 122px; top: 150px; width: 372px; height: 386px; min-height: 0; gap: 8px; }
+.room-card.framed .slot .tx { font-size: 18px; }
+.room-card.framed .slot .nm { font-size: 13px; }
+.room-card.framed .rm-mid { position: absolute; left: 506px; top: 150px; width: 252px; height: 386px; gap: 8px; }
+.room-card.framed .rm-map { min-height: 0; border-width: 2px; }
+.room-card.framed .rm-map .q { font-size: 84px; }
+.room-card.framed .rm-roll { padding: 6px 10px; }
+.room-card.framed .rm-roll .dice { font-size: 26px; }
+.room-card.framed .rm-roll b { font-size: 17px; }
+.room-card.framed .rm-roll small { font-size: 12px; }
+.room-card.framed .rm-rules { padding: 6px 8px 6px 24px; background: rgba(120, 80, 30, .1); border-color: #b8893a; color: #5a3410; font-size: 12px; line-height: 1.5; }
+.room-card.framed .rm-state { position: absolute; left: 788px; top: 140px; width: 160px; padding: 6px 4px; font-size: 13px; background: rgba(120, 80, 30, .12); border: 1px solid #b8893a; color: #5a3410; }
+.room-card.framed .rm-side .co-big { position: absolute; left: 790px; width: 156px; height: 56px; font-size: 18px; margin: 0; }
+.room-card.framed #rm-invite { top: 196px; }
+.room-card.framed #rm-back { top: 258px; background-image: url("img/btn-brown2.webp?v=1"); }
+.room-card.framed .rm-side .co-big.go { left: 786px; top: 396px; width: 164px; height: 84px; font-size: 26px; }
+.room-card.framed .rm-side .err { position: absolute; left: 786px; top: 486px; width: 164px; font-size: 12px; text-align: center; color: #b3261e; }
+@media (max-width: 760px) { .co-grid:not(.framed .co-grid) { grid-template-columns: 1fr; } }
 .card .err { color: var(--bad); min-height: 1.3em; margin: 0; font-size: 14px; }
 .card .x { float: right; border: 0; background: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted); padding: 2px 4px; }
 .card hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
@@ -457,9 +537,9 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 </div>
 
 <div class="modal" id="m-colo" hidden role="dialog" aria-modal="true" aria-labelledby="t-colo">
-  <div class="card colo">
+  <div class="card colo framed" id="co-card">
     <button class="x" data-close aria-label="ปิด">✕</button>
-    <h2 id="t-colo">ห้องเล่นเกม</h2>
+    <h2 id="t-colo" class="sr">ห้องเล่นเกม</h2>
     <div class="co-grid">
       <section class="co-main" aria-label="รายชื่อห้อง">
         <div class="co-bar">
@@ -495,7 +575,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 </div>
 
 <div class="modal" id="m-room" hidden role="dialog" aria-modal="true" aria-labelledby="t-room" data-lock="1">
-  <div class="card colo room-card">
+  <div class="card colo room-card framed" id="rm-card">
     <button class="x" id="rm-x" aria-label="ออกจากห้อง">✕</button>
     <h2 id="t-room">ห้อง <span id="rm-no"></span> · <span id="rm-mode"></span></h2>
     <div class="rm-grid">
@@ -745,7 +825,7 @@ const press = (d, sel) => { const el = d.querySelector(sel); if (el) el.click();
 const ROOMS_PER_PAGE = 6, SLOTS = 4, GAME_MAX = 2; // the game plays 2 at a time for now
 const MAPS = [{ k: 'jungle', name: 'อารยธรรมโบราณ', img: 'img/map-jungle.webp?v=1' }];
 const MODES = { duel: 'ดวล', rush: 'ลุย' }; // ลุย (Karoz): the map is always picked at random
-const co = { page: 0, room: null, host: false, max: 2, mode: 'duel', map: MAPS[0].k, game: null, lastGame: null, ch: null, live: false };
+const co = { page: 0, room: null, host: false, max: 2, shut: [2, 3], mode: 'duel', map: MAPS[0].k, game: null, lastGame: null, ch: null, live: false };
 // sample people for the preview page, which cannot sign in
 const DEMO = [
   { name: 'ชินดี้', job: 'blade', level: 70, exp: 35, room: '1517', host: true, max: 2, mode: 'duel', map: 'jungle' },
@@ -758,7 +838,7 @@ const DEMO = [
   { name: 'GM_Luna', job: 'cleric', level: 12, admin: true },
 ].map((p, i) => Object.assign({ key: 'demo' + i }, p));
 const myKey = () => co.live ? online.user.id : 'me';
-const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, exp: prof.exp | 0, admin: isAdmin(), room: co.room, host: co.host, max: co.max, mode: co.mode, map: co.map, game: co.game });
+const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, exp: prof.exp | 0, admin: isAdmin(), room: co.room, host: co.host, max: co.max, shut: co.shut, mode: co.mode, map: co.map, game: co.game });
 // everyone in town; this player's own entry is always the local state, so it never lags behind a sync
 function townPeople() {
   const me = Object.assign({ key: myKey() }, myPresence());
@@ -767,10 +847,20 @@ function townPeople() {
   for (const k in st) if (st[k][0] && k !== me.key) out.push(Object.assign({ key: k }, st[k][0]));
   return out.concat([me]);
 }
+// closed slots: any of the 4 can be shut (all but one), not only the last ones (older entries only had max, so the last ones are shut)
+function shutOf(p) {
+  const max = Math.max(1, Math.min(SLOTS, p.max | 0 || 2));
+  const s = Array.isArray(p.shut) ? [...new Set(p.shut.map(i => i | 0).filter(i => i >= 0 && i < SLOTS))] : [];
+  return s.length === SLOTS - max ? s : [...Array(SLOTS).keys()].slice(max);
+}
+function setShut(i, shut) {
+  co.shut = shut ? [...co.shut, i] : co.shut.filter(k => k !== i);
+  co.max = SLOTS - co.shut.length; sharePresence(); renderRoom();
+}
 function townRooms() {
   const ppl = townPeople(), rooms = [];
   for (const p of ppl) if (p.host && p.room) rooms.push({ code: p.room, host: p.name, mine: p.key === myKey(), mode: MODES[p.mode] ? p.mode : 'duel',
-    max: Math.max(2, Math.min(SLOTS, p.max | 0 || 2)), map: p.map, game: p.game || null, n: ppl.filter(q => q.room === p.room).length });
+    max: Math.max(1, Math.min(SLOTS, p.max | 0 || 2)), shut: shutOf(p), map: p.map, game: p.game || null, n: ppl.filter(q => q.room === p.room).length });
   return rooms.sort((x, y) => (x.n >= x.max) - (y.n >= y.max) || x.code.localeCompare(y.code));
 }
 const roomOf = code => townRooms().find(r => r.code === code);
@@ -837,7 +927,10 @@ function renderColo() {
   if (!co.live) { const li = document.createElement('li'); li.className = 'note'; li.textContent = 'หน้าตัวอย่าง: ห้องและรายชื่อจริงจะขึ้นบนเว็บจริง'; list.appendChild(li); }
 }
 function coErr(t) { $('co-err').textContent = t || ''; }
-function openColo() { if (co.room) { openModal('m-room'); renderRoom(); return; } coErr(''); co.page = 0; openModal('m-colo'); renderColo(); }
+// the framed window is drawn at a fixed 1060x642, so it shrinks to fit smaller screens
+function fitColo() { const k = Math.min(1, (innerWidth - 24) / 1060, (innerHeight - 24) / 642).toFixed(3); for (const id of ['co-card', 'rm-card']) $(id).style.setProperty('--k', k); }
+addEventListener('resize', fitColo);
+function openColo() { fitColo(); if (co.room) { openModal('m-room'); renderRoom(); return; } coErr(''); co.page = 0; openModal('m-colo'); renderColo(); }
 // share where this player is: in town, hosting a room, or in someone's room
 function sharePresence() { if (co.live) co.ch.track(myPresence()).catch(() => {}); }
 function startPresence() {
@@ -851,7 +944,7 @@ function startPresence() {
 function makeRoom(mode) {
   const used = new Set(townRooms().map(r => r.code));
   let code; do code = String(1000 + Math.floor(Math.random() * 9000)); while (used.has(code));
-  Object.assign(co, { room: code, host: true, max: 2, mode, map: mode === 'rush' ? null : MAPS[0].k, game: null, lastGame: null });
+  Object.assign(co, { room: code, host: true, max: 2, shut: [2, 3], mode, map: mode === 'rush' ? null : MAPS[0].k, game: null, lastGame: null });
   sharePresence(); setRoom(code); showRoom();
 }
 function enterRoom(code) {
@@ -864,7 +957,7 @@ function enterRoom(code) {
   Object.assign(co, { room: c, host: false, max: 2, game: null, lastGame: r.game }); // a match already running in it is not ours to join
   sharePresence(); setRoom(c); showRoom();
 }
-function showRoom() { $('m-colo').hidden = true; $('rm-msg').textContent = ''; openModal('m-room'); renderRoom(); }
+function showRoom() { fitColo(); $('m-colo').hidden = true; $('rm-msg').textContent = ''; openModal('m-room'); renderRoom(); }
 function leaveRoom(why) {
   Object.assign(co, { room: null, host: false, max: 2, game: null, lastGame: null });
   sharePresence(); $('m-room').hidden = true; openColo(); if (why) coErr(why);
@@ -879,22 +972,24 @@ function renderRoom() {
   $('rm-no').textContent = r.code;
   $('rm-mode').textContent = MODES[r.mode];
   const slots = $('rm-slots'); slots.textContent = '';
+  // members fill the open slots in order; the host can open or shut any empty slot
+  const shut = new Set(r.shut), open = SLOTS - shut.size, list = [...mem];
   for (let i = 0; i < SLOTS; i++) {
-    const p = mem[i], b = document.createElement('button'); b.type = 'button';
+    const p = shut.has(i) ? null : list.shift(), b = document.createElement('button'); b.type = 'button';
     if (p) {
       b.className = 'slot full'; b.disabled = true;
       b.innerHTML = '<b class="nm"></b><img class="lv" alt=""><span class="ar"></span>' + (p.host ? '<i class="tag">หัวห้อง</i>' : '') + (p.key === myKey() ? '<i class="tag you">คุณ</i>' : '');
       b.querySelector('.nm').textContent = p.name;
       setBadge(b.querySelector('.lv'), p);
       const im = artImg(p.job, 'sl-art'); if (im) b.querySelector('.ar').appendChild(im);
-    } else if (i < r.max) {
+    } else if (!shut.has(i)) {
       b.className = 'slot open'; b.innerHTML = '<span class="ic">♡</span><span class="tx">รอ</span>';
-      b.disabled = !co.host || r.max <= Math.max(2, mem.length);
-      if (!b.disabled) { b.title = 'ปิดช่องนี้'; b.onclick = () => { co.max = Math.max(2, mem.length, co.max - 1); sharePresence(); renderRoom(); }; }
+      b.disabled = !co.host || open <= Math.max(1, mem.length);
+      if (!b.disabled) { b.title = 'ปิดช่องนี้'; b.onclick = () => setShut(i, true); }
     } else {
       b.className = 'slot shut'; b.innerHTML = '<span class="ic">✕</span><span class="tx">เปิด</span>';
       b.disabled = !co.host;
-      if (co.host) { b.title = 'เปิดช่องเพิ่ม'; b.onclick = () => { co.max = Math.min(SLOTS, co.max + 1); sharePresence(); renderRoom(); }; }
+      if (co.host) { b.title = 'เปิดช่องนี้'; b.onclick = () => setShut(i, false); }
     }
     slots.appendChild(b);
   }
