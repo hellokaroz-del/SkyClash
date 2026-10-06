@@ -1043,7 +1043,7 @@ $('rc-form').onsubmit = async e => {
 
 let entered = false;
 // a remembered sign-in is held on the login screen until the player presses a button (Karoz: the login screen shows on every visit)
-let held = null, holdIn = false;
+let held = null, holdIn = true; // stays true until boot() has looked at the stored session (supabase fires SIGNED_IN for it while starting up)
 function enterTown(session) {
   if (entered || !session) return;
   entered = true; online.user = session.user;
@@ -1080,7 +1080,8 @@ async function boot() {
     await sb.auth.signOut().catch(() => {});
     aMsg('', 'ตอนนี้ต้องสมัครสมาชิกก่อนเข้าเมือง สมัครด้วยอีเมลหรือ Google ได้เลย');
   } else if (session && fromLink) { enterTown(session); return; }
-  else if (session) { held = session; holdIn = true; }
+  else if (session) held = session;
+  else holdIn = false;
   $('auth').hidden = false; chatState('ยังไม่ได้เข้าสู่ระบบ', false);
   if (held) {
     if (held.user.email) $('a-email').value = held.user.email;
