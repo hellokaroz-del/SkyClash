@@ -826,9 +826,9 @@ function townPeople() {
   for (const k in st) if (st[k][0] && k !== me.key) out.push(Object.assign({ key: k }, st[k][0]));
   return out.concat([me]);
 }
-// closed slots: any of the 4 can be shut, not only the last ones (older entries only had max, so the last ones are shut)
+// closed slots: any of the 4 can be shut (all but one), not only the last ones (older entries only had max, so the last ones are shut)
 function shutOf(p) {
-  const max = Math.max(2, Math.min(SLOTS, p.max | 0 || 2));
+  const max = Math.max(1, Math.min(SLOTS, p.max | 0 || 2));
   const s = Array.isArray(p.shut) ? [...new Set(p.shut.map(i => i | 0).filter(i => i >= 0 && i < SLOTS))] : [];
   return s.length === SLOTS - max ? s : [...Array(SLOTS).keys()].slice(max);
 }
@@ -839,7 +839,7 @@ function setShut(i, shut) {
 function townRooms() {
   const ppl = townPeople(), rooms = [];
   for (const p of ppl) if (p.host && p.room) rooms.push({ code: p.room, host: p.name, mine: p.key === myKey(), mode: MODES[p.mode] ? p.mode : 'duel',
-    max: Math.max(2, Math.min(SLOTS, p.max | 0 || 2)), shut: shutOf(p), map: p.map, game: p.game || null, n: ppl.filter(q => q.room === p.room).length });
+    max: Math.max(1, Math.min(SLOTS, p.max | 0 || 2)), shut: shutOf(p), map: p.map, game: p.game || null, n: ppl.filter(q => q.room === p.room).length });
   return rooms.sort((x, y) => (x.n >= x.max) - (y.n >= y.max) || x.code.localeCompare(y.code));
 }
 const roomOf = code => townRooms().find(r => r.code === code);
@@ -963,7 +963,7 @@ function renderRoom() {
       const im = artImg(p.job, 'sl-art'); if (im) b.querySelector('.ar').appendChild(im);
     } else if (!shut.has(i)) {
       b.className = 'slot open'; b.innerHTML = '<span class="ic">♡</span><span class="tx">รอ</span>';
-      b.disabled = !co.host || open <= Math.max(2, mem.length);
+      b.disabled = !co.host || open <= Math.max(1, mem.length);
       if (!b.disabled) { b.title = 'ปิดช่องนี้'; b.onclick = () => setShut(i, true); }
     } else {
       b.className = 'slot shut'; b.innerHTML = '<span class="ic">✕</span><span class="tx">เปิด</span>';
