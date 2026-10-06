@@ -292,7 +292,7 @@ button, input { font: inherit; color: inherit; }
     </button>
 
     <img class="bar" src="img/topbar.png" alt="" style="left:1060px;top:0;width:860px;height:115px">
-    <img class="bar" src="img/tray.webp?v=1" alt="" style="left:1135px;top:894px;width:780px;height:181px">
+    <img class="bar" src="img/tray.webp?v=2" alt="" style="left:1115px;top:921px;width:800px;height:154px">
 
     <form id="create" hidden autocomplete="off" aria-labelledby="cr-title">
       <h1 id="cr-title">สร้างตัวละคร</h1>
@@ -475,11 +475,11 @@ const BUILDINGS = [
 const ICONS = [
   { name: 'Reward', box: [1095, 8, 150, 104] }, { name: 'Promotion', box: [1260, 8, 155, 104] },
   { name: 'Coin', box: [1470, 8, 125, 104] }, { name: 'Daily', box: [1655, 8, 120, 104] }, { name: 'เมนูเพิ่มเติม', box: [1840, 20, 80, 80] },
-  // bottom-right tray: Karoz's icons, one per slot (slot centres measured on img/tray.webp)
-  { name: 'Backpack', img: 'bag', box: [1224, 944, 100, 100] }, { name: 'Shop', img: 'shop', box: [1328, 944, 100, 100] },
-  { name: 'Quest', img: 'quest', box: [1433, 944, 100, 100] }, { name: 'Mail', img: 'mail', box: [1537, 944, 100, 100] },
-  { name: 'Social', img: 'social', box: [1642, 944, 100, 100] },
-  { name: 'Setting', img: 'setting', box: [1747, 944, 100, 100], act: () => acctModal() },
+  // bottom-right tray: Karoz's icons, one per slot (centred between the tray's red gems)
+  { name: 'Backpack', img: 'bag', box: [1180, 943, 100, 100] }, { name: 'Shop', img: 'shop', box: [1294, 943, 100, 100] },
+  { name: 'Quest', img: 'quest', box: [1409, 943, 100, 100] }, { name: 'Mail', img: 'mail', box: [1527, 943, 100, 100] },
+  { name: 'Social', img: 'social', box: [1645, 943, 100, 100] },
+  { name: 'Setting', img: 'setting', box: [1762, 943, 100, 100], act: () => acctModal() },
 ];
 const chatEl = $('chat');
 const place = (el, [x, y, w, h]) => Object.assign(el.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
