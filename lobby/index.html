@@ -291,7 +291,7 @@ button, input { font: inherit; color: inherit; }
       </span>
     </button>
 
-    <img class="bar" src="img/topbar.png" alt="" style="left:1060px;top:0;width:860px;height:115px">
+    <img class="bar" src="img/topframe.webp?v=1" alt="" style="left:1136px;top:0;width:780px;height:175px">
     <img class="bar" src="img/tray.webp?v=3" alt="" style="left:1115px;top:914px;width:800px;height:161px">
 
     <form id="create" hidden autocomplete="off" aria-labelledby="cr-title">
@@ -473,8 +473,10 @@ const BUILDINGS = [
   { k: 'farm', desc: 'ปลูกผักและเก็บผลผลิตไว้ใช้ในเมือง', name: 'Farm', th: SOON, at: [215, 770] },
 ];
 const ICONS = [
-  { name: 'Reward', box: [1095, 8, 150, 104] }, { name: 'Promotion', box: [1260, 8, 155, 104] },
-  { name: 'Coin', box: [1470, 8, 125, 104] }, { name: 'Daily', box: [1655, 8, 120, 104] }, { name: 'เมนูเพิ่มเติม', box: [1840, 20, 80, 80] },
+  // top-right frame: the old bar's icons on Karoz's parchment frame
+  { name: 'Reward', img: 'top-reward', box: [1211, 43, 120, 86] }, { name: 'Promotion', img: 'top-promo', box: [1339, 43, 120, 86] },
+  { name: 'Coin', img: 'top-coin', box: [1466, 43, 120, 86] }, { name: 'Daily', img: 'top-daily', box: [1594, 43, 120, 86] },
+  { name: 'เมนูเพิ่มเติม', img: 'top-more', box: [1751, 55, 60, 62] },
   // bottom-right tray: Karoz's icons, one per slot (centred between the tray's red gems)
   { name: 'Backpack', img: 'bag', box: [1182, 941, 100, 100] }, { name: 'Shop', img: 'shop', box: [1293, 941, 100, 100] },
   { name: 'Quest', img: 'quest', box: [1406, 941, 100, 100] }, { name: 'Mail', img: 'mail', box: [1524, 941, 100, 100] },
@@ -526,7 +528,7 @@ function hideTip(b) {
 for (const ic of ICONS) {
   const btn = document.createElement('button');
   btn.type = 'button'; btn.className = 'ico'; btn.setAttribute('aria-label', ic.name); btn.title = ic.name; place(btn, ic.box);
-  if (ic.img) { btn.classList.add('pic'); const im = document.createElement('img'); im.src = `img/ico-${ic.img}.webp?v=1`; im.alt = ''; btn.appendChild(im); }
+  if (ic.img) { btn.classList.add('pic'); const im = document.createElement('img'); im.src = `img/${ic.img.startsWith('top-') ? '' : 'ico-'}${ic.img}.webp?v=1`; im.alt = ''; btn.appendChild(im); }
   btn.onclick = ic.act || (() => toast(`${ic.name} ${SOON}`));
   world.appendChild(btn);
 }
