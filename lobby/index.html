@@ -385,6 +385,27 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .framed #co-list li img.lv { width: 38px; height: 22px; }
 .framed #co-list li img.jb { width: 22px; height: 22px; }
 .framed #co-list li.note { color: #6a4a24; font-size: 11px; }
+/* waiting room in the same Colosseum frame: players and map in the big parchment, state and invite/back in the upper
+   right box, ลุย in the lower right box */
+.room-card.framed h2 { position: absolute; left: 122px; top: 116px; width: 636px; margin: 0; font-size: 20px; color: #5a3410; }
+.room-card.framed .rm-grid, .room-card.framed .rm-side { display: contents; }
+.room-card.framed .rm-slots { position: absolute; left: 122px; top: 150px; width: 372px; height: 386px; min-height: 0; gap: 8px; }
+.room-card.framed .slot .tx { font-size: 18px; }
+.room-card.framed .slot .nm { font-size: 13px; }
+.room-card.framed .rm-mid { position: absolute; left: 506px; top: 150px; width: 252px; height: 386px; gap: 8px; }
+.room-card.framed .rm-map { min-height: 0; border-width: 2px; }
+.room-card.framed .rm-map .q { font-size: 84px; }
+.room-card.framed .rm-roll { padding: 6px 10px; }
+.room-card.framed .rm-roll .dice { font-size: 26px; }
+.room-card.framed .rm-roll b { font-size: 17px; }
+.room-card.framed .rm-roll small { font-size: 12px; }
+.room-card.framed .rm-rules { padding: 6px 8px 6px 24px; background: rgba(120, 80, 30, .1); border-color: #b8893a; color: #5a3410; font-size: 12px; line-height: 1.5; }
+.room-card.framed .rm-state { position: absolute; left: 788px; top: 140px; width: 160px; padding: 6px 4px; font-size: 13px; background: rgba(120, 80, 30, .12); border: 1px solid #b8893a; color: #5a3410; }
+.room-card.framed .rm-side .co-big { position: absolute; left: 790px; width: 156px; height: 56px; font-size: 18px; margin: 0; }
+.room-card.framed #rm-invite { top: 196px; }
+.room-card.framed #rm-back { top: 258px; background-image: url("img/btn-brown2.webp?v=1"); }
+.room-card.framed .rm-side .co-big.go { left: 786px; top: 396px; width: 164px; height: 84px; font-size: 26px; }
+.room-card.framed .rm-side .err { position: absolute; left: 786px; top: 486px; width: 164px; font-size: 12px; text-align: center; color: #b3261e; }
 @media (max-width: 760px) { .co-grid:not(.framed .co-grid) { grid-template-columns: 1fr; } }
 .card .err { color: var(--bad); min-height: 1.3em; margin: 0; font-size: 14px; }
 .card .x { float: right; border: 0; background: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted); padding: 2px 4px; }
@@ -554,7 +575,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 </div>
 
 <div class="modal" id="m-room" hidden role="dialog" aria-modal="true" aria-labelledby="t-room" data-lock="1">
-  <div class="card colo room-card">
+  <div class="card colo room-card framed" id="rm-card">
     <button class="x" id="rm-x" aria-label="ออกจากห้อง">✕</button>
     <h2 id="t-room">ห้อง <span id="rm-no"></span> · <span id="rm-mode"></span></h2>
     <div class="rm-grid">
@@ -907,7 +928,7 @@ function renderColo() {
 }
 function coErr(t) { $('co-err').textContent = t || ''; }
 // the framed window is drawn at a fixed 1060x642, so it shrinks to fit smaller screens
-function fitColo() { $('co-card').style.setProperty('--k', Math.min(1, (innerWidth - 24) / 1060, (innerHeight - 24) / 642).toFixed(3)); }
+function fitColo() { const k = Math.min(1, (innerWidth - 24) / 1060, (innerHeight - 24) / 642).toFixed(3); for (const id of ['co-card', 'rm-card']) $(id).style.setProperty('--k', k); }
 addEventListener('resize', fitColo);
 function openColo() { fitColo(); if (co.room) { openModal('m-room'); renderRoom(); return; } coErr(''); co.page = 0; openModal('m-colo'); renderColo(); }
 // share where this player is: in town, hosting a room, or in someone's room
@@ -936,7 +957,7 @@ function enterRoom(code) {
   Object.assign(co, { room: c, host: false, max: 2, game: null, lastGame: r.game }); // a match already running in it is not ours to join
   sharePresence(); setRoom(c); showRoom();
 }
-function showRoom() { $('m-colo').hidden = true; $('rm-msg').textContent = ''; openModal('m-room'); renderRoom(); }
+function showRoom() { fitColo(); $('m-colo').hidden = true; $('rm-msg').textContent = ''; openModal('m-room'); renderRoom(); }
 function leaveRoom(why) {
   Object.assign(co, { room: null, host: false, max: 2, game: null, lastGame: null });
   sharePresence(); $('m-room').hidden = true; openColo(); if (why) coErr(why);
