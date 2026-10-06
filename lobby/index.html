@@ -326,7 +326,47 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .rm-state { margin: 0; padding: 10px; border-radius: 10px; background: #4a3626; border: 2px solid #8a6630; color: #ffe2a0; font-size: 15px; text-align: center; }
 .rm-side .err { margin: 0; min-height: 1.2em; color: var(--bad); font-size: 14px; }
 @media (max-width: 760px) { .rm-grid { grid-template-columns: 1fr; } .rm-slots { min-height: 340px; } .rm-side .co-big.go { height: 64px; } }
-@media (max-width: 760px) { .co-grid { grid-template-columns: 1fr; } .co-rooms { grid-template-columns: 1fr; } .co-art { height: 110px; } }
+/* Karoz's Colosseum frame (1612x976 art drawn at 1060x642): the room list sits in the big parchment, own character in the
+   upper right box, online players in the lower right box (its tan strip holds the column names). zoom shrinks it on small screens. */
+.card.colo.framed { position: relative; width: 1060px; height: 642px; max-height: none; overflow: visible; padding: 0; border: 0; border-radius: 0;
+  background: url("img/colo-frame.webp?v=1") 0 0 / 100% 100% no-repeat; box-shadow: none; filter: drop-shadow(0 20px 40px rgba(0, 0, 0, .6)); zoom: var(--k, 1); }
+.card.framed .x { position: absolute; z-index: 2; right: 46px; top: 40px; width: 34px; height: 34px; border-radius: 50%; float: none;
+  background: radial-gradient(#5a2a14, #2a140a); border: 2px solid #e2b55a; color: #ffe2a0; font-size: 18px; display: grid; place-items: center; padding: 0; }
+.card.framed .x:hover { background: radial-gradient(#8a3a1a, #3a1a0a); }
+.framed .co-grid { display: block; }
+.framed .co-side { display: contents; }
+.framed .co-main, .framed .co-side > div { background: none; border: 0; border-radius: 0; box-shadow: none; }
+.framed .co-main { position: absolute; left: 122px; top: 120px; width: 636px; height: 418px; padding: 0; }
+.framed .co-bar { margin-bottom: 8px; gap: 6px; flex-wrap: nowrap; }
+.framed .co-bar b { font-size: 16px; color: #5a3410; white-space: nowrap; }
+.framed .co-bar select, .framed .co-find input { height: 32px; font-size: 13px; border-color: #b8893a; background: #fff8e8; color: #3a2410; }
+.framed .co-bar select { width: 104px; padding: 0 6px; }
+.framed .co-find { flex: 1 1 auto; min-width: 0; }
+.framed .co-bar .btn { height: 32px; padding: 0 10px; font-size: 13px; white-space: nowrap; }
+.framed .co-rooms { grid-auto-rows: 80px; gap: 8px; min-height: 256px; }
+.framed .room .md { font-size: 19px; }
+.framed .room .no { font-size: 12px; }
+.framed .room .host { font-size: 11px; }
+.framed .co-empty { color: #6a4a24; font-size: 15px; }
+.framed .co-main .err { margin: 4px 0 0; min-height: 1.2em; font-size: 13px; color: #b3261e; }
+.framed .co-foot { position: absolute; left: 0; right: 0; bottom: 4px; margin: 0; gap: 6px; flex-wrap: nowrap; }
+.framed .co-foot .co-pg { height: 30px; padding: 0 8px; font-size: 12px; white-space: nowrap; color: #ffe2a0; }
+.framed .co-big { height: 46px; font-size: 16px; flex: 1 1 0; white-space: nowrap; }
+.framed .co-me { position: absolute !important; left: 786px; top: 132px; width: 164px; height: 200px; padding: 2px 4px; background: none !important; }
+.framed .co-me b { font-size: 15px; color: #5a3410; }
+.framed .co-lvbig { width: 54px; height: 30px; margin-top: 0; }
+.framed .co-art { height: 116px; margin: 0; }
+.framed .co-me small { position: absolute; left: 0; right: 0; bottom: 16px; font-size: 11px; color: #6a4a24; }
+.framed .co-online { position: absolute; left: 782px; top: 354px; width: 172px; height: 186px; padding: 0; display: block; }
+.framed .co-oh { height: 24px; padding: 0; border: 0; overflow: hidden; color: transparent; } /* the frame's tan strip carries a gem; the column names stay for screen readers only */
+.framed #co-list { max-height: 160px; margin-top: 4px; }
+.framed #co-list li { grid-template-columns: 40px 1fr 24px; gap: 4px; padding: 2px 4px; font-size: 12px; color: #3a2410; border-bottom: 1px solid rgba(120, 80, 30, .2); }
+.framed #co-list li:nth-child(odd) { background: rgba(120, 80, 30, .08); }
+.framed #co-list li.me { background: rgba(245, 198, 74, .45); font-weight: 700; }
+.framed #co-list li img.lv { width: 38px; height: 22px; }
+.framed #co-list li img.jb { width: 22px; height: 22px; }
+.framed #co-list li.note { color: #6a4a24; font-size: 11px; }
+@media (max-width: 760px) { .co-grid:not(.framed .co-grid) { grid-template-columns: 1fr; } }
 .card .err { color: var(--bad); min-height: 1.3em; margin: 0; font-size: 14px; }
 .card .x { float: right; border: 0; background: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted); padding: 2px 4px; }
 .card hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
@@ -457,9 +497,9 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 </div>
 
 <div class="modal" id="m-colo" hidden role="dialog" aria-modal="true" aria-labelledby="t-colo">
-  <div class="card colo">
+  <div class="card colo framed" id="co-card">
     <button class="x" data-close aria-label="ปิด">✕</button>
-    <h2 id="t-colo">ห้องเล่นเกม</h2>
+    <h2 id="t-colo" class="sr">ห้องเล่นเกม</h2>
     <div class="co-grid">
       <section class="co-main" aria-label="รายชื่อห้อง">
         <div class="co-bar">
@@ -837,7 +877,10 @@ function renderColo() {
   if (!co.live) { const li = document.createElement('li'); li.className = 'note'; li.textContent = 'หน้าตัวอย่าง: ห้องและรายชื่อจริงจะขึ้นบนเว็บจริง'; list.appendChild(li); }
 }
 function coErr(t) { $('co-err').textContent = t || ''; }
-function openColo() { if (co.room) { openModal('m-room'); renderRoom(); return; } coErr(''); co.page = 0; openModal('m-colo'); renderColo(); }
+// the framed window is drawn at a fixed 1060x642, so it shrinks to fit smaller screens
+function fitColo() { $('co-card').style.setProperty('--k', Math.min(1, (innerWidth - 24) / 1060, (innerHeight - 24) / 642).toFixed(3)); }
+addEventListener('resize', fitColo);
+function openColo() { fitColo(); if (co.room) { openModal('m-room'); renderRoom(); return; } coErr(''); co.page = 0; openModal('m-colo'); renderColo(); }
 // share where this player is: in town, hosting a room, or in someone's room
 function sharePresence() { if (co.live) co.ch.track(myPresence()).catch(() => {}); }
 function startPresence() {
