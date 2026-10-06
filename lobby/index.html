@@ -203,6 +203,62 @@ button, input { font: inherit; color: inherit; }
 .btn.go { background: var(--gold); color: #2b1d00; border-color: var(--gold-dk); }
 .btn.go:hover { background: #ffd566; }
 .btn.wide { width: 100%; }
+
+/* Colosseum room list (Karoz's DDTank reference): rooms on the left, own character and online players on the right */
+.card.colo { width: min(1060px, 100%); padding: 16px 18px 18px; background: linear-gradient(#3a2a1c, #2a1e14); border: 3px solid #c99a3c;
+  box-shadow: 0 0 0 2px #5a3d16 inset, 0 20px 60px rgba(0, 0, 0, .7); }
+.colo h2 { margin-bottom: 10px; }
+.co-grid { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 14px; }
+.co-main, .co-side > div { background: #4a3626; border: 2px solid #8a6630; border-radius: 12px; box-shadow: inset 0 2px 10px rgba(0, 0, 0, .45); }
+.co-main { padding: 12px; display: flex; flex-direction: column; min-width: 0; }
+.co-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.co-bar b { font-size: 18px; color: #ffe2a0; margin-right: 4px; }
+.co-bar select, .co-find input { height: 38px; border-radius: 8px; border: 2px solid #9a7535; background: #20170f; color: #fff; padding: 0 10px; font-size: 15px; }
+.co-find { display: flex; gap: 6px; flex: 1 1 220px; }
+.co-find input { flex: 1; min-width: 0; }
+.co-bar .btn { height: 38px; padding: 0 14px; font-size: 15px; }
+.co-bar .btn:not(.go) { background: #2b1f14; border-color: #9a7535; color: #ffe2a0; }
+.co-rooms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 92px; gap: 10px; min-height: 316px; align-content: start; }
+.room { position: relative; display: grid; grid-template-columns: 1fr 46%; align-items: stretch; text-align: left; padding: 0; overflow: hidden; cursor: pointer;
+  border-radius: 10px; border: 2px solid #b8893a; background: linear-gradient(#e9cf91, #c99d52); color: #3a2410; box-shadow: 0 3px 0 #6a4a1c; }
+.room:hover, .room:focus-visible { outline: none; border-color: #ffe08a; filter: brightness(1.08); }
+.room.full { filter: grayscale(.55) brightness(.85); cursor: default; }
+.room .rl { padding: 8px 10px; display: flex; flex-direction: column; justify-content: space-between; }
+.room .md { font-size: 22px; font-weight: 800; color: #7a1d0f; line-height: 1; }
+.room .no { font-size: 14px; font-weight: 600; }
+.room .host { font-size: 12px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.room .rm { position: relative; background: center / cover; border-left: 2px solid #b8893a; }
+.room .rm::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 35%, rgba(0, 0, 0, .7)); }
+.room .map, .room .ppl { position: absolute; z-index: 1; right: 8px; color: #fff; text-shadow: 0 1px 3px #000; font-weight: 700; }
+.room .map { bottom: 26px; font-size: 13px; }
+.room .ppl { bottom: 5px; font-size: 16px; }
+.room .st { position: absolute; z-index: 1; top: 5px; right: 6px; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #2f8a4e; color: #fff; }
+.room.full .st { background: #8a2f2f; }
+.co-empty { grid-column: 1 / -1; align-self: center; text-align: center; color: #e8d3a8; font-size: 16px; line-height: 1.6; margin: 0; }
+.co-main .err { min-height: 1.3em; margin: 8px 0 0; color: var(--bad); font-size: 14px; }
+.co-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+.co-foot .co-pg { height: 34px; padding: 0 12px; font-size: 14px; background: #2b1f14; border-color: #9a7535; }
+.co-foot .co-pg:disabled { opacity: .4; cursor: default; }
+.co-foot .co-big { height: 50px; font-size: 18px; flex: 1 1 120px; background: linear-gradient(#5b4128, #3a2918); border-color: #c99a3c; color: #ffe7b0; }
+.co-foot .co-big.go { background: linear-gradient(#ffd566, #e0a82a); color: #3a2200; }
+.co-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.co-me { position: relative; padding: 10px; text-align: center; background: radial-gradient(circle at 50% 60%, #7a4a1a, #4a3626 70%) !important; }
+.co-me b { display: block; font-size: 18px; color: #ffe2a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.co-lvbig { position: absolute; right: 6px; top: 34px; width: 58px; height: 36px; object-fit: contain; }
+.co-art { display: block; height: 150px; max-width: 100%; margin: 4px auto 0; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .6)); }
+.co-me small { color: #e8d3a8; font-size: 14px; }
+.co-online { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 6px; }
+.co-oh, #co-list li { display: grid; grid-template-columns: 50px 1fr 30px; align-items: center; gap: 6px; }
+.co-oh { font-size: 13px; color: #ffe2a0; padding: 2px 6px 6px; border-bottom: 1px solid #8a6630; }
+#co-list { list-style: none; margin: 0; padding: 0; overflow: auto; max-height: 230px; }
+#co-list li { padding: 3px 6px; font-size: 14px; border-bottom: 1px solid rgba(0, 0, 0, .25); }
+#co-list li:nth-child(odd) { background: rgba(0, 0, 0, .12); }
+#co-list li.me { background: rgba(245, 198, 74, .22); }
+#co-list li img.lv { width: 46px; height: 26px; object-fit: contain; }
+#co-list li img.jb { width: 26px; height: 26px; object-fit: contain; }
+#co-list li span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#co-list li.note { display: block; color: #e8d3a8; font-size: 13px; text-align: center; padding: 10px 4px; }
+@media (max-width: 760px) { .co-grid { grid-template-columns: 1fr; } .co-rooms { grid-template-columns: 1fr; } .co-art { height: 100px; } }
 .card .err { color: var(--bad); min-height: 1.3em; margin: 0; font-size: 14px; }
 .card .x { float: right; border: 0; background: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted); padding: 2px 4px; }
 .card hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
@@ -332,20 +388,41 @@ button, input { font: inherit; color: inherit; }
   </div>
 </div>
 
-<div class="modal" id="m-stadium" hidden role="dialog" aria-modal="true" aria-labelledby="t-stadium">
-  <div class="card">
+<div class="modal" id="m-colo" hidden role="dialog" aria-modal="true" aria-labelledby="t-colo">
+  <div class="card colo">
     <button class="x" data-close aria-label="ปิด">✕</button>
-    <h2 id="t-stadium">สนามประลอง</h2>
-    <p>สู้กับเพื่อนออนไลน์ คนหนึ่งสร้างห้องแล้วส่งรหัส 4 หลักให้อีกคน</p>
-    <button class="btn go wide" id="st-make">สร้างห้อง</button>
-    <hr>
-    <div class="row">
-      <input id="st-code" inputmode="numeric" maxlength="4" placeholder="รหัสห้อง 4 หลัก" aria-label="รหัสห้อง" autocomplete="off">
-      <button class="btn go" id="st-join">เข้าห้อง</button>
+    <h2 id="t-colo">ห้องเล่นเกม</h2>
+    <div class="co-grid">
+      <section class="co-main" aria-label="รายชื่อห้อง">
+        <div class="co-bar">
+          <b>รายชื่อห้อง</b>
+          <select id="co-mode" aria-label="โหมด"><option value="">ทุกโหมด</option><option value="duel">ดวล 1:1</option></select>
+          <span class="co-find"><input id="co-code" inputmode="numeric" maxlength="4" placeholder="ระบุหมายเลขห้อง" aria-label="หมายเลขห้อง" autocomplete="off"><button class="btn go" id="co-join">เข้า</button></span>
+          <button class="btn" id="co-refresh">⟳ รีเฟรช</button>
+        </div>
+        <div class="co-rooms" id="co-rooms"></div>
+        <p class="err" id="co-err" role="status"></p>
+        <div class="co-foot">
+          <button class="btn co-pg" id="co-prev">◀ ก่อนหน้า</button>
+          <button class="btn co-pg" id="co-next">ถัดไป ▶</button>
+          <button class="btn co-big" id="co-make">สร้างห้อง</button>
+          <button class="btn co-big" id="co-pvp">2 คนเครื่องเดียว</button>
+          <button class="btn go co-big" id="co-go">ลุย</button>
+        </div>
+      </section>
+      <aside class="co-side">
+        <div class="co-me">
+          <b id="co-name"></b>
+          <img id="co-lv" class="co-lvbig" alt="">
+          <img id="co-art" class="co-art" alt="">
+          <small id="co-job"></small>
+        </div>
+        <div class="co-online">
+          <div class="co-oh"><span>เลเวล</span><span>ชื่อ</span><span>อาชีพ</span></div>
+          <ul id="co-list"></ul>
+        </div>
+      </aside>
     </div>
-    <p class="err" id="st-err" role="status"></p>
-    <hr>
-    <button class="btn wide" id="st-pvp">2 ผู้เล่น เครื่องเดียว</button>
   </div>
 </div>
 
@@ -468,7 +545,7 @@ const ART_V = 25;
 const BUILDINGS = [
   { k: 'tower', desc: 'สู้กับบอทระดับยาก ทดสอบฝีมือการเล็งและอ่านลมของคุณ', name: 'Endless Tower', th: 'หอคอยไร้สิ้นสุด', at: [425, 252], act: () => botModal('tower') },
   { k: 'wedding', desc: 'จับคู่กับคนพิเศษ แล้วจัดงานแต่งให้ทั้งเมืองรู้', name: 'Wedding Hall', th: SOON, at: [690, 408] },
-  { k: 'stadium', desc: 'สร้างห้องหรือเข้าห้องด้วยรหัส แล้วดวลกับเพื่อนแบบออนไลน์', name: 'Stadium', th: 'สนามประลอง', at: [957, 324], act: () => { $('st-err').textContent = ''; openModal('m-stadium'); } },
+  { k: 'stadium', desc: 'ดูห้องที่เปิดอยู่ สร้างห้อง หรือเข้าห้องของเพื่อน แล้วดวลกันแบบออนไลน์', name: 'Stadium', th: 'สนามประลอง', at: [957, 324], act: () => openColo() },
   { k: 'guild', desc: 'สร้างหรือเข้าร่วมกิลด์ แล้วร่วมมือกับเพื่อนพิชิตศัตรู', name: 'Guild', th: SOON, at: [1295, 378] },
   { k: 'dungeon', desc: 'ลงดันเจียนไปสู้กับบอท เลือกความยากได้ 3 ระดับ', name: 'Dungeon', th: 'ดันเจียน', at: [1763, 312], act: () => botModal('dungeon') },
   { k: 'smith', desc: 'ตีบวกและอัปเกรดอาวุธให้แรงขึ้น', name: 'Blacksmith', th: SOON, at: [306, 522] },
@@ -564,22 +641,113 @@ function watchGameRoom(fr) {
     if (!fr.isConnected) { clearInterval(t); return; }
     const el = fr.contentDocument && fr.contentDocument.getElementById('net-msg');
     const m = el && el.textContent.match(/ห้อง\s*(\d{4})/);
-    if (m) setRoom(m[1]);
+    if (m && m[1] !== co.room) { setMyRoom(m[1], co.host); setRoom(m[1]); }
   }, 1500);
 }
-$('back').onclick = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; };
+$('back').onclick = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; if (co.room || co.host) setMyRoom(null, false); };
 const press = (d, sel) => { const el = d.querySelector(sel); if (el) el.click(); return !!el; };
 
-// stadium
-$('st-make').onclick = () => launch(d => { press(d, '#mode-net'); press(d, '#net-make'); }, true);
-function joinRoom() {
-  const c = $('st-code').value.replace(/\D/g, '');
-  if (c.length !== 4) { $('st-err').textContent = 'ใส่รหัสห้อง 4 หลัก'; $('st-code').focus(); return; }
-  setRoom(c); launch(d => { press(d, '#mode-net'); d.getElementById('net-code').value = c; press(d, '#net-join'); }, true);
+// ---------- Colosseum: room list ----------
+// Rooms and online players come from Supabase Realtime presence (channel 'town-presence', no table needed):
+// each player in town shares { name, job, level, room, host }; a room is a host's entry plus everyone sharing its code.
+const ROOM_MAX = 2, ROOMS_PER_PAGE = 6, MAP = { name: 'อารยธรรมโบราณ', img: 'img/map-jungle.webp?v=1' };
+const MODES = { duel: 'ดวล' };
+const co = { page: 0, room: null, host: false, ch: null, live: false };
+const DEMO_PEOPLE = [['Karoz', 'mage', 57], ['ชินดี้', 'blade', 70], ['Filmza', 'archer', 70], ['Irene', 'cleric', 69], ['qwerx', 'thief', 69], ['Chin-Cang', 'merchant', 68], ['ZEDD2', 'archer', 66]];
+const DEMO_ROOMS = [['4512', 'Karoz', 1], ['1517', 'ชินดี้', 2], ['6630', 'Filmza', 1], ['6651', 'qwerx', 1], ['5320', 'Chin-Cang', 2]];
+const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, room: co.room, host: co.host });
+function townPeople() {
+  if (!co.live) return DEMO_PEOPLE.map(([name, job, level]) => ({ name, job, level }));
+  const st = co.ch.presenceState(), out = [];
+  for (const k in st) if (st[k][0]) out.push(Object.assign({ key: k }, st[k][0]));
+  return out;
 }
-$('st-join').onclick = joinRoom;
-$('st-code').addEventListener('keydown', e => { if (e.key === 'Enter') joinRoom(); });
-$('st-pvp').onclick = () => launch(d => press(d, '#mode-pvp'));
+function townRooms() {
+  if (!co.live) return DEMO_ROOMS.map(([code, host, n]) => ({ code, host, n, mode: 'duel' }));
+  const ppl = townPeople(), rooms = [];
+  for (const p of ppl) if (p.host && p.room) rooms.push({ code: p.room, host: p.name, mine: p.key === online.user.id, mode: 'duel', n: ppl.filter(q => q.room === p.room).length });
+  return rooms.sort((x, y) => (x.n >= ROOM_MAX) - (y.n >= ROOM_MAX) || x.code.localeCompare(y.code));
+}
+const jobOf = k => JOBS.find(x => x.k === k);
+function renderColo() {
+  if ($('m-colo').hidden) return;
+  const mode = $('co-mode').value, rooms = townRooms().filter(r => !mode || r.mode === mode);
+  const pages = Math.max(1, Math.ceil(rooms.length / ROOMS_PER_PAGE));
+  co.page = Math.min(co.page, pages - 1);
+  const box = $('co-rooms'); box.textContent = '';
+  for (const r of rooms.slice(co.page * ROOMS_PER_PAGE, (co.page + 1) * ROOMS_PER_PAGE)) {
+    const full = r.n >= ROOM_MAX, b = document.createElement('button');
+    b.type = 'button'; b.className = 'room' + (full ? ' full' : '');
+    b.setAttribute('aria-label', `ห้อง ${r.code} ${MODES[r.mode]} ${r.n}/${ROOM_MAX}${full ? ' เต็ม' : ''}`);
+    b.innerHTML = `<span class="rl"><span class="md"></span><span class="no"></span><span class="host"></span></span>
+      <span class="rm" style="background-image:url('${MAP.img}')"><span class="st"></span><span class="map"></span><span class="ppl"></span></span>`;
+    b.querySelector('.md').textContent = MODES[r.mode];
+    b.querySelector('.no').textContent = 'หมายเลขห้อง ' + r.code;
+    b.querySelector('.host').textContent = 'หัวห้อง ' + r.host;
+    b.querySelector('.st').textContent = full ? 'เต็ม' : 'รอผู้เล่น';
+    b.querySelector('.map').textContent = MAP.name;
+    b.querySelector('.ppl').textContent = `${r.n}/${ROOM_MAX}`;
+    b.onclick = () => r.mine ? coErr('ห้องนี้เป็นห้องของคุณเอง') : full ? coErr(`ห้อง ${r.code} เต็มแล้ว`) : joinRoom(r.code);
+    box.appendChild(b);
+  }
+  if (!rooms.length) {
+    const p = document.createElement('p'); p.className = 'co-empty';
+    p.innerHTML = 'ยังไม่มีห้องที่เปิดอยู่<br>กด "สร้างห้อง" หรือ "ลุย" เพื่อเปิดห้องใหม่';
+    box.appendChild(p);
+  }
+  $('co-prev').disabled = co.page === 0; $('co-next').disabled = co.page >= pages - 1;
+  // own character
+  const j = jobOf(prof.job), lv = Math.max(1, Math.min(100, prof.level | 0 || 1));
+  $('co-name').textContent = prof.name || 'ผู้เล่น';
+  $('co-lv').src = `img/lv/lv-${lv}.webp?v=1`; $('co-lv').alt = 'LV.' + lv;
+  $('co-art').hidden = !j; if (j) $('co-art').src = `img/cls-${j.k}.webp?v=${ART_V}`;
+  $('co-job').textContent = j ? `${j.name} · ${j.th}` : '';
+  // players in town, highest level first
+  const list = $('co-list'); list.textContent = '';
+  const ppl = townPeople().sort((x, y) => (y.level | 0) - (x.level | 0) || String(x.name).localeCompare(String(y.name)));
+  for (const p of ppl) {
+    const li = document.createElement('li'), pj = jobOf(p.job), plv = Math.max(1, Math.min(100, p.level | 0 || 1));
+    if (co.live ? p.key === online.user.id : p.name === prof.name) li.className = 'me';
+    li.innerHTML = `<img class="lv" alt="LV.${plv}" src="img/lv/lv-${plv}.webp?v=1"><span></span>` +
+      (pj ? `<img class="jb" alt="${pj.name}" title="${pj.name}" src="img/${pj.admin ? 'cls' : 'emb'}-${pj.k}.webp?v=${ART_V}">` : '<i></i>');
+    li.querySelector('span').textContent = p.name;
+    list.appendChild(li);
+  }
+  if (!co.live) { const li = document.createElement('li'); li.className = 'note'; li.textContent = 'หน้าตัวอย่าง: ห้องและรายชื่อจริงจะขึ้นบนเว็บจริง'; list.appendChild(li); }
+}
+function coErr(t) { $('co-err').textContent = t || ''; }
+function openColo() { coErr(''); co.page = 0; openModal('m-colo'); renderColo(); }
+// share where this player is: in town, hosting a room, or in someone's room
+function sharePresence() { if (co.live) co.ch.track(myPresence()).catch(() => {}); }
+function startPresence() {
+  if (!online.sb || !online.user || co.ch) return;
+  co.ch = online.sb.channel('town-presence', { config: { presence: { key: online.user.id } } })
+    .on('presence', { event: 'sync' }, renderColo)
+    .subscribe(st => { if (st === 'SUBSCRIBED') { co.live = true; sharePresence(); renderColo(); } });
+}
+function setMyRoom(code, host) { co.room = code; co.host = !!host; sharePresence(); }
+
+$('co-make').onclick = () => { co.host = true; launch(d => { press(d, '#mode-net'); press(d, '#net-make'); }, true); };
+function joinRoom(code) {
+  const c = String(code || $('co-code').value).replace(/\D/g, '');
+  if (c.length !== 4) { coErr('ใส่หมายเลขห้อง 4 หลัก'); $('co-code').focus(); return; }
+  const r = townRooms().find(x => x.code === c);
+  if (co.live && r && r.n >= ROOM_MAX) { coErr(`ห้อง ${c} เต็มแล้ว`); return; }
+  setMyRoom(c, false); setRoom(c);
+  launch(d => { press(d, '#mode-net'); d.getElementById('net-code').value = c; press(d, '#net-join'); }, true);
+}
+// ลุย: join the first room that still has a seat, or open a new one
+$('co-go').onclick = () => {
+  const mode = $('co-mode').value, r = co.live && townRooms().find(x => !x.mine && x.n < ROOM_MAX && (!mode || x.mode === mode));
+  if (r) joinRoom(r.code); else $('co-make').click();
+};
+$('co-join').onclick = () => joinRoom();
+$('co-code').addEventListener('keydown', e => { if (e.key === 'Enter') joinRoom(); });
+$('co-refresh').onclick = () => { coErr(''); renderColo(); };
+$('co-mode').onchange = () => { co.page = 0; renderColo(); };
+$('co-prev').onclick = () => { co.page--; renderColo(); };
+$('co-next').onclick = () => { co.page++; renderColo(); };
+$('co-pvp').onclick = () => launch(d => press(d, '#mode-pvp'));
 
 // bot fights
 const BOT_PLACES = {
@@ -859,6 +1027,7 @@ async function startChat() {
         else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') chatState('การเชื่อมต่อแชทสะดุด กำลังลองใหม่', true);
       });
     chatState(`ออนไลน์ ในชื่อ ${prof.name}`, true);
+    startPresence();
   } catch (e) {
     console.warn('chat', e);
     chatState(why(e), false);
