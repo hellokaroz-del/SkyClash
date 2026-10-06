@@ -748,16 +748,17 @@ const MODES = { duel: 'ดวล', rush: 'ลุย' }; // ลุย (Karoz): th
 const co = { page: 0, room: null, host: false, max: 2, mode: 'duel', map: MAPS[0].k, game: null, lastGame: null, ch: null, live: false };
 // sample people for the preview page, which cannot sign in
 const DEMO = [
-  { name: 'ชินดี้', job: 'blade', level: 70, room: '1517', host: true, max: 2, mode: 'duel', map: 'jungle' },
-  { name: 'Filmza', job: 'archer', level: 70, room: '6630', host: true, max: 3, mode: 'rush' },
-  { name: 'Irene', job: 'cleric', level: 69, room: '1517' },
-  { name: 'qwerx', job: 'thief', level: 69, room: '6651', host: true, max: 2, mode: 'rush' },
+  { name: 'ชินดี้', job: 'blade', level: 70, exp: 35, room: '1517', host: true, max: 2, mode: 'duel', map: 'jungle' },
+  { name: 'Filmza', job: 'archer', level: 70, exp: 80, room: '6630', host: true, max: 3, mode: 'rush' },
+  { name: 'Irene', job: 'cleric', level: 69, exp: 60, room: '1517' },
+  { name: 'qwerx', job: 'thief', level: 69, exp: 12, room: '6651', host: true, max: 2, mode: 'rush' },
   { name: 'Chin-Cang', job: 'merchant', level: 68, room: '5320', host: true, max: 2, mode: 'duel', map: 'jungle' },
   { name: 'ZEDD2', job: 'archer', level: 66, room: '5320' },
   { name: 'Moji', job: 'mage', level: 41 },
+  { name: 'GM_Luna', job: 'cleric', level: 12, admin: true },
 ].map((p, i) => Object.assign({ key: 'demo' + i }, p));
 const myKey = () => co.live ? online.user.id : 'me';
-const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, admin: isAdmin(), room: co.room, host: co.host, max: co.max, mode: co.mode, map: co.map, game: co.game });
+const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, exp: prof.exp | 0, admin: isAdmin(), room: co.room, host: co.host, max: co.max, mode: co.mode, map: co.map, game: co.game });
 // everyone in town; this player's own entry is always the local state, so it never lags behind a sync
 function townPeople() {
   const me = Object.assign({ key: myKey() }, myPresence());
@@ -822,7 +823,9 @@ function renderColo() {
   $('co-job').textContent = j ? `${j.name} · ${j.th}` : '';
   // players in town, highest level first
   const list = $('co-list'); list.textContent = '';
-  const ppl = townPeople().sort((x, y) => (y.level | 0) - (x.level | 0) || String(x.name).localeCompare(String(y.name)));
+  // you first, then admins, then everyone else by total EXP (Karoz): level first, then EXP inside the level
+  const me = myKey(), xp = p => (p.level | 0) * 100 + (p.exp | 0);
+  const ppl = townPeople().sort((x, y) => (y.key === me) - (x.key === me) || !!y.admin - !!x.admin || xp(y) - xp(x) || String(x.name).localeCompare(String(y.name)));
   for (const p of ppl) {
     const li = document.createElement('li'), pj = jobOf(p.job);
     if (p.key === myKey()) li.className = 'me';
