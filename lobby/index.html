@@ -804,7 +804,7 @@ const press = (d, sel) => { const el = d.querySelector(sel); if (el) el.click();
 const ROOMS_PER_PAGE = 6, SLOTS = 4, GAME_MAX = 2; // the game plays 2 at a time for now
 const MAPS = [{ k: 'jungle', name: 'อารยธรรมโบราณ', img: 'img/map-jungle.webp?v=1' }];
 const MODES = { duel: 'ดวล', rush: 'ลุย' }; // ลุย (Karoz): the map is always picked at random
-const co = { page: 0, room: null, host: false, max: 2, mode: 'duel', map: MAPS[0].k, game: null, lastGame: null, ch: null, live: false };
+const co = { page: 0, room: null, host: false, max: 2, shut: [2, 3], mode: 'duel', map: MAPS[0].k, game: null, lastGame: null, ch: null, live: false };
 // sample people for the preview page, which cannot sign in
 const DEMO = [
   { name: 'ชินดี้', job: 'blade', level: 70, exp: 35, room: '1517', host: true, max: 2, mode: 'duel', map: 'jungle' },
@@ -817,7 +817,7 @@ const DEMO = [
   { name: 'GM_Luna', job: 'cleric', level: 12, admin: true },
 ].map((p, i) => Object.assign({ key: 'demo' + i }, p));
 const myKey = () => co.live ? online.user.id : 'me';
-const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, exp: prof.exp | 0, admin: isAdmin(), room: co.room, host: co.host, max: co.max, mode: co.mode, map: co.map, game: co.game });
+const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, exp: prof.exp | 0, admin: isAdmin(), room: co.room, host: co.host, max: co.max, shut: co.shut, mode: co.mode, map: co.map, game: co.game });
 // everyone in town; this player's own entry is always the local state, so it never lags behind a sync
 function townPeople() {
   const me = Object.assign({ key: myKey() }, myPresence());
@@ -826,10 +826,20 @@ function townPeople() {
   for (const k in st) if (st[k][0] && k !== me.key) out.push(Object.assign({ key: k }, st[k][0]));
   return out.concat([me]);
 }
+// closed slots: any of the 4 can be shut, not only the last ones (older entries only had max, so the last ones are shut)
+function shutOf(p) {
+  const max = Math.max(2, Math.min(SLOTS, p.max | 0 || 2));
+  const s = Array.isArray(p.shut) ? [...new Set(p.shut.map(i => i | 0).filter(i => i >= 0 && i < SLOTS))] : [];
+  return s.length === SLOTS - max ? s : [...Array(SLOTS).keys()].slice(max);
+}
+function setShut(i, shut) {
+  co.shut = shut ? [...co.shut, i] : co.shut.filter(k => k !== i);
+  co.max = SLOTS - co.shut.length; sharePresence(); renderRoom();
+}
 function townRooms() {
   const ppl = townPeople(), rooms = [];
   for (const p of ppl) if (p.host && p.room) rooms.push({ code: p.room, host: p.name, mine: p.key === myKey(), mode: MODES[p.mode] ? p.mode : 'duel',
-    max: Math.max(2, Math.min(SLOTS, p.max | 0 || 2)), map: p.map, game: p.game || null, n: ppl.filter(q => q.room === p.room).length });
+    max: Math.max(2, Math.min(SLOTS, p.max | 0 || 2)), shut: shutOf(p), map: p.map, game: p.game || null, n: ppl.filter(q => q.room === p.room).length });
   return rooms.sort((x, y) => (x.n >= x.max) - (y.n >= y.max) || x.code.localeCompare(y.code));
 }
 const roomOf = code => townRooms().find(r => r.code === code);
@@ -913,7 +923,7 @@ function startPresence() {
 function makeRoom(mode) {
   const used = new Set(townRooms().map(r => r.code));
   let code; do code = String(1000 + Math.floor(Math.random() * 9000)); while (used.has(code));
-  Object.assign(co, { room: code, host: true, max: 2, mode, map: mode === 'rush' ? null : MAPS[0].k, game: null, lastGame: null });
+  Object.assign(co, { room: code, host: true, max: 2, shut: [2, 3], mode, map: mode === 'rush' ? null : MAPS[0].k, game: null, lastGame: null });
   sharePresence(); setRoom(code); showRoom();
 }
 function enterRoom(code) {
@@ -941,22 +951,24 @@ function renderRoom() {
   $('rm-no').textContent = r.code;
   $('rm-mode').textContent = MODES[r.mode];
   const slots = $('rm-slots'); slots.textContent = '';
+  // members fill the open slots in order; the host can open or shut any empty slot
+  const shut = new Set(r.shut), open = SLOTS - shut.size, list = [...mem];
   for (let i = 0; i < SLOTS; i++) {
-    const p = mem[i], b = document.createElement('button'); b.type = 'button';
+    const p = shut.has(i) ? null : list.shift(), b = document.createElement('button'); b.type = 'button';
     if (p) {
       b.className = 'slot full'; b.disabled = true;
       b.innerHTML = '<b class="nm"></b><img class="lv" alt=""><span class="ar"></span>' + (p.host ? '<i class="tag">หัวห้อง</i>' : '') + (p.key === myKey() ? '<i class="tag you">คุณ</i>' : '');
       b.querySelector('.nm').textContent = p.name;
       setBadge(b.querySelector('.lv'), p);
       const im = artImg(p.job, 'sl-art'); if (im) b.querySelector('.ar').appendChild(im);
-    } else if (i < r.max) {
+    } else if (!shut.has(i)) {
       b.className = 'slot open'; b.innerHTML = '<span class="ic">♡</span><span class="tx">รอ</span>';
-      b.disabled = !co.host || r.max <= Math.max(2, mem.length);
-      if (!b.disabled) { b.title = 'ปิดช่องนี้'; b.onclick = () => { co.max = Math.max(2, mem.length, co.max - 1); sharePresence(); renderRoom(); }; }
+      b.disabled = !co.host || open <= Math.max(2, mem.length);
+      if (!b.disabled) { b.title = 'ปิดช่องนี้'; b.onclick = () => setShut(i, true); }
     } else {
       b.className = 'slot shut'; b.innerHTML = '<span class="ic">✕</span><span class="tx">เปิด</span>';
       b.disabled = !co.host;
-      if (co.host) { b.title = 'เปิดช่องเพิ่ม'; b.onclick = () => { co.max = Math.min(SLOTS, co.max + 1); sharePresence(); renderRoom(); }; }
+      if (co.host) { b.title = 'เปิดช่องนี้'; b.onclick = () => setShut(i, false); }
     }
     slots.appendChild(b);
   }
