@@ -1116,6 +1116,34 @@ function startTurn(first) {
 }
 
 // ---------- projectile physics (shared with bot simulation) ----------
+// V99 (Karoz, from Boomz): the angle reads 0-180 from the screen's horizontal (0 = right, 90 = straight up, 180 = left).
+// Each class's weapon only turns inside its own window of angles, measured from the ground it lies on (Karoz: "a gun is 45-65,
+// so it only moves 20 degrees; to shoot at 90 you must find a steep slope"). The dial shows the ground tilted and the window in green.
+// default windows per built-in class (from the ground, facing side); a class made in the game maker can set its own
+const AIM_DEF = { thief: [20, 50], archer: [15, 45], blade: [40, 70], mage: [30, 65], merchant: [35, 65], cleric: [30, 60], doram: [30, 60] };
+function aimWin(p) {
+  const d = AIM_DEF[p.k] || [25, 60], lo = p.c.aimMin != null ? +p.c.aimMin : d[0], hi = p.c.aimMax != null ? +p.c.aimMax : d[1];
+  return lo <= hi ? [lo, hi] : [hi, lo];
+}
+// degrees the ground rises in the facing direction: a straight-line fit to the ground over 36 px either side,
+// so a bump under the feet doesn't swing the aim; at most 30 either way. 0 for the Golem's shots and fallen heroes
+function slopeOf(p) {
+  if (p.angle == null || !p.alive) return 0;
+  const x = Math.round(p.x), y = Math.round(p.y);
+  let n = 0, sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for (let d = -36; d <= 36; d += 6) {
+    const g = groundNear(x + d, y);
+    if (g === y && !solid(x + d, y)) continue; // no ground near this column (a gap or a ledge drop)
+    n++; sx += d; sy += g; sxx += d * d; sxy += d * g;
+  }
+  if (n < 4) return 0;
+  const m = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+  return Math.round(Math.max(-30, Math.min(30, -Math.atan(m) * 180 / Math.PI * p.face)));
+}
+// the aim allowed now, as an elevation from the facing side: the class's window turned with the slope underneath
+function aimRange(p) { const s = slopeOf(p), [lo, hi] = aimWin(p); return [s + lo, s + hi]; }
+// the angle as the dial shows it (0-180 from the right)
+function worldAng(ang, face) { return face === 1 ? ang : 180 - ang; }
 function makeProj(p, angleDeg, power, extra) {
   const a = angleDeg * Math.PI / 180, v = power / 100 * MAXV * (p.c.vel || 1);
   const tip = CAST[p.k] ? 30 : 8; // the mage's shot leaves from the staff orb
@@ -1147,7 +1175,7 @@ function fire() {
   const p = cur();
   const power = Math.max(5, Math.min(100, S.power));
   if (S.tut && !p.mob && p.armed !== 'z') { if (p.armed) { if (S.tut.step === 3) S.tut.skill = true; } else if (S.tut.step === 2 && power >= TUT.minPower) S.tut.shot = true; }
-  p.lastPower = power;
+  p.lastPower = power; p.lastAng = worldAng(p.angle, p.face); // the dial keeps a mark of the last shot's angle
   let up = p.boost ? 1.3 : 1;
   const list = [];
   const sk = p.armed && p.armed !== 'z' ? p.c.sk[p.armed] : null;
@@ -1354,19 +1382,20 @@ function botPlan(p) {
     return 1e9;
   };
   // coarse grid first, then a fine one around the best spot (about a third of the work of one fine grid)
-  for (let ang = 20; ang <= 80; ang += 6) for (let pow = 30; pow <= 100; pow += 4) {
+  const [wlo, whi] = aimRange(p), alo = Math.ceil(wlo), ahi = Math.floor(whi), ast = Math.max(2, Math.min(6, (ahi - alo) / 5)); // only inside the weapon's window
+  for (let ang = alo; ang <= ahi + 0.01; ang += ast) for (let pow = 30; pow <= 100; pow += 4) {
     const sc = tryShot(ang, pow);
     if (!best || sc < best.sc) best = { ang, pow, sc };
   }
   const c0 = best;
-  for (let ang = Math.max(20, c0.ang - 6); ang <= Math.min(80, c0.ang + 6); ang += 2) for (let pow = Math.max(30, c0.pow - 4); pow <= Math.min(100, c0.pow + 4); pow += 1) {
+  for (let ang = Math.max(alo, c0.ang - ast); ang <= Math.min(ahi, c0.ang + ast); ang += 1) for (let pow = Math.max(30, c0.pow - 4); pow <= Math.min(100, c0.pow + 4); pow += 1) {
     const sc = tryShot(ang, pow);
     if (sc < best.sc) best = { ang, pow, sc };
   }
   // the test bots keep a small aim error; SIM_AIM scales it per class (V8: Archer and Assassin test bots aim tighter)
   const ae = SIM ? (SIM_AIM[p.k] != null ? SIM_AIM[p.k] : 1) : 0;
   const err = SIM ? (Math.random() - 0.5) * 8 * ae : 0, aerr = SIM ? Math.round((Math.random() - 0.5) * 4 * ae) : 0;
-  return { ang: Math.max(5, Math.min(85, best.ang + aerr)), pow: Math.max(10, Math.min(100, best.pow + err)) };
+  return { ang: Math.max(wlo, Math.min(whi, best.ang + aerr)), pow: Math.max(10, Math.min(100, best.pow + err)) };
 }
 // test bots (auto battle test): pick skills by what they do instead of at random.
 // Reads skill fields, not class names, so skills made in the game maker get sensible use too.
@@ -2048,12 +2077,15 @@ function update() {
   if (S.state === 'aim') {
     if (p.bot) { if (!S.bot) S.bot = { phase: 'think', t: SIM ? 0 : 40 }; botTick(p); }
     else if (!(p.frozen > 0)) { // frozen / stunned (waiting to Purge): no walking, no shot
-      if (pin.up) p.angle = Math.min(90, p.angle + 0.5);
-      if (pin.down) p.angle = Math.max(0, p.angle - 0.5);
+      const [alo, ahi] = aimRange(p);
+      p.angle = Math.max(alo, Math.min(ahi, p.angle));
+      if (pin.up) p.angle = Math.min(ahi, p.angle + 0.5);
+      if (pin.down) p.angle = Math.max(alo, p.angle - 0.5);
       const dir = pin.left ? -1 : pin.right ? 1 : 0;
       if (dir) {
         p.face = dir; cam.manual = false;
         if (!settling) walkStep(p, dir);
+        const [lo, hi] = aimRange(p); p.angle = Math.max(lo, Math.min(hi, p.angle)); // walking onto a slope turns the window with it
       }
       if (pin.fire) { S.state = 'charging'; S.power = 0; S.chargeDir = 1; }
     }
@@ -2845,18 +2877,31 @@ function drawHUD() {
   const dcx = 70, dcy = VH - 62, DS = 0.21, R = 205 * DS;
   if (ready(HUD.dial)) ctx.drawImage(HUD.dial, dcx - 336 * DS, dcy - 331 * DS, 702 * DS, 692 * DS);
   else { ctx.fillStyle = 'rgba(12,30,60,.85)'; ctx.beginPath(); ctx.arc(dcx, dcy, R, 0, 7); ctx.fill(); }
-  const ra = p.angle * Math.PI / 180, f = p.face;
-  // usable arc 0-90 on the facing side
-  ctx.strokeStyle = 'rgba(127,233,255,.45)'; ctx.lineWidth = 3; ctx.beginPath();
-  if (f === 1) ctx.arc(dcx, dcy, R - 5, -Math.PI / 2, 0); else ctx.arc(dcx, dcy, R - 5, Math.PI, Math.PI * 1.5);
-  ctx.stroke();
+  const f = p.face, sr = slopeOf(p) * Math.PI / 180, ra = p.angle * Math.PI / 180;
+  // V99: the ground under the hero, tilted with the slope: the half below it is shaded and the ground line runs through the centre
+  const gx = Math.cos(sr) * f, gy = -Math.sin(sr), down = Math.atan2(Math.cos(sr), f * Math.sin(sr));
+  ctx.save(); ctx.beginPath(); ctx.moveTo(dcx, dcy); ctx.arc(dcx, dcy, R - 1, down - Math.PI / 2, down + Math.PI / 2); ctx.closePath();
+  ctx.fillStyle = 'rgba(6,10,26,.65)'; ctx.fill();
+  // the weapon's window of angles, turned with the ground: a green wedge
+  { const [lo, hi] = aimRange(p), a0 = f === 1 ? -hi * Math.PI / 180 : Math.PI + lo * Math.PI / 180, a1 = f === 1 ? -lo * Math.PI / 180 : Math.PI + hi * Math.PI / 180;
+    ctx.beginPath(); ctx.moveTo(dcx, dcy); ctx.arc(dcx, dcy, R - 3, a0, a1); ctx.closePath(); ctx.fillStyle = 'rgba(90,210,110,.38)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(140,240,150,.8)'; ctx.lineWidth = 1.5; ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(255,211,106,.85)'; ctx.lineWidth = 2; ctx.beginPath();
+  ctx.moveTo(dcx - gx * (R - 2), dcy - gy * (R - 2)); ctx.lineTo(dcx + gx * (R - 2), dcy + gy * (R - 2)); ctx.stroke();
+  // mark of the last shot's angle (like the ghost mark on the power bar)
+  if (p.lastAng != null) {
+    const la = p.lastAng * Math.PI / 180;
+    ctx.strokeStyle = 'rgba(200,30,40,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(dcx, dcy); ctx.lineTo(dcx + Math.cos(la) * (R - 4), dcy - Math.sin(la) * (R - 4)); ctx.stroke();
+  }
+  ctx.restore();
   const nx = dcx + Math.cos(ra) * f * (R - 4), ny = dcy - Math.sin(ra) * (R - 4);
   ctx.save(); ctx.shadowColor = '#7fe9ff'; ctx.shadowBlur = 8;
   ctx.strokeStyle = '#fff6d8'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(dcx, dcy); ctx.lineTo(nx, ny); ctx.stroke();
   ctx.fillStyle = '#ffd36a'; ctx.beginPath(); ctx.arc(nx, ny, 3.5, 0, 7); ctx.fill();
   ctx.restore();
+  const shown = Math.round(p.angle); // like DDTank: the number is the angle from the way you face, the same 0-90 facing left or right (Karoz 2026-10-06)
   ctx.font = `600 22px ${FONT}`; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(8,14,40,.95)';
-  ctx.strokeText(Math.round(p.angle), dcx - f * 14, dcy + 28); ctx.fillStyle = '#ffd36a'; ctx.fillText(Math.round(p.angle), dcx - f * 14, dcy + 28);
+  ctx.strokeText(shown, dcx, dcy + 28); ctx.fillStyle = '#ffd36a'; ctx.fillText(shown, dcx, dcy + 28);
   drawSlots(p);
   drawPassives(p);
   drawWarpButton(p);
@@ -3755,7 +3800,7 @@ function reloadData(gd) { applyData(gd); buildSetup(); if (!S || S.demo || S.sta
 // acknowledges, so none is lost when presence updates are coalesced. The room itself comes from a transport
 // with join(name) -> { presence(patch), peers(), onPeers(fn), leave() } (the artifact's room capability here).
 const PK = ['x', 'y', 'vy', 'hp', 'maxHp', 'rage', 'energy', 'maxEn', 'angle', 'face', 'cds', 'warpCd', 'frozen', 'cck', 'ccRes', 'ccTurn', 'bind', 'bindNow', 'shield', 'buffs', 'debs', 'dots', 'marks', 'hidden',
-  'armed', 'alive', 'iron', 'castT', 'releaseT', 'walk', 'boost', 'gone', 'lastPower', 'items', 'guard', 'passed'];
+  'armed', 'alive', 'iron', 'castT', 'releaseT', 'walk', 'boost', 'gone', 'lastPower', 'lastAng', 'items', 'guard', 'passed'];
 const PJK = ['x', 'y', 'vx', 'vy', 'gf', 'wf', 'kind', 'owner', 'age', 'delay', 'strike', 'scale', 'spin', 'bolt', 'meteor', 'steal', 'elem', 'ice', 'warp'];
 const nr = v => typeof v === 'number' ? Math.round(v * 100) / 100 : v === undefined ? null : v;
 const netMsg = t => { document.getElementById('net-msg').textContent = t; };
@@ -4294,6 +4339,9 @@ function classForm(f, c) {
   f.append(fieldRow('รัศมีระเบิด', inNum(c, 'r', 8, 120, 1, 34), 'ยิ่งมากยิ่งโดนง่าย และขุดดินมาก'));
   f.append(fieldRow('น้ำหนักกระสุน', inNum(c, 'gf', 0.3, 2, 0.01, 1), 'มากกว่า 1 = ตกเร็ว ยิงได้ใกล้ลง'));
   f.append(fieldRow('ความแรงยิง', inNum(c, 'vel', 0.6, 1.5, 0.01, 1), 'มากกว่า 1 = ยิงได้ไกลขึ้น'));
+  const ad = AIM_DEF[MK.sel.classes] || [25, 60];
+  f.append(fieldRow('มุมต่ำสุดของอาวุธ', inNum(c, 'aimMin', 0, 170, 1, ad[0]), 'วัดจากพื้นที่ยืน ยืนบนเนินแล้วช่วงมุมจะเอียงตาม'));
+  f.append(fieldRow('มุมสูงสุดของอาวุธ', inNum(c, 'aimMax', 0, 170, 1, ad[1]), '90 = ตั้งตรงเมื่อยืนบนพื้นเรียบ'));
   f.append(fieldRow('กระสุนปกติ', inAsset(c, 'shot', 'image', PROJ_OPTS, { maxW: 96, maxH: 96 }), 'รูปที่อัปโหลดควรหันหัวไปทางขวา'));
   f.append(section('สกิล'));
   SLOT_IDS.forEach((x, i) => f.append(fieldRow('ช่องสกิล ' + (i + 1), inSelect(c, x, skillOpts('ไม่มี')))));
