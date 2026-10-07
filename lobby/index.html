@@ -849,7 +849,7 @@ const tut = { on: false, done: false, timer: 0 };
 function startTutorial() {
   tut.on = true; tut.done = false;
   launch(d => {
-    if (!press(d, '#mode-tut')) { tut.on = false; toast('เกมบนเว็บยังไม่มีบทสอน'); return; }
+    if (!press(d, '#mode-tut')) { tut.on = false; $('back').click(); toast('เกมบนเว็บยังไม่มีบทสอน'); return; } // an older game build: stay in town
     press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#start');
   });
   const fr = gameBox.querySelector('iframe');
