@@ -2174,25 +2174,35 @@ function tickFx(p) {
   cam.x += (gx - cam.x) * 0.08; cam.y += (gy - cam.y) * 0.08;
 }
 
-function endMatch(winner) {
+// Karoz 2026-10-07: the last hit plays out for 4 s before Victory/Defeat shows, then the summary comes 3 s after that
+const RESULT_DELAY = 4000, SUMMARY_DELAY = 3000;
+function endMatch(winner, why) {
   S.state = 'over';
   if (SIM) { S.winIdx = winner ? winner.i : -1; return; }
   fadeBgm();
   updatePad();
-  const res = document.getElementById('result');
-  res.hidden = false;
+  const res = document.getElementById('result'), s0 = S;
   // whose result is it on this screen: vs the bot it's the human's; on a shared screen the winner gets the Victory
   const human = meP();
   S.winIdx = winner ? winner.i : -1;
-  S.result = { kind: !winner ? 'draw' : (human ? (winner === human ? 'victory' : 'defeat') : 'victory'),
-    sub: !winner ? 'ทั้งสองฝ่ายล้มพร้อมกัน' : human ? (winner === human ? 'คุณชนะการต่อสู้!' : vsBot ? 'บอทชนะ ลองใหม่อีกครั้ง' : 'เพื่อนชนะ ลองใหม่อีกครั้ง') : `${winner.name} ชนะ!`, f0: S.frame,
+  const R = { kind: !winner ? 'draw' : (human ? (winner === human ? 'victory' : 'defeat') : 'victory'),
+    sub: !winner ? 'ทั้งสองฝ่ายล้มพร้อมกัน' : human ? (winner === human ? 'คุณชนะการต่อสู้!' : vsBot ? 'บอทชนะ ลองใหม่อีกครั้ง' : 'เพื่อนชนะ ลองใหม่อีกครั้ง') : `${winner.name} ชนะ!`,
     sparks: [] };
-  res.textContent = !winner ? 'เสมอ! ทั้งสองฝ่ายล้มพร้อมกัน' : `${winner.name} (${winner.c.name}) ชนะ! เลือกอาชีพแล้วเริ่มรอบใหม่ได้เลย`;
-  if (S.mob) { const won = winner === S.players[0]; S.result.kind = won ? 'victory' : 'defeat'; S.result.sub = won ? `กำจัดสไลม์ครบ ${S.mob.total} ตัว!` : `สไลม์ชนะ (กำจัดได้ ${mobKilled()}/${S.mob.total} ตัว) ลองใหม่อีกครั้ง`; res.textContent = S.result.sub; }
-  if (S.tut) { const won = winner === S.players[0]; S.result.sub = won ? 'จบบทสอนแล้ว! คุณพร้อมออกผจญภัยแล้ว' : 'สไลม์ชนะ ลองบทสอนใหม่อีกครั้งนะ'; res.textContent = S.result.sub; 
-    // tell the lobby (which opens the game in a frame for new characters) that the tutorial is won
-    if (won && window.parent !== window) try { parent.postMessage({ type: 'aoa-tutorial-done' }, location.origin); } catch (_) {} }
-  setTimeout(() => { document.getElementById('setup').hidden = false; document.getElementById('setup').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 5200);
+  let txt = !winner ? 'เสมอ! ทั้งสองฝ่ายล้มพร้อมกัน' : `${winner.name} (${winner.c.name}) ชนะ! เลือกอาชีพแล้วเริ่มรอบใหม่ได้เลย`;
+  if (S.mob) { const won = winner === S.players[0]; R.kind = won ? 'victory' : 'defeat'; txt = R.sub = won ? `กำจัดสไลม์ครบ ${S.mob.total} ตัว!` : `สไลม์ชนะ (กำจัดได้ ${mobKilled()}/${S.mob.total} ตัว) ลองใหม่อีกครั้ง`; }
+  const tutWon = S.tut && winner === S.players[0];
+  if (S.tut) txt = R.sub = tutWon ? 'จบบทสอนแล้ว! คุณพร้อมออกผจญภัยแล้ว' : 'สไลม์ชนะ ลองบทสอนใหม่อีกครั้งนะ';
+  if (why) R.sub = why;
+  // a new match started meanwhile (S replaced) drops these late steps
+  setTimeout(() => {
+    if (S !== s0) return;
+    R.f0 = S.frame; S.result = R; res.textContent = txt; res.hidden = false;
+  }, RESULT_DELAY);
+  // tell the lobby (which opens the game in a frame for new characters) that the tutorial is won; it shows the EXP summary
+  if (tutWon && window.parent !== window) setTimeout(() => {
+    if (S === s0) try { parent.postMessage({ type: 'aoa-tutorial-done' }, location.origin); } catch (_) {}
+  }, RESULT_DELAY + SUMMARY_DELAY);
+  setTimeout(() => { if (S !== s0) return; document.getElementById('setup').hidden = false; document.getElementById('setup').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, RESULT_DELAY + 5200);
 }
 
 // ---------- drawing ----------
@@ -4055,7 +4065,7 @@ function netPeers() {
   netUI();
 }
 function netGone() {
-  if (NET.inMatch && S && !S.demo && S.state !== 'over') { NET.ended = true; endMatch(meP()); if (S.result) S.result.sub = 'เพื่อนออกจากเกม'; }
+  if (NET.inMatch && S && !S.demo && S.state !== 'over') { NET.ended = true; endMatch(meP(), 'เพื่อนออกจากเกม'); }
   netUI();
 }
 function markPicks() {
