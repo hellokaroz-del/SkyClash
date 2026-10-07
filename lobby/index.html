@@ -404,6 +404,32 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .framed #co-list li img.lv { width: 38px; height: 22px; }
 .framed #co-list li img.jb { width: 22px; height: 22px; }
 .framed #co-list li.note { color: #6a4a24; font-size: 11px; }
+/* Karoz 2026-10-07: the waiting room fills the screen like DDTank's: the frame grows to fit, the town is dimmed out,
+   the players sit 2x2 in the upper left of the parchment and the town chat moves into the lower part. */
+#m-room { background: rgba(8, 6, 14, .94); padding: 4px; }
+.room-card.framed .rm-slots { height: 236px !important; width: 250px !important; gap: 6px !important; }
+.room-card.framed .slot { border-width: 2px; border-radius: 8px; }
+.room-card.framed .slot .nm { font-size: 10px; top: 5px; left: 6px; right: 34px; }
+.room-card.framed .slot .lv { width: 30px; height: auto; top: 4px; right: 4px; }
+.room-card.framed .slot .tag { font-size: 9px; padding: 1px 5px; bottom: 6px; left: 6px; }
+.room-card.framed .slot .tag.you { left: auto; right: 6px; }
+.room-card.framed .slot .tx { font-size: 13px; }
+.room-card.framed .slot .ar { inset: 8px 6px 6px; }
+.room-card.framed .rm-mid { left: 384px !important; width: 374px !important; height: 236px !important; gap: 6px !important; }
+.room-card.framed .rm-rules { display: none; }
+.room-card.framed .rm-roll { padding: 4px 10px; }
+#rm-chat { position: absolute; left: 122px; top: 394px; width: 636px; height: 142px; }
+#rm-chat #chat { position: relative; left: 0; top: 0; width: 1156px; height: 258px; zoom: .55; transform: none; backdrop-filter: none; background: rgba(30, 22, 16, .92); }
+#rm-chat #chat .side button { flex: 1 1 0; height: auto; min-height: 0; font-size: 18px; padding: 0; }
+#rm-chat #chat .tabs { gap: 3px; }
+#rm-chat #chat .tabs button { min-height: 0; padding: 0; font-size: 15px; }
+#rm-chat #c-min { display: none; }
+/* while a ลุย room looks for an opponent, the clock runs on the map (DDTank) */
+.rm-map .tm { display: none; position: absolute; inset: 0; z-index: 2; place-content: center; text-align: center; background: rgba(20, 10, 0, .55); }
+.rm-map.seek .tm { display: grid; }
+.rm-map.seek .q { display: none; }
+.rm-map .tm b { font-size: 64px; font-weight: 900; color: #ffe27a; text-shadow: 0 3px 0 #8a4d18, 0 0 14px rgba(255, 190, 60, .8); line-height: 1; font-variant-numeric: tabular-nums; }
+.rm-map .tm small { margin-top: 6px; font-size: 14px; color: #fff4d8; text-shadow: 0 1px 2px #000; }
 /* waiting room in the same Colosseum frame: players and map in the big parchment, state and invite/back in the upper
    right box, ลุย in the lower right box */
 .room-card.framed h2 { position: absolute; left: 122px; top: 116px; width: 636px; margin: 0; font-size: 20px; color: #5a3410; }
@@ -505,8 +531,41 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 #tut-done[hidden] { display: none; }
 #g-cover { position: absolute; inset: 0; z-index: 40; padding: 16px; text-align: center; display: grid; place-items: center; background: #0d0b14; color: #ffe7a0; font-size: 20px; font-weight: 700; }
 #g-cover[hidden] { display: none; }
-#tut-done .card { text-align: center; }
-#tut-done .exp { font-size: 30px; font-weight: 800; color: var(--gold); margin: 6px 0 2px; }
+/* end-of-match EXP summary (Karoz's DDTank reference): the character in a burst of light on the left, the EXP rows and
+   the big Total on the right. The tutorial shows only the สรุปผล row. */
+.res { position: relative; width: min(920px, 100%); max-height: 100%; display: grid; grid-template-columns: 38% 1fr; gap: 18px; padding: 22px;
+  border-radius: 16px; border: 3px solid #c99a3c; box-shadow: 0 0 0 2px #5a3d16 inset, 0 24px 70px rgba(0, 0, 0, .7);
+  background: radial-gradient(circle at 20% 30%, #3a2a3a, #1c1420 70%); }
+.res-l { position: relative; display: grid; grid-template-rows: 1fr auto; gap: 10px; min-height: 300px; }
+.res-art { position: relative; overflow: hidden; border-radius: 12px; display: grid; place-items: end start;
+  background: radial-gradient(circle at 50% 55%, rgba(255, 236, 170, .9), rgba(255, 170, 60, .35) 30%, rgba(0, 0, 0, 0) 62%); }
+.res-art::before { content: ""; position: absolute; inset: -60%; background: repeating-conic-gradient(rgba(255, 214, 120, .28) 0 6deg, rgba(255, 214, 120, 0) 6deg 18deg);
+  -webkit-mask: radial-gradient(circle, #000 20%, transparent 55%); mask: radial-gradient(circle, #000 20%, transparent 55%); animation: resSpin 40s linear infinite; }
+@keyframes resSpin { to { transform: rotate(360deg); } }
+.res-art img { position: relative; height: 290px; max-width: none; transform: translateX(var(--fx, -50%)); left: 50%; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .5)); }
+.res-me { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px; border-radius: 10px; background: rgba(0, 0, 0, .35); border: 1px solid #8a6630; }
+.res-me b { color: #ffe7a0; font-size: 18px; }
+.res-me span { color: #fff; font-size: 15px; }
+.res-r { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.res-r h2 { margin: 0; text-align: center; font-size: 28px; color: #ffe08a; text-shadow: 0 2px 0 #6a3a10, 0 0 14px rgba(255, 200, 80, .5); }
+.res-sec { border-radius: 10px; border: 1px solid #8a3a2a; background: linear-gradient(rgba(110, 20, 20, .55), rgba(40, 10, 10, .55)); padding: 8px 14px 10px; }
+.res-sec h3 { margin: 0 0 6px; text-align: center; font-size: 19px; color: #ff4a3a; text-shadow: 0 1px 0 #000; }
+.res-sec ul { list-style: none; margin: 0; padding: 0; }
+.res-sec li { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 4px; border-top: 1px solid rgba(255, 255, 255, .08); color: #e8dccb; font-size: 17px; }
+.res-sec li:first-child { border-top: 0; }
+.res-sec li b { font-size: 26px; font-style: italic; color: #fff; text-shadow: 0 2px 0 #b3261e, 0 0 8px rgba(255, 80, 60, .6); }
+.res-total { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 16px; border-radius: 10px; background: rgba(0, 0, 0, .4); border: 1px solid #8a6630; }
+.res-total > span { font-size: 46px; font-weight: 900; font-style: italic; color: #ffd84a; text-shadow: 0 3px 0 #8a4d18, 0 0 16px rgba(255, 200, 60, .6); }
+.res-total div { text-align: right; }
+.res-total small { display: block; color: #ff6a8a; font-size: 16px; font-weight: 700; }
+.res-total b { font-size: 40px; font-style: italic; color: #fff; text-shadow: 0 3px 0 #b3261e, 0 0 10px rgba(255, 120, 60, .7); }
+.res-r p { margin: 0; text-align: center; color: #e8dccb; font-size: 15px; min-height: 1.3em; }
+.res-up { position: absolute; right: -16px; top: -20px; width: 112px; height: 112px; border-radius: 50%; display: grid; place-items: center; text-align: center;
+  background: radial-gradient(#f4f6fb, #b9c2d2 60%, #7f8aa0); border: 4px dashed #e8edf6; color: #2a4a8a; font-size: 22px; font-weight: 900; line-height: 1.1;
+  transform: rotate(-14deg); box-shadow: 0 6px 16px rgba(0, 0, 0, .5); animation: resStamp .45s cubic-bezier(.2, 1.6, .5, 1) both; }
+.res-up[hidden] { display: none; }
+@keyframes resStamp { from { transform: rotate(-14deg) scale(2.2); opacity: 0; } }
+@media (max-width: 720px) { .res { grid-template-columns: 1fr; } .res-l { min-height: 0; } .res-art img { height: 170px; } .res-total > span { font-size: 32px; } .res-total b { font-size: 30px; } }
 
 #rotate { position: fixed; inset: 0; z-index: 15; display: none; place-items: center; text-align: center; padding: 24px;
   background: rgba(5, 4, 10, .85); font-size: 18px; color: #ffe7a0; }
@@ -611,7 +670,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
     <div class="rm-grid">
       <div class="rm-slots" id="rm-slots"></div>
       <div class="rm-mid">
-        <div class="rm-map" id="rm-map"><span class="q">?</span></div>
+        <div class="rm-map" id="rm-map"><span class="q">?</span><span class="tm"><b id="rm-clock"></b><small id="rm-clocksub"></small></span></div>
         <div class="rm-roll"><span class="dice">🎲</span><b id="rm-mapname"></b><small id="rm-mapsub"></small></div>
         <ol class="rm-rules" id="rm-rules"></ol>
       </div>
@@ -623,6 +682,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
         <button class="btn go co-big" id="rm-go">ลุย</button>
       </div>
     </div>
+    <div id="rm-chat"></div>
   </div>
 </div>
 
@@ -706,11 +766,16 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
   <button id="back" type="button">← กลับเมือง</button>
   <div id="g-cover" hidden>กำลังเข้าสู่ด่านฝึก...</div>
   <div id="tut-done" hidden>
-    <div class="card" role="dialog" aria-labelledby="td-h">
-      <h2 id="td-h">จบบทสอนแล้ว!</h2>
-      <div class="exp" id="td-exp"></div>
-      <p id="td-msg"></p>
-      <button class="btn go wide" id="td-go" type="button">เข้าสู่เมือง</button>
+    <div class="res" role="dialog" aria-labelledby="td-h">
+      <div class="res-l"><div class="res-art" id="td-art"></div><div class="res-me"><b id="td-name"></b><span id="td-lv"></span></div></div>
+      <div class="res-r">
+        <h2 id="td-h">ผลการต่อสู้</h2>
+        <div class="res-sec"><h3>EXP จากการต่อสู้</h3><ul id="td-rows"></ul></div>
+        <div class="res-total"><span>Total</span><div><small>EXP รวม</small><b id="td-exp"></b></div></div>
+        <p id="td-msg"></p>
+        <button class="btn go wide" id="td-go" type="button">เข้าสู่เมือง</button>
+      </div>
+      <div class="res-up" id="td-up" hidden>เลเวล<br>อัป!</div>
     </div>
   </div>
 </div>
@@ -911,9 +976,9 @@ function endTutorial() {
 }
 async function finishTutorial() {
   if (!tut.on || tut.done) return; tut.done = true;
-  const box = $('tut-done'), go = $('td-go');
-  $('td-h').textContent = 'จบบทสอนแล้ว!'; $('td-exp').textContent = `+${TUT_EXP.toLocaleString()} EXP`;
-  $('td-msg').textContent = 'กำลังบันทึก...'; go.disabled = true; go.textContent = 'เข้าสู่เมือง'; box.hidden = false;
+  const go = $('td-go'), lv0 = prof.level || 1;
+  showResult([['สรุปผล', TUT_EXP]], TUT_EXP); // the tutorial shows only the summary row (Karoz)
+  $('td-msg').textContent = 'กำลังบันทึก...'; go.disabled = true; go.textContent = 'เข้าสู่เมือง';
   if (online.sb && online.user && online.user.id !== 'preview') {
     const { data, error } = await online.sb.rpc('finish_tutorial');
     if (error) { // the reward is not saved yet: stay here and let the player try again
@@ -925,8 +990,21 @@ async function finishTutorial() {
     online.me = Object.assign(online.me || {}, p);
     Object.assign(prof, { level: p.level || 1, exp: p.exp || 0 }); saveProf(); renderProf(); sharePresence();
   } else Object.assign(prof, { level: Math.max(2, prof.level || 1), exp: 0 }), renderProf(); // the Claude preview has no account to save to
-  $('td-msg').textContent = `ขึ้นเป็นเลเวล ${prof.level} แล้ว ไปผจญภัยในเมืองกันเลย`;
+  $('td-lv').textContent = 'Lv.' + prof.level; $('td-up').hidden = prof.level <= lv0;
+  $('td-msg').textContent = prof.level > lv0 ? `ขึ้นเป็นเลเวล ${prof.level} แล้ว ไปผจญภัยในเมืองกันเลย` : '';
   go.disabled = false; go.onclick = endTutorial; go.focus();
+}
+// end-of-match summary: rows of [label, EXP] and the total, counted up like DDTank's result screen.
+// Stage EXP comes from Karoz per stage (exp-rules-2026-10-07); the tutorial is the only match that gives EXP so far.
+function showResult(rows, total) {
+  const art = $('td-art'); art.textContent = ''; const im = artImg(prof.job, 'res-im'); if (im) art.appendChild(im);
+  $('td-name').textContent = prof.name || ''; $('td-name').classList.toggle('adm', isAdmin()); $('td-lv').textContent = 'Lv.' + (prof.level || 1);
+  const ul = $('td-rows'); ul.textContent = '';
+  for (const [label, exp] of rows) { const li = document.createElement('li'); li.append(label); const b = document.createElement('b'); b.textContent = '+' + exp.toLocaleString(); li.appendChild(b); ul.appendChild(li); }
+  $('td-up').hidden = true; $('tut-done').hidden = false;
+  const el = $('td-exp'), t0 = performance.now();
+  const step = t => { const k = Math.min(1, (t - t0) / 900); el.textContent = '+' + Math.round(total * k).toLocaleString(); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
 }
 // read the room code the game shows, so /r in town chat reaches the same room
 function watchGameRoom(fr) {
@@ -1053,7 +1131,10 @@ function renderColo() {
 }
 function coErr(t) { $('co-err').textContent = t || ''; }
 // the framed window is drawn at a fixed 1060x642, so it shrinks to fit smaller screens
-function fitColo() { const k = Math.min(1, (innerWidth - 24) / 1060, (innerHeight - 24) / 642).toFixed(3); for (const id of ['co-card', 'rm-card']) $(id).style.setProperty('--k', k); }
+function fitColo() {
+  $('co-card').style.setProperty('--k', Math.min(1, (innerWidth - 24) / 1060, (innerHeight - 24) / 642).toFixed(3));
+  $('rm-card').style.setProperty('--k', Math.min((innerWidth - 8) / 1060, (innerHeight - 8) / 642).toFixed(3)); // the waiting room fills the screen
+}
 addEventListener('resize', fitColo);
 function openColo() { fitColo(); if (co.room) { openModal('m-room'); renderRoom(); return; } coErr(''); co.page = 0; openModal('m-colo'); renderColo(); }
 // share where this player is: in town, hosting a room, or in someone's room
@@ -1088,6 +1169,15 @@ function leaveRoom(why) {
   Object.assign(co, { room: null, host: false, max: 2, game: null, lastGame: null, seek: 0, vs: null });
   sharePresence(); $('m-room').hidden = true; openColo(); if (why) coErr(why);
 }
+let roomClock = 0;
+// the town chat moves into the waiting room while it is open, and back into town after (the same element, so nothing is lost)
+const chatHome = $('chat').parentNode, chatNext = $('chat').nextSibling;
+function placeChat() {
+  const inRoom = !$('m-room').hidden, c = $('chat');
+  if (inRoom && c.parentNode !== $('rm-chat')) $('rm-chat').appendChild(c); // shown open in the room, whatever its town state
+  else if (!inRoom && c.parentNode !== chatHome) chatHome.insertBefore(c, chatNext);
+}
+new MutationObserver(placeChat).observe($('m-room'), { attributes: true, attributeFilter: ['hidden'] });
 function renderRoom() {
   if (!co.room || $('m-room').hidden) return;
   const r = roomOf(co.room);
@@ -1132,7 +1222,12 @@ function renderRoom() {
   $('rm-go').textContent = !co.host ? 'รอหัวห้อง' : r.seek && !r.vs ? 'ยกเลิก' : 'ลุย';
   if (rnd) { // ลุย: the room is one team; the opponent is another room with the same number of people
     const t = r.seek ? Math.floor((Date.now() - r.seek) / 1000) : 0, clock = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
-    $('rm-state').textContent = r.game ? 'กำลังเล่นอยู่' : r.vs ? `เจอคู่แข่งแล้ว ห้อง ${r.vs}` : r.seek ? `กำลังหาคู่แข่ง ${n}-${n} ${clock}` : !co.host ? 'รอหัวห้องกดลุย' : `กดลุยเพื่อหาคู่แข่ง ${n}-${n}`;
+    $('rm-state').textContent = r.game ? 'กำลังเล่นอยู่' : r.vs ? `เจอคู่แข่งแล้ว ห้อง ${r.vs}` : r.seek ? `กำลังหาคู่แข่ง ${n}-${n}` : !co.host ? 'รอหัวห้องกดลุย' : `กดลุยเพื่อหาคู่แข่ง ${n}-${n}`;
+    const seeking = !!(r.seek && !r.game && !co.rolling);
+    $('rm-map').classList.toggle('seek', seeking);
+    $('rm-clock').textContent = clock;
+    $('rm-clocksub').textContent = r.vs ? 'เจอคู่แข่งแล้ว กำลังเข้าเกม...' : 'กำลังจับคู่ โปรดรอสักครู่...';
+    clearTimeout(roomClock); if (seeking) roomClock = setTimeout(renderRoom, 1000); // everyone in the room sees the clock run
   } else $('rm-state').textContent = r.game ? 'กำลังเล่นอยู่' : !co.host ? 'รอหัวห้องกดลุย' : n < 2 ? 'รอผู้เล่นเข้าห้อง' : n > GAME_MAX ? `ตอนนี้เกมเล่นได้ทีละ ${GAME_MAX} คน` : 'พร้อมแล้ว กดลุยได้เลย';
 }
 // the town presses the game's own buttons: online mode, stage, own class, then create or join
