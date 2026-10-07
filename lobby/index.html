@@ -216,12 +216,14 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 #log .ch { font-weight: 700; margin-right: 4px; }
 #log b { font-weight: 700; cursor: pointer; }
 #log .sys { color: var(--muted); font-style: italic; }
-#log .c-world b, #log .c-world .ch { color: #f5c64a; }
-#log .c-guild { color: #9df0a6; }
-#log .c-whisper { color: #ffaed9; }
+#log .c-world .ch { color: #f5c64a; }
+#log b, #log b.me { color: #fff; } /* names are white; admins glow red (.adm) */
 #log .c-room { color: #9fd2ff; }
 #log .c-announce { color: #ffe066; font-weight: 700; text-shadow: 0 0 6px rgba(255, 200, 60, .5); }
-#log b.me { color: var(--accent) !important; }
+/* guild lines are all green and whispers all pink: tag, name and message in one colour */
+#log .c-guild, #log .c-guild .ch, #log .c-guild b, #log .c-guild b.me, #log .c-guild b.adm { color: #5ee36e !important; }
+#log .c-whisper, #log .c-whisper .ch, #log .c-whisper b, #log .c-whisper b.me, #log .c-whisper b.adm { color: #ff8fd2 !important; }
+#log .c-guild b.adm, #log .c-whisper b.adm { text-shadow: none; animation: none; font-weight: 700; }
 #chatform { grid-column: 1 / 4; display: flex; gap: 8px; position: relative; }
 #chan { flex: none; min-width: 132px; height: 56px; border-radius: 12px; border: 2px solid #b8862e; background: linear-gradient(#5a4320, #3a2a12);
   color: #ffe7a0; font-weight: 800; font-size: 22px; cursor: pointer; padding: 0 12px; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
