@@ -842,6 +842,36 @@ function launch(setup, watchRoom) {
   };
   gameBox.appendChild(fr); gameBox.hidden = false; $('back').focus();
 }
+// ---------- tutorial: a new character goes straight into the game's tutorial with the job they picked ----------
+// Finishing it gives the EXP from level 1 to 2 once (server function finish_tutorial, lobby/supabase-progress.sql).
+const TUT_EXP = 1000; // exp-table-v3: level 1 -> 2
+const tut = { on: false, done: false, timer: 0 };
+function startTutorial() {
+  tut.on = true; tut.done = false;
+  launch(d => {
+    if (!press(d, '#mode-tut')) { tut.on = false; toast('เกมบนเว็บยังไม่มีบทสอน'); return; }
+    press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#start');
+  });
+  const fr = gameBox.querySelector('iframe');
+  clearInterval(tut.timer);
+  // the game shows "จบบทสอนแล้ว" in #result when the hero beats the tutorial slimes
+  tut.timer = setInterval(() => {
+    if (!fr.isConnected) { clearInterval(tut.timer); return; }
+    const r = fr.contentDocument && fr.contentDocument.getElementById('result');
+    if (r && !r.hidden && /จบบทสอนแล้ว/.test(r.textContent)) { clearInterval(tut.timer); finishTutorial(); }
+  }, 500);
+}
+addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'aoa-tutorial-done') finishTutorial(); });
+async function finishTutorial() {
+  if (!tut.on || tut.done) return; tut.done = true; tut.on = false;
+  if (!online.sb || !online.user || online.user.id === 'preview') { toast(`จบบทสอนแล้ว! ได้รับ ${TUT_EXP.toLocaleString()} EXP`); return; }
+  const { data, error } = await online.sb.rpc('finish_tutorial');
+  if (error) { console.warn('tutorial', error); toast('บันทึกผลบทสอนไม่ได้ ลองใหม่ภายหลัง'); tut.done = false; return; }
+  const p = Array.isArray(data) ? data[0] : data;
+  online.me = Object.assign(online.me || {}, p);
+  Object.assign(prof, { level: p.level || 1, exp: p.exp || 0 }); saveProf(); renderProf(); sharePresence();
+  toast(`จบบทสอนแล้ว! ได้รับ ${TUT_EXP.toLocaleString()} EXP ขึ้นเป็นเลเวล ${p.level}`);
+}
 // read the room code the game shows, so /r in town chat reaches the same room
 function watchGameRoom(fr) {
   const t = setInterval(() => {
@@ -1356,6 +1386,7 @@ async function startChat() {
   try {
     const sb = online.sb;
     await loadProfile();
+    if (online.me && online.me.tutorial_done === false) startTutorial();
     loadAdmins();
     // no history: each visit (and each refresh) starts with an empty chat and shows only new messages
     if (!online.v2) sysLine('ตอนนี้ใช้ได้แค่ช่องโลก ต้องรัน SQL ช่องแชทใน Supabase ก่อน');
