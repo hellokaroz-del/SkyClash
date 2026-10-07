@@ -504,6 +504,8 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 #game.tut #back { display: none; }
 #tut-done { position: absolute; inset: 0; z-index: 42; display: grid; place-items: center; background: rgba(5, 4, 10, .75); padding: 16px; }
 #tut-done[hidden] { display: none; }
+#g-cover { position: absolute; inset: 0; z-index: 41; display: grid; place-items: center; background: #0d0b14; color: #ffe7a0; font-size: 20px; font-weight: 700; }
+#g-cover[hidden] { display: none; }
 #tut-done .card { text-align: center; }
 #tut-done .exp { font-size: 30px; font-weight: 800; color: var(--gold); margin: 6px 0 2px; }
 
@@ -704,6 +706,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 
 <div id="game" hidden>
   <button id="back" type="button">← กลับเมือง</button>
+  <div id="g-cover" hidden>กำลังเข้าสู่ด่านฝึก...</div>
   <div id="tut-done" hidden>
     <div class="card" role="dialog" aria-labelledby="td-h">
       <h2 id="td-h">จบบทสอนแล้ว!</h2>
@@ -847,19 +850,25 @@ function launch(setup, watchRoom) {
   const fr = document.createElement('iframe');
   fr.title = 'Ages of Aether'; fr.allow = 'autoplay; fullscreen';
   fr.src = GAME_URL;
+  // the game's Admin button is only for admins (Karoz 2026-10-07), and in the tutorial the game's own menu never shows:
+  // not while the game loads, and not when it comes back 5 s after a match ends. The style goes in as soon as the game's
+  // page exists, and the tutorial also stays under a loading cover until the lobby has started it.
+  const css = (isAdmin() ? '' : '#admin-btn, #admin-pin, #admin-menu { display: none !important; }') + (tut.on ? '#setup { display: none !important; }' : '');
+  $('g-cover').hidden = !tut.on;
+  const early = setInterval(() => {
+    if (!fr.isConnected) { clearInterval(early); return; }
+    let d; try { d = fr.contentDocument; } catch (e) { clearInterval(early); return; }
+    if (!d || !d.head || !/index\.html/.test(d.URL)) return;
+    clearInterval(early);
+    if (css) { const st = d.createElement('style'); st.textContent = css; d.head.appendChild(st); }
+  }, 20);
   fr.onload = () => {
-    // the game's Admin button is only for admins (Karoz 2026-10-07)
-    // and in the tutorial the game's own menu never comes back (it reappears 5 s after a match ends), so the player stays in the field
-    try {
-      const css = (isAdmin() ? '' : '#admin-btn, #admin-pin, #admin-menu { display: none !important; }') + (tut.on ? '#setup { display: none !important; }' : '');
-      if (css) { const st = fr.contentDocument.createElement('style'); st.textContent = css; fr.contentDocument.head.appendChild(st); }
-    } catch (e) {}
     // same site, so the town can press the game's own setup buttons for the player
     let tries = 0;
     const go = () => {
       const d = fr.contentDocument;
-      if (d && d.getElementById('mode-net') && d.getElementById('start')) { try { setup(d); } catch (e) { console.warn(e); } if (watchRoom) watchGameRoom(fr); return; }
-      if (++tries < 50) setTimeout(go, 100);
+      if (d && d.getElementById('mode-net') && d.getElementById('start')) { try { setup(d); } catch (e) { console.warn(e); } if (watchRoom) watchGameRoom(fr); setTimeout(() => { $('g-cover').hidden = true; }, 400); return; }
+      if (++tries < 50) setTimeout(go, 100); else $('g-cover').hidden = true;
     };
     go();
   };
@@ -919,7 +928,7 @@ function watchGameRoom(fr) {
     if (m && co.room && co.host && m[1] !== co.game) { co.game = m[1]; sharePresence(); } // guests in the waiting room follow this code
   }, 1500);
 }
-$('back').onclick = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; if (co.room) { co.game = null; if (co.host && co.mode === 'rush') Object.assign(co, { map: null, seek: 0, vs: null }); matchStarted = null; sharePresence(); openModal('m-room'); renderRoom(); } };
+$('back').onclick = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; $('g-cover').hidden = true; if (co.room) { co.game = null; if (co.host && co.mode === 'rush') Object.assign(co, { map: null, seek: 0, vs: null }); matchStarted = null; sharePresence(); openModal('m-room'); renderRoom(); } };
 const press = (d, sel) => { const el = d.querySelector(sel); if (el) el.click(); return !!el; };
 
 // ---------- Colosseum: room list and waiting room ----------
