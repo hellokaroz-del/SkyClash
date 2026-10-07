@@ -1426,10 +1426,28 @@ async function submitChat(text) {
   if (ALIAS[cmd]) { setSend(ALIAS[cmd], null); return rest ? post(ALIAS[cmd], rest) : true; }
   toast(`ไม่รู้จักคำสั่ง /${cmd} พิมพ์ /help`); return false;
 }
+// ↑/↓ in the chat box brings back what was typed before; a plain line is kept with its channel (/w name, /g ...) so it goes to the same place
+const sent = { list: [], at: 0, draft: '' };
+const CMD_OF = { world: 's', guild: 'g', room: 'r', announce: 'a' };
+function keepSent(text) {
+  if (!text.startsWith('/')) text = chat.send === 'whisper' && chat.to ? `/w ${chat.to.name} ${text}` : `/${CMD_OF[chat.send] || 's'} ${text}`;
+  if (sent.list[sent.list.length - 1] !== text) sent.list.push(text);
+  if (sent.list.length > 50) sent.list.shift();
+  sent.at = sent.list.length;
+}
+$('msg').addEventListener('keydown', e => {
+  if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || e.isComposing || !sent.list.length) return;
+  e.preventDefault();
+  if (sent.at === sent.list.length) sent.draft = $('msg').value;
+  sent.at = Math.max(0, Math.min(sent.list.length, sent.at + (e.key === 'ArrowUp' ? -1 : 1)));
+  const v = sent.at === sent.list.length ? sent.draft : sent.list[sent.at];
+  $('msg').value = v; $('msg').setSelectionRange(v.length, v.length);
+});
 $('chatform').onsubmit = async e => {
   e.preventDefault();
   const inp = $('msg'), text = inp.value.trim();
   if (!text || !online.sb) return;
+  keepSent(text);
   inp.value = '';
   const ok = await submitChat(text);
   if (ok === false) inp.value = text;
