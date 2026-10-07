@@ -585,7 +585,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
   font-size: 22px; cursor: pointer; }
 .bag .x:hover { background: #2a5596; }
 .bag h2 { margin: 0 0 10px; font-size: 34px; font-style: italic; font-weight: 900; color: #fff; text-shadow: 0 3px 0 #2a5596, 0 0 10px rgba(80, 160, 255, .8); }
-.bg-tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin: 0 56px 12px 0; }
+.bg-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 0 56px 12px 0; }
 .bg-tabs button, .bg-side button, .bg-acts button { border: 2px solid #8fbff0; border-radius: 12px; background: linear-gradient(#2f62a8, #1d3f73); color: #fff;
   font: 700 16px/1.2 inherit; padding: 10px 6px; cursor: pointer; }
 .bg-tabs button.on, .bg-side button.on { background: linear-gradient(#58b6ff, #2a7fe0); border-color: #fff; box-shadow: 0 0 12px rgba(120, 200, 255, .9); }
@@ -602,11 +602,9 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .slot::before { content: attr(data-n); position: absolute; left: 4px; top: 2px; font-size: 12px; color: #fff; background: #2a7fe0; border-radius: 50%;
   width: 18px; height: 18px; line-height: 18px; text-align: center; }
 .slot:not([data-n])::before { display: none; }
-.bg-art { position: relative; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 14px; overflow: hidden;
+.bg-art { position: relative; display: flex; flex-direction: column; justify-content: center; border-radius: 14px; overflow: hidden;
   background: radial-gradient(circle at 50% 60%, rgba(255, 255, 255, .95), rgba(160, 210, 255, .5) 60%, transparent 75%); }
-.bg-art img { width: 100%; max-height: 300px; object-fit: contain; margin-bottom: auto; }
-.bg-art .bg-row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 6px; }
-.bg-art .bg-row3 .slot { border-color: #a07a2a; background: linear-gradient(#3a2a1c, #1f150c); color: #e6c27a; }
+.bg-art img { width: 100%; max-height: 380px; object-fit: contain; }
 .bg-pow { margin: 8px 0 6px; display: flex; align-items: center; justify-content: center; gap: 10px; background: linear-gradient(90deg, transparent, #1d3f73 20%, #1d3f73 80%, transparent);
   color: #ffe08a; font-weight: 900; font-size: 20px; padding: 4px; border-radius: 10px; }
 .bg-pow b { color: #fff; font-size: 22px; }
@@ -805,7 +803,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
     <button class="x" type="button" data-close aria-label="ปิด">✕</button>
     <h2 id="t-bag">กระเป๋า</h2>
     <div class="bg-tabs" id="bg-tabs">
-      <button type="button" class="on">อุปกรณ์สวมใส่</button><button type="button">STATS ที่แสดง</button><button type="button">Jobs</button>
+      <button type="button" class="on">อุปกรณ์สวมใส่</button><button type="button">Jobs</button>
       <button type="button">Ruin</button><button type="button">Card</button><button type="button">ช่องเก็บของ</button>
     </div>
     <div class="bg-body">
@@ -813,7 +811,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
         <div class="bg-head"><span id="bg-name"></span><span id="bg-job"></span><span>Lv. <b id="bg-lv"></b></span></div>
         <div class="bg-eq">
           <div class="bg-col" id="bg-left"></div>
-          <div class="bg-art"><span id="bg-art"></span><div class="bg-row3" id="bg-row3"></div></div>
+          <div class="bg-art"><span id="bg-art"></span></div>
           <div class="bg-col" id="bg-right"></div>
         </div>
         <div class="bg-pow">พลังต่อสู้ <b id="bg-pow">0</b></div>
@@ -1480,14 +1478,14 @@ const expNeed = lv => EXP_TABLE[lv] || Math.round(1000 * Math.pow(1.15, lv - 1) 
 
 // ---------- bag ----------
 const BAG_LEFT = ['หมวก', 'เสื้อ', 'กางเกง', 'รองเท้า', 'สกิน', 'ปีก'], BAG_RIGHT = ['อาวุธ', 'มือรอง', 'สร้อยคอ', 'ต่างหู', 'แหวน'];
-const BAG_ROW3 = ['สัตว์เลี้ยง', 'พาหนะ', 'ฉายา'], BAG_CELLS = 42;
+const BAG_CELLS = 42;
 let classStats = null; // job stats from the game's data file, loaded the first time the bag opens
 function bagSlots(id, names, numbered) {
   const box = $(id); if (box.childElementCount) return;
   names.forEach((n, i) => { const d = document.createElement('div'); d.className = 'slot'; if (numbered) d.dataset.n = i + 1; d.textContent = n; box.appendChild(d); });
 }
 function renderBag() {
-  bagSlots('bg-left', BAG_LEFT, true); bagSlots('bg-right', BAG_RIGHT, true); bagSlots('bg-row3', BAG_ROW3, false);
+  bagSlots('bg-left', BAG_LEFT, true); bagSlots('bg-right', BAG_RIGHT, true);
   const grid = $('bg-grid'); if (!grid.childElementCount) for (let i = 0; i < BAG_CELLS; i++) { const c = document.createElement('div'); c.className = 'cell'; grid.appendChild(c); }
   const j = jobOf(prof.job), lv = Math.max(1, prof.level | 0 || 1), need = expNeed(lv), cur = Math.max(0, prof.exp | 0);
   $('bg-name').textContent = prof.name || 'ผู้เล่น'; $('bg-job').textContent = j ? `${j.th} · ${j.name}` : 'ยังไม่มีอาชีพ'; $('bg-lv').textContent = lv;
@@ -2024,6 +2022,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.60</div>
+<div id="ver">v0.61</div>
 </body>
 </html>
