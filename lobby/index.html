@@ -106,6 +106,18 @@ button, input { font: inherit; color: inherit; }
 
 /* top and bottom icon bars (art from Karoz's mockup) */
 .bar { position: absolute; pointer-events: none; }
+/* top scroll rolls up toward the right edge: the left roller slides over while the paper is clipped from the left */
+.tops { position: absolute; pointer-events: none; }
+.tops > * { position: absolute; top: 0; height: 100%; padding: 0; border: 0; background: url("img/topscroll.webp?v=1") no-repeat; background-size: 780px 228px; }
+.ts-mid { left: 100px; width: 580px; background-position: -100px 0; clip-path: inset(0 0 0 0); transition: clip-path .7s ease-in-out; }
+.ts-l, .ts-r { width: 100px; pointer-events: auto; cursor: pointer; transition: transform .7s ease-in-out, filter .15s; }
+.ts-l { left: 0; background-position: 0 0; }
+.ts-r { left: 680px; background-position: -680px 0; }
+.ts-l:hover, .ts-r:hover, .ts-l:focus-visible, .ts-r:focus-visible { outline: none; filter: brightness(1.1) drop-shadow(0 0 8px rgba(255, 215, 120, .9)); }
+.tops.rolled .ts-mid { clip-path: inset(0 0 0 580px); }
+.tops.rolled .ts-l { transform: translateX(580px); }
+.ico.gone { opacity: 0; pointer-events: none; }
+.ico { transition: opacity .4s; }
 .ico { position: absolute; border: 0; padding: 0; background: none; cursor: pointer; border-radius: 18px; }
 .ico:hover, .ico:focus-visible { background: rgba(255, 255, 255, .16); box-shadow: 0 0 0 3px rgba(255, 220, 120, .55) inset; outline: none; }
 .ico.pic img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .5)); transition: transform .15s; }
@@ -204,12 +216,14 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 #log .ch { font-weight: 700; margin-right: 4px; }
 #log b { font-weight: 700; cursor: pointer; }
 #log .sys { color: var(--muted); font-style: italic; }
-#log .c-world b, #log .c-world .ch { color: #f5c64a; }
-#log .c-guild { color: #9df0a6; }
-#log .c-whisper { color: #ffaed9; }
+#log .c-world .ch { color: #f5c64a; }
+#log b, #log b.me { color: #fff; } /* names are white; admins glow red (.adm) */
 #log .c-room { color: #9fd2ff; }
 #log .c-announce { color: #ffe066; font-weight: 700; text-shadow: 0 0 6px rgba(255, 200, 60, .5); }
-#log b.me { color: var(--accent) !important; }
+/* guild lines are all green and whispers all pink: tag, name and message in one colour */
+#log .c-guild, #log .c-guild .ch, #log .c-guild b, #log .c-guild b.me, #log .c-guild b.adm { color: #5ee36e !important; }
+#log .c-whisper, #log .c-whisper .ch, #log .c-whisper b, #log .c-whisper b.me, #log .c-whisper b.adm { color: #ff8fd2 !important; }
+#log .c-guild b.adm, #log .c-whisper b.adm { text-shadow: none; animation: none; font-weight: 700; }
 #chatform { grid-column: 1 / 4; display: flex; gap: 8px; position: relative; }
 #chan { flex: none; min-width: 132px; height: 56px; border-radius: 12px; border: 2px solid #b8862e; background: linear-gradient(#5a4320, #3a2a12);
   color: #ffe7a0; font-weight: 800; font-size: 22px; cursor: pointer; padding: 0 12px; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -508,7 +522,11 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
       </span>
     </button>
 
-    <img class="bar" src="img/topscroll.webp?v=1" alt="" style="left:1136px;top:0;width:780px;height:228px">
+    <div class="tops" id="tops" style="left:1136px;top:0;width:780px;height:228px">
+      <i class="ts-mid"></i>
+      <button type="button" class="ts-l" aria-controls="tops" aria-expanded="true" aria-label="ม้วนเก็บม้วนกระดาษ" title="ม้วนเก็บ"></button>
+      <button type="button" class="ts-r" aria-controls="tops" aria-expanded="true" aria-label="ม้วนเก็บม้วนกระดาษ" title="ม้วนเก็บ"></button>
+    </div>
     <img class="bar" src="img/tray.webp?v=3" alt="" style="left:1115px;top:914px;width:800px;height:161px">
 
     <form id="create" hidden autocomplete="off" aria-labelledby="cr-title">
@@ -630,7 +648,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
     <div class="amir l" aria-hidden="true"></div><div class="amir r" aria-hidden="true"></div>
     <h1 class="sr" id="a-title">Ages of Aether เข้าสู่ระบบ</h1>
     <label class="sr" for="a-email">อีเมล</label>
-    <input class="afld" id="a-email" type="email" autocomplete="email" placeholder="อีเมล" required>
+    <input class="afld" id="a-email" type="email" autocomplete="username" placeholder="อีเมล" required>
     <label class="sr" for="a-pass">รหัสผ่าน</label>
     <input class="afld" id="a-pass" type="password" autocomplete="current-password" placeholder="รหัสผ่าน" minlength="6">
     <i class="aring" id="r-email"></i><i class="aring" id="r-pass"></i>
@@ -734,7 +752,7 @@ const BUILDINGS = [
 ];
 const ICONS = [
   // top-right frame: only Daily for now (Karoz removed Reward, Promotion, Coin and the more-menu arrow)
-  { name: 'Daily', tip: 'Daily', below: true, img: 'top-daily', v: 2, box: [1466, 49, 120, 94] },
+  { name: 'Daily', tip: 'Daily', below: true, onScroll: true, img: 'top-daily', v: 2, box: [1466, 49, 120, 94] },
   // bottom-right tray: Karoz's icons, one per slot (centred between the tray's red gems)
   { name: 'Backpack', tip: 'กระเป๋า', img: 'bag', box: [1182, 941, 100, 100] }, { name: 'Shop', tip: 'ร้านค้า', img: 'shop', box: [1293, 941, 100, 100] },
   { name: 'Quest', tip: 'เควส', img: 'quest', box: [1406, 941, 100, 100] }, { name: 'Mail', tip: 'จดหมาย', img: 'mail', box: [1524, 941, 100, 100] },
@@ -789,8 +807,22 @@ for (const ic of ICONS) {
   if (ic.tip) { btn.dataset.tip = ic.tip; btn.removeAttribute('title'); if (ic.below) btn.classList.add('below'); }
   if (ic.img) { btn.classList.add('pic'); const im = document.createElement('img'); im.src = `img/${ic.img.startsWith('top-') ? '' : 'ico-'}${ic.img}.webp?v=${ic.v || 1}`; im.alt = ''; btn.appendChild(im); }
   btn.onclick = ic.act || (() => toast(`${ic.name} ${SOON}`));
+  if (ic.onScroll) btn.classList.add('on-scroll');
   world.appendChild(btn);
 }
+
+// the top scroll rolls up and opens again; the choice is remembered on this device
+function rollScroll(rolled) {
+  $('tops').classList.toggle('rolled', rolled);
+  for (const b of $('tops').querySelectorAll('button')) {
+    b.setAttribute('aria-expanded', String(!rolled)); b.title = rolled ? 'กางม้วนกระดาษ' : 'ม้วนเก็บ';
+    b.setAttribute('aria-label', rolled ? 'กางม้วนกระดาษ' : 'ม้วนเก็บม้วนกระดาษ');
+  }
+  for (const b of world.querySelectorAll('.ico.on-scroll')) b.classList.toggle('gone', rolled);
+  try { localStorage.setItem('aoa-scroll', rolled ? '1' : '0'); } catch (e) {}
+}
+for (const b of $('tops').querySelectorAll('button')) b.onclick = () => rollScroll(!$('tops').classList.contains('rolled'));
+try { if (localStorage.getItem('aoa-scroll') === '1') rollScroll(true); } catch (e) {}
 
 // ---------- open the game inside the town ----------
 const gameBox = $('game');
@@ -851,7 +883,7 @@ function townPeople() {
   const me = Object.assign({ key: myKey() }, myPresence());
   if (!co.live) return DEMO.concat([me]);
   const st = co.ch.presenceState(), out = [];
-  for (const k in st) if (st[k][0] && k !== me.key) out.push(Object.assign({ key: k }, st[k][0]));
+  for (const k in st) if (st[k][0] && k !== me.key) out.push(Object.assign({ key: k }, st[k][0], { admin: !!st[k][0].admin || online.admins.has(k) }));
   return out.concat([me]);
 }
 // closed slots: any of the 4 can be shut (all but one), not only the last ones (older entries only had max, so the last ones are shut)
@@ -1185,7 +1217,7 @@ const HELP = [
   '/r ข้อความ  คุยกับคนในห้อง Stadium ล่าสุด',
   '/a ข้อความ  ประกาศ (เฉพาะแอดมิน)',
 ];
-const online = { sb: null, user: null, v2: false, seen: new Set(), me: null };
+const online = { sb: null, user: null, v2: false, seen: new Set(), me: null, admins: new Set() };
 renderProf(); // first paint of the profile frame (needs JOBS and online)
 const chat = { send: 'world', to: null, view: 'all', lock: false };
 const log = $('log');
@@ -1210,8 +1242,8 @@ function addMsg(m) {
   if (ch === 'whisper') b.textContent = mine ? `ถึง ${m.to_name || '?'}: ` : `จาก ${m.name}: `;
   else b.textContent = `[${m.name}]: `;
   if (mine && ch !== 'whisper') b.className = 'me';
-  // chat rows carry only the name, so other admins are known from who is online
-  if (ch !== 'whisper' || !mine) { if (mine ? isAdmin() : townPeople().some(q => q.admin && q.name === m.name)) b.classList.add('adm'); }
+  // the sender's name glows red when they are an admin (admin ids come from profiles.is_admin)
+  if (ch !== 'whisper' || !mine) { b.dataset.uid = m.user_id; if (isAdminId(m.user_id)) b.classList.add('adm'); }
   const replyTo = ch === 'whisper' ? (mine ? { id: m.to_id, name: m.to_name } : { id: m.user_id, name: m.name }) : (mine ? null : { id: m.user_id, name: m.name });
   if (replyTo && replyTo.id) { b.title = `กระซิบหา ${replyTo.name}`; b.onclick = () => setSend('whisper', replyTo); }
   p.append(tag, b, document.createTextNode(m.body)); addLine(p, ch);
@@ -1324,6 +1356,7 @@ async function startChat() {
   try {
     const sb = online.sb;
     await loadProfile();
+    loadAdmins();
     // no history: each visit (and each refresh) starts with an empty chat and shows only new messages
     if (!online.v2) sysLine('ตอนนี้ใช้ได้แค่ช่องโลก ต้องรัน SQL ช่องแชทใน Supabase ก่อน');
     else if (online.me.guild) sysLine(`คุณอยู่กิลด์ ${online.me.guild}`);
@@ -1341,6 +1374,16 @@ async function startChat() {
   }
 }
 
+const isAdminId = id => online.admins.has(id) || (online.user && id === online.user.id && isAdmin());
+// everyone may read profiles, so the admin list comes straight from profiles.is_admin
+async function loadAdmins() {
+  const { data, error } = await online.sb.from('profiles').select('id').eq('is_admin', true);
+  if (error || !Array.isArray(data)) return;
+  online.admins = new Set(data.map(r => r.id));
+  for (const b of document.querySelectorAll('#log b[data-uid]')) b.classList.toggle('adm', isAdminId(b.dataset.uid));
+  if (!$('m-colo').hidden) renderColo();
+  renderRoom();
+}
 // whisper target by name: the most recently active player with that name
 async function findPlayer(name) {
   const { data, error } = await online.sb.from('profiles').select('id, name').ilike('name', name.replace(/[\\%_]/g, '\\$&')).order('updated_at', { ascending: false }).limit(1);
@@ -1450,6 +1493,18 @@ $('a-remember').checked = remembered();
 try { $('a-email').value = localStorage.getItem(EMAIL_KEY) || ''; } catch {}
 $('a-remember').onchange = () => store(REM_KEY, $('a-remember').checked ? null : '0');
 function busy(btn, on) { btn.disabled = on; }
+// "จำรหัสผ่าน": hand the email and password to the browser's own password manager (never kept by the page itself)
+function savePass(email, pass) {
+  if (!remembered() || !window.PasswordCredential || !navigator.credentials) return;
+  navigator.credentials.store(new PasswordCredential({ id: email, password: pass, name: email })).catch(() => {});
+}
+async function fillPass() {
+  if (!remembered() || !window.PasswordCredential || !navigator.credentials) return;
+  try {
+    const c = await navigator.credentials.get({ password: true, mediation: 'optional' });
+    if (c && c.password && !$('a-pass').value) { $('a-email').value = c.id; $('a-pass').value = c.password; }
+  } catch {}
+}
 
 const isGoogle = u => (u.identities || []).some(i => i.provider === 'google') || (u.app_metadata && u.app_metadata.provider === 'google');
 function useHeld() { const s = held; held = null; holdIn = false; enterTown(s); }
@@ -1482,7 +1537,7 @@ $('a-form').onsubmit = async e => {
     : await sb.auth.signInWithPassword({ email, password: pass });
   busy(btn, false);
   if (r.error) { aMsg(authErr(r.error)); return; }
-  if (r.data.session) { enterTown(r.data.session); return; }
+  if (r.data.session) { savePass(email, pass); enterTown(r.data.session); return; }
   // sign-up with "Confirm email" on: no session until the link is clicked
   aMsg('', 'สมัครแล้ว เปิดอีเมลแล้วกดลิงก์ยืนยัน จากนั้นกลับมาเข้าสู่ระบบ');
   setAuthMode('in'); $('a-ok').textContent = 'สมัครแล้ว เปิดอีเมลแล้วกดลิงก์ยืนยัน จากนั้นกลับมาเข้าสู่ระบบ';
@@ -1525,7 +1580,7 @@ $('rc-form').onsubmit = async e => {
 };
 
 let entered = false;
-// a remembered sign-in is held on the login screen until the player presses a button (Karoz: the login screen shows on every visit)
+// a stored sign-in goes straight into town on refresh (Karoz 2026-10-07); with จำรหัสผ่าน off it lives in sessionStorage and ends with the browser
 let held = null, holdIn = true; // stays true until boot() has looked at the stored session (supabase fires SIGNED_IN for it while starting up)
 function enterTown(session) {
   if (entered || !session) return;
@@ -1562,8 +1617,7 @@ async function boot() {
     // old guest sessions from the test period: an account is required now
     await sb.auth.signOut().catch(() => {});
     aMsg('', 'ตอนนี้ต้องสมัครสมาชิกก่อนเข้าเมือง สมัครด้วยอีเมลหรือ Google ได้เลย');
-  } else if (session && fromLink) { enterTown(session); return; }
-  else if (session) held = session;
+  } else if (session) { holdIn = false; enterTown(session); return; } // a refresh (or coming back from a link) goes straight into town
   else holdIn = false;
   $('auth').hidden = false; chatState('ยังไม่ได้เข้าสู่ระบบ', false);
   if (held) {
@@ -1571,6 +1625,7 @@ async function boot() {
     aMsg('', isGoogle(held.user) ? 'จำบัญชีไว้แล้ว กดปุ่ม Google ได้เลย' : 'จำบัญชีไว้แล้ว กดเข้าสู่ระบบได้เลย');
   }
   if (error || urlErr) aMsg(authErr(error || urlErr));
+  await fillPass();
   setTimeout(() => ($('a-email').value ? $('a-pass') : $('a-email')).focus(), 50);
 }
 sysLine('ยินดีต้อนรับสู่เมือง กดที่อาคารเพื่อเข้าไป');
