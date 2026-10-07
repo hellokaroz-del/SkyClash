@@ -578,7 +578,8 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 @keyframes resStamp { from { transform: rotate(-14deg) scale(2.2); opacity: 0; } }
 @media (max-width: 720px) { .res { grid-template-columns: 1fr; } .res-l { min-height: 0; } .res-art img { height: 170px; } .res-total > span { font-size: 32px; } .res-total b { font-size: 30px; } }
 
-/* the game version, faint white at the bottom centre over everything (Karoz 2026-10-07); bump it with each update */
+/* the game version, faint white at the bottom centre over everything (Karoz 2026-10-07). Each update bumps the last
+   number: v0.61.1 -> v0.61.2 -> v0.61.3 ... */
 #ver { position: fixed; left: 50%; bottom: max(4px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 50; pointer-events: none;
   color: rgba(255, 255, 255, .8); font-size: 12px; letter-spacing: .05em; white-space: nowrap;
   background: rgba(0, 0, 0, .45); padding: 1px 8px; border-radius: 3px; }
