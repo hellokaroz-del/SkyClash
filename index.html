@@ -948,7 +948,9 @@ JUNGLE.fg.src = "assets/a095.webp";
 JUNGLE.col.src = "assets/a096.png";
 JUNGLE.bg.src = "assets/a097.webp";
 const BUILTIN_IMG = { 'jungle-bg': JUNGLE.bg, 'jungle-fg': JUNGLE.fg, 'jungle-col': JUNGLE.col };
-function refImage(ref) { if (!ref) return null; if (ref === 'hills' && !BUILTIN_IMG.hills) BUILTIN_IMG.hills = makeHills(); if (ref === 'flat' && !BUILTIN_IMG.flat) BUILTIN_IMG.flat = makeFlat(); if (ref === 'flatcol' && !BUILTIN_IMG.flatcol) BUILTIN_IMG.flatcol = makeFlatCol(); return ref.startsWith('a:') ? assetImage(ref) : BUILTIN_IMG[ref] || null; }
+// the meadow (Karoz 2026-10-07, the tutorial's field): pixel sky and grass-and-dirt ground, loaded only when the stage is used
+const MEADOW_SRC = { 'meadow-bg': 'assets/a221.webp', 'meadow-fg': 'assets/a222.webp' };
+function refImage(ref) { if (!ref) return null; if (MEADOW_SRC[ref] && !BUILTIN_IMG[ref]) { const im = new Image(); im.src = MEADOW_SRC[ref]; BUILTIN_IMG[ref] = im; } if (ref === 'hills' && !BUILTIN_IMG.hills) BUILTIN_IMG.hills = makeHills(); if (ref === 'flat' && !BUILTIN_IMG.flat) BUILTIN_IMG.flat = makeFlat(); if (ref === 'flatcol' && !BUILTIN_IMG.flatcol) BUILTIN_IMG.flatcol = makeFlatCol(); return ref.startsWith('a:') ? assetImage(ref) : BUILTIN_IMG[ref] || null; }
 // a plain grassy hill ground (diggable) for stages without their own ground picture
 function makeHills() {
   const c = document.createElement('canvas'); c.width = WW; c.height = WH; const x = c.getContext('2d');
@@ -962,7 +964,7 @@ function makeHills() {
 }
 // the slime test stage: dead flat ground of old stone blocks with grass on top; it can't be dug or broken (Karoz)
 const FLAT_Y = WH - 190;
-const SLIME_STAGE = { name: 'ทุ่งสไลม์', hard: true, spawn: [380, 1300], scanFrom: 0, music: 'sounds/SM_Stage_01.mp3', bg: 'jungle-bg', fg: 'flat', col: 'flatcol' };
+const SLIME_STAGE = { name: 'ทุ่งสไลม์', hard: true, spawn: [380, 1300], scanFrom: 0, music: 'sounds/SM_Stage_01.mp3', bg: 'meadow-bg', fg: 'meadow-fg', col: 'flatcol', fx: 'meadow' };
 function makeFlat() {
   const c = document.createElement('canvas'); c.width = WW; c.height = WH; const x = c.getContext('2d');
   const g = x.createLinearGradient(0, FLAT_Y, 0, WH); g.addColorStop(0, '#8d7b62'); g.addColorStop(1, '#4a3f33');
@@ -2169,6 +2171,7 @@ function drawJungleSky() {
   const kx = cam.x / Math.max(1, WW - VW), ky = cam.y / Math.max(1, WH - VH);
   if (im && ready(im)) ctx.drawImage(im, -VW * ex * kx, -VH * ex * ky, w, h); else { ctx.fillStyle = '#6fb0d8'; ctx.fillRect(0, 0, VW, VH); }
   const t = S ? S.frame : 0;
+  if (STAGE && STAGE.fx === 'meadow') return drawMeadowSky(t, -VW * ex * kx, -VH * ex * ky, w, h);
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   for (let k = 0; k < 3; k++) { // slow sun shafts from the top right
     const x0 = VW * (0.55 + k * 0.17) - cam.x * 0.05, a = 0.05 + 0.03 * Math.sin(t * 0.01 + k * 2);
@@ -2183,6 +2186,82 @@ function drawJungleSky() {
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 3 * q.s, 0, 7); ctx.fill();
   }
   ctx.restore();
+}
+// ---------- the meadow's living scenery (Karoz 2026-10-07: "ทำเอฟเฟคสวยๆ") ----------
+// everything is drawn in chunky pixels to match the art: sun glow and slow light rays, pixel clouds drifting across,
+// little flocks of birds, then in front of the ground: swaying grass blades, butterflies and petals riding the wind
+const MD = (() => {
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  return {
+    // drifting clouds cut from the sky painting itself (a sheet of 4: top, height, width)
+    sheet: Object.assign(new Image(), { src: 'assets/a223.png' }), cuts: [[0, 65, 220], [65, 50, 185], [115, 70, 360], [185, 70, 310]],
+    clouds: Array.from({ length: 5 }, (_, i) => ({ k: i % 4, x: rnd() * 1400, y: 40 + i * 52 + rnd() * 20, v: 0.06 + rnd() * 0.1, z: 0.15 + i * 0.06, a: 0.75 + rnd() * 0.2 })),
+    birds: Array.from({ length: 2 }, (_, i) => ({ x: -200 - i * 900, y: 70 + i * 60, v: 0.55 + i * 0.2, n: 3 + i })),
+    petals: Array.from({ length: 34 }, (_, i) => ({ x: rnd() * VW, y: rnd() * VH, v: 0.25 + rnd() * 0.5, p: rnd() * 7, c: ['#ffd6e8', '#ffffff', '#ffe27a', '#ffb3cf', '#d8f7a8'][i % 5], s: 2 + Math.floor(rnd() * 2) })),
+    flies: Array.from({ length: 5 }, (_, i) => ({ x: 200 + i * 340 + rnd() * 120, y: FLAT_Y - 30 - rnd() * 50, p: rnd() * 7, c: ['#ffe066', '#ff9ecb', '#9fd8ff', '#ffffff', '#ffb35a'][i] })),
+    blades: Array.from({ length: Math.ceil(WW / 11) }, (_, i) => ({ x: i * 11 + Math.floor(rnd() * 6), h: 3 + Math.floor(rnd() * 4), p: rnd() * 7, c: rnd() < 0.5 ? '#4fb52f' : '#7ad63f' })),
+    glints: Array.from({ length: 16 }, (_, i) => ({ k: i % 5, f: rnd(), p: rnd() * 7 })),
+  };
+})();
+function meadowWind() { return S && S.wind ? S.wind : 1.2; } // gentle breeze to the right when there's no wind yet
+function drawMeadowSky(t, bx, by, bw, bh) {
+  const sx = bx + bw * 0.15, sy = by + bh * 0.2; // the sun behind the clouds at the top left of the painting
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const pulse = 0.5 + 0.5 * Math.sin(t * 0.02);
+  let g = ctx.createRadialGradient(sx, sy, 0, sx, sy, 230 + pulse * 30);
+  g.addColorStop(0, `rgba(255,248,215,${0.32 + pulse * 0.1})`); g.addColorStop(0.4, 'rgba(255,240,190,.10)'); g.addColorStop(1, 'rgba(255,240,190,0)');
+  ctx.fillStyle = g; ctx.fillRect(sx - 280, sy - 280, 560, 560);
+  for (let k = 0; k < 5; k++) { // light rays fanning out from the sun, each breathing on its own
+    const ang = 0.55 + k * 0.17 + Math.sin(t * 0.004 + k) * 0.02, a = 0.035 + 0.035 * (0.5 + 0.5 * Math.sin(t * 0.013 + k * 1.9)), len = 900, wid = 0.035 + (k % 2) * 0.025;
+    g = ctx.createLinearGradient(sx, sy, sx + Math.cos(ang) * len, sy + Math.sin(ang) * len);
+    g.addColorStop(0, `rgba(255,252,225,${a * 2})`); g.addColorStop(1, 'rgba(255,252,225,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + Math.cos(ang - wid) * len, sy + Math.sin(ang - wid) * len); ctx.lineTo(sx + Math.cos(ang + wid) * len, sy + Math.sin(ang + wid) * len); ctx.fill();
+  }
+  for (const q of MD.glints) { // specks of dust shining inside the rays
+    const ang = 0.55 + q.k * 0.17, d = 120 + ((q.f * 600 + t * 0.25) % 600), x = sx + Math.cos(ang) * d, y = sy + Math.sin(ang) * d, a = Math.max(0, Math.sin(t * 0.06 + q.p));
+    ctx.fillStyle = `rgba(255,255,230,${a * 0.8})`; ctx.fillRect(Math.round(x), Math.round(y), 2, 2);
+  }
+  ctx.restore();
+  ctx.save(); ctx.imageSmoothingEnabled = false;
+  if (ready(MD.sheet)) for (const c of MD.clouds) { // clouds drifting with the breeze, the lower (nearer) ones moving more with the camera
+    const [top, ch, cw] = MD.cuts[c.k], sc = 0.65, span = VW + 600, x = ((c.x + t * c.v * (meadowWind() >= 0 ? 1 : -1) - cam.x * c.z) % span + span) % span - 300;
+    ctx.globalAlpha = c.a; ctx.drawImage(MD.sheet, 0, top, cw, ch, Math.round(x), Math.round(c.y - cam.y * c.z * 0.3), cw * sc, ch * sc);
+  }
+  ctx.globalAlpha = 1;
+  for (const b of MD.birds) { // a small flock crossing now and then
+    const span = VW + 1400, x0 = ((b.x + t * b.v) % span + span) % span - 300;
+    for (let i = 0; i < b.n; i++) {
+      const x = Math.round(x0 - i * 18), y = Math.round(b.y + i * 7 + Math.sin(t * 0.03 + i) * 3), up = Math.floor(t / 7 + i) % 2;
+      ctx.fillStyle = '#2d4a6e';
+      ctx.fillRect(x, y, 2, 2); ctx.fillRect(x - 2, y - 2 * up + 1, 2, 2); ctx.fillRect(x + 2, y - 2 * up + 1, 2, 2); ctx.fillRect(x - 4, y - 3 * up + 2, 2, 2); ctx.fillRect(x + 4, y - 3 * up + 2, 2, 2);
+    }
+  }
+  ctx.restore();
+}
+// in front of the ground (world space, shifted by the camera): grass blades swaying, butterflies over the grass, petals in the air
+function drawMeadowFront() {
+  const t = S ? S.frame : 0, wind = meadowWind(), lean = Math.max(-3, Math.min(3, wind * 0.5)), gy = FLAT_Y + 3 - cam.y;
+  for (const b of MD.blades) {
+    const x0 = b.x - cam.x; if (x0 < -8 || x0 > VW + 8) continue;
+    const sway = Math.sin(t * 0.045 + b.x * 0.05 + b.p * 0.3) * 1.4 + lean;
+    ctx.fillStyle = b.c;
+    for (let k = 0; k < b.h; k++) ctx.fillRect(Math.round(x0 + sway * k / b.h), Math.round(gy - k * 2), 2, 2);
+  }
+  for (const f of MD.flies) { // butterflies: wander over the grass, wings flap by squashing
+    const x = f.x + Math.sin(t * 0.007 + f.p) * 90 + Math.sin(t * 0.023 + f.p * 2) * 18 - cam.x, y = f.y + Math.sin(t * 0.017 + f.p) * 22 - cam.y;
+    if (x < -10 || x > VW + 10) continue;
+    const flap = Math.abs(Math.sin(t * 0.35 + f.p)), w = Math.max(1, Math.round(6 * flap)), X = Math.round(x), Y = Math.round(y);
+    ctx.fillStyle = f.c; ctx.fillRect(X - w - 1, Y - 5, w, 6); ctx.fillRect(X + 1, Y - 5, w, 6); ctx.fillRect(X - w, Y + 1, Math.max(1, w - 1), 3); ctx.fillRect(X + 1, Y + 1, Math.max(1, w - 1), 3);
+    ctx.fillStyle = '#3a2a22'; ctx.fillRect(X - 1, Y - 5, 2, 9);
+  }
+  for (const q of MD.petals) { // petals and seeds carried by the wind, tumbling as they go
+    q.x += 0.25 + wind * 0.22 + Math.sin(t * 0.03 + q.p) * 0.3; q.y += q.v * 0.6 + Math.sin(t * 0.02 + q.p) * 0.2;
+    if (q.x > VW + 10) q.x -= VW + 20; if (q.x < -10) q.x += VW + 20; if (q.y > VH + 6) { q.y = -6; q.x = Math.random() * VW; }
+    const turn = Math.abs(Math.sin(t * 0.08 + q.p)), w = Math.max(1, Math.round(q.s * turn + 0.5));
+    ctx.fillStyle = q.c; ctx.globalAlpha = 0.9; ctx.fillRect(Math.round(q.x), Math.round(q.y), w, q.s);
+  }
+  ctx.globalAlpha = 1;
 }
 function drawMist() {
   const y0 = WH - 70 - cam.y;
@@ -3249,7 +3328,7 @@ function draw() {
   const shk = cam.shake > 0 ? (Math.random() - 0.5) * cam.shake : 0;
   ctx.save(); ctx.translate(shk, shk * 0.6);
   ctx.drawImage(terr, cam.x, cam.y, VW, VH, 0, 0, VW, VH);
-  drawMist();
+  if (STAGE && STAGE.fx === 'meadow') drawMeadowFront(); else drawMist();
   if (!S) return;
   drawZones();
   drawGolem();
