@@ -2174,8 +2174,8 @@ function tickFx(p) {
   cam.x += (gx - cam.x) * 0.08; cam.y += (gy - cam.y) * 0.08;
 }
 
-// Karoz 2026-10-07: the last hit plays out for 4 s before Victory/Defeat shows, then the summary comes 3 s after that
-const RESULT_DELAY = 4000, SUMMARY_DELAY = 3000;
+// Karoz 2026-10-07: the last hit plays out for 3 s before Victory/Defeat shows, then the summary comes 3 s after that
+const RESULT_DELAY = 3000, SUMMARY_DELAY = 3000;
 function endMatch(winner, why) {
   S.state = 'over';
   if (SIM) { S.winIdx = winner ? winner.i : -1; return; }
