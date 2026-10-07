@@ -773,7 +773,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
         <div class="res-sec"><h3>EXP จากการต่อสู้</h3><ul id="td-rows"></ul></div>
         <div class="res-total"><span>Total</span><div><small>EXP รวม</small><b id="td-exp"></b></div></div>
         <p id="td-msg"></p>
-        <button class="btn go wide" id="td-go" type="button">เข้าสู่เมือง</button>
+        <button class="btn go wide" id="td-go" type="button">ต่อไป</button>
       </div>
       <div class="res-up" id="td-up" hidden>เลเวล<br>อัป!</div>
     </div>
@@ -978,7 +978,7 @@ async function finishTutorial() {
   if (!tut.on || tut.done) return; tut.done = true;
   const go = $('td-go'), lv0 = prof.level || 1;
   showResult([['สรุปผล', TUT_EXP]], TUT_EXP); // the tutorial shows only the summary row (Karoz)
-  $('td-msg').textContent = 'กำลังบันทึก...'; go.disabled = true; go.textContent = 'เข้าสู่เมือง';
+  $('td-msg').textContent = 'กำลังบันทึก...'; go.disabled = true; go.textContent = 'ต่อไป';
   if (online.sb && online.user && online.user.id !== 'preview') {
     const { data, error } = await online.sb.rpc('finish_tutorial');
     if (error) { // the reward is not saved yet: stay here and let the player try again
