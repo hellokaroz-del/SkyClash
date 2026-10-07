@@ -848,6 +848,8 @@ function launch(setup, watchRoom) {
   fr.title = 'Ages of Aether'; fr.allow = 'autoplay; fullscreen';
   fr.src = GAME_URL;
   fr.onload = () => {
+    // the game's Admin button is only for admins (Karoz 2026-10-07)
+    try { if (!isAdmin()) { const st = fr.contentDocument.createElement('style'); st.textContent = '#admin-btn, #admin-pin, #admin-menu { display: none !important; }'; fr.contentDocument.head.appendChild(st); } } catch (e) {}
     // same site, so the town can press the game's own setup buttons for the player
     let tries = 0;
     const go = () => {
