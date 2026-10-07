@@ -283,6 +283,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .room .ppl { bottom: 5px; font-size: 16px; }
 .room .st { position: absolute; z-index: 1; top: 5px; right: 6px; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #2f8a4e; color: #fff; }
 .room.full .st { background: #8a2f2f; }
+.room.seek .st { background: #b8742a; }
 .co-empty { grid-column: 1 / -1; align-self: center; text-align: center; color: #e8d3a8; font-size: 16px; line-height: 1.6; margin: 0; }
 .co-main .err { min-height: 1.3em; margin: 8px 0 0; color: var(--bad); font-size: 14px; }
 .co-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
@@ -499,6 +500,12 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 #game iframe { width: 100%; height: 100%; border: 0; display: block; }
 #back { position: fixed; left: 10px; top: 10px; z-index: 41; height: 38px; padding: 0 14px; border-radius: 999px; border: 2px solid rgba(245, 198, 74, .7);
   background: rgba(20, 16, 30, .85); color: #ffe7a0; font-weight: 700; cursor: pointer; font-size: 15px; }
+/* a new character stays in the tutorial until it is won (Karoz 2026-10-07): no way back to town until then */
+#game.tut #back { display: none; }
+#tut-done { position: absolute; inset: 0; z-index: 42; display: grid; place-items: center; background: rgba(5, 4, 10, .55); padding: 16px; }
+#tut-done[hidden] { display: none; }
+#tut-done .card { text-align: center; }
+#tut-done .exp { font-size: 30px; font-weight: 800; color: var(--gold); margin: 6px 0 2px; }
 
 #rotate { position: fixed; inset: 0; z-index: 15; display: none; place-items: center; text-align: center; padding: 24px;
   background: rgba(5, 4, 10, .85); font-size: 18px; color: #ffe7a0; }
@@ -697,6 +704,14 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 
 <div id="game" hidden>
   <button id="back" type="button">← กลับเมือง</button>
+  <div id="tut-done" hidden>
+    <div class="card" role="dialog" aria-labelledby="td-h">
+      <h2 id="td-h">จบบทสอนแล้ว!</h2>
+      <div class="exp" id="td-exp"></div>
+      <p id="td-msg"></p>
+      <button class="btn go wide" id="td-go" type="button">เข้าสู่เมือง</button>
+    </div>
+  </div>
 </div>
 
 <script src="supabase.min.js"></script>
@@ -824,9 +839,11 @@ try { if (localStorage.getItem('aoa-scroll') === '1') rollScroll(true); } catch 
 
 // ---------- open the game inside the town ----------
 const gameBox = $('game');
+const tut = { on: false, done: false, timer: 0 };
 function launch(setup, watchRoom) {
   for (const m of document.querySelectorAll('.modal')) m.hidden = true;
   const old = gameBox.querySelector('iframe'); if (old) old.remove();
+  gameBox.classList.toggle('tut', tut.on); $('tut-done').hidden = true;
   const fr = document.createElement('iframe');
   fr.title = 'Ages of Aether'; fr.allow = 'autoplay; fullscreen';
   fr.src = GAME_URL;
@@ -840,7 +857,52 @@ function launch(setup, watchRoom) {
     };
     go();
   };
-  gameBox.appendChild(fr); gameBox.hidden = false; $('back').focus();
+  gameBox.insertBefore(fr, $('back')); gameBox.hidden = false; if (!tut.on) $('back').focus();
+}
+// ---------- tutorial: a new character goes straight into the game's tutorial with the job they picked ----------
+// Karoz 2026-10-07: the player stays in the tutorial (no way back to town, a loss starts it again) until it is won;
+// then the EXP from level 1 to 2 is given once (server function finish_tutorial, lobby/supabase-progress.sql)
+// and only then does the player walk into town.
+const TUT_EXP = 1000; // exp-table-v3: level 1 -> 2
+function startTutorial() {
+  tut.on = true; tut.done = false;
+  launch(d => {
+    if (!press(d, '#mode-tut')) { endTutorial(); toast('เกมบนเว็บยังไม่มีบทสอน'); return; } // an older game build: stay in town
+    press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#start');
+  });
+  const fr = gameBox.querySelector('iframe');
+  clearInterval(tut.timer);
+  // the game's #result says "จบบทสอนแล้ว" when the hero beats the tutorial slimes, "สไลม์ชนะ" when they lose
+  tut.timer = setInterval(() => {
+    if (!fr.isConnected) { clearInterval(tut.timer); return; }
+    const r = fr.contentDocument && fr.contentDocument.getElementById('result');
+    if (!r || r.hidden) return;
+    if (/จบบทสอนแล้ว/.test(r.textContent)) { clearInterval(tut.timer); finishTutorial(); }
+    else if (/สไลม์ชนะ/.test(r.textContent)) { clearInterval(tut.timer); setTimeout(() => { if (tut.on && fr.isConnected) startTutorial(); }, 3000); }
+  }, 500);
+}
+addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'aoa-tutorial-done') finishTutorial(); });
+function endTutorial() {
+  tut.on = false; clearInterval(tut.timer); gameBox.classList.remove('tut'); $('tut-done').hidden = true; $('back').click();
+}
+async function finishTutorial() {
+  if (!tut.on || tut.done) return; tut.done = true;
+  const box = $('tut-done'), go = $('td-go');
+  $('td-h').textContent = 'จบบทสอนแล้ว!'; $('td-exp').textContent = `+${TUT_EXP.toLocaleString()} EXP`;
+  $('td-msg').textContent = 'กำลังบันทึก...'; go.disabled = true; go.textContent = 'เข้าสู่เมือง'; box.hidden = false;
+  if (online.sb && online.user && online.user.id !== 'preview') {
+    const { data, error } = await online.sb.rpc('finish_tutorial');
+    if (error) { // the reward is not saved yet: stay here and let the player try again
+      console.warn('tutorial', error);
+      $('td-msg').textContent = 'บันทึกผลไม่สำเร็จ กดลองอีกครั้ง'; go.disabled = false; go.textContent = 'ลองอีกครั้ง';
+      go.onclick = () => { tut.done = false; finishTutorial(); }; return;
+    }
+    const p = Array.isArray(data) ? data[0] : data;
+    online.me = Object.assign(online.me || {}, p);
+    Object.assign(prof, { level: p.level || 1, exp: p.exp || 0 }); saveProf(); renderProf(); sharePresence();
+  } else Object.assign(prof, { level: Math.max(2, prof.level || 1), exp: 0 }), renderProf(); // the Claude preview has no account to save to
+  $('td-msg').textContent = `ขึ้นเป็นเลเวล ${prof.level} แล้ว ไปผจญภัยในเมืองกันเลย`;
+  go.disabled = false; go.onclick = endTutorial; go.focus();
 }
 // read the room code the game shows, so /r in town chat reaches the same room
 function watchGameRoom(fr) {
@@ -851,7 +913,7 @@ function watchGameRoom(fr) {
     if (m && co.room && co.host && m[1] !== co.game) { co.game = m[1]; sharePresence(); } // guests in the waiting room follow this code
   }, 1500);
 }
-$('back').onclick = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; if (co.room) { co.game = null; if (co.host && co.mode === 'rush') co.map = null; sharePresence(); openModal('m-room'); renderRoom(); } };
+$('back').onclick = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; if (co.room) { co.game = null; if (co.host && co.mode === 'rush') Object.assign(co, { map: null, seek: 0, vs: null }); matchStarted = null; sharePresence(); openModal('m-room'); renderRoom(); } };
 const press = (d, sel) => { const el = d.querySelector(sel); if (el) el.click(); return !!el; };
 
 // ---------- Colosseum: room list and waiting room ----------
@@ -862,7 +924,7 @@ const press = (d, sel) => { const el = d.querySelector(sel); if (el) el.click();
 const ROOMS_PER_PAGE = 6, SLOTS = 4, GAME_MAX = 2; // the game plays 2 at a time for now
 const MAPS = [{ k: 'jungle', name: 'อารยธรรมโบราณ', img: 'img/map-jungle.webp?v=1' }];
 const MODES = { duel: 'ดวล', rush: 'ลุย' }; // ลุย (Karoz): the map is always picked at random
-const co = { page: 0, room: null, host: false, max: 2, shut: [2, 3], mode: 'duel', map: MAPS[0].k, game: null, lastGame: null, ch: null, live: false };
+const co = { page: 0, room: null, host: false, max: 2, shut: [2, 3], mode: 'duel', map: MAPS[0].k, game: null, lastGame: null, ch: null, live: false, seek: 0, vs: null };
 // sample people for the preview page, which cannot sign in
 const DEMO = [
   { name: 'ชินดี้', job: 'blade', level: 70, exp: 35, room: '1517', host: true, max: 2, mode: 'duel', map: 'jungle' },
@@ -875,7 +937,7 @@ const DEMO = [
   { name: 'GM_Luna', job: 'cleric', level: 12, admin: true },
 ].map((p, i) => Object.assign({ key: 'demo' + i }, p));
 const myKey = () => co.live ? online.user.id : 'me';
-const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, exp: prof.exp | 0, admin: isAdmin(), room: co.room, host: co.host, max: co.max, shut: co.shut, mode: co.mode, map: co.map, game: co.game });
+const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, exp: prof.exp | 0, admin: isAdmin(), room: co.room, host: co.host, max: co.max, shut: co.shut, mode: co.mode, map: co.map, game: co.game, seek: co.seek || 0, vs: co.vs || null });
 // everyone in town; this player's own entry is always the local state, so it never lags behind a sync
 function townPeople() {
   const me = Object.assign({ key: myKey() }, myPresence());
@@ -897,7 +959,8 @@ function setShut(i, shut) {
 function townRooms() {
   const ppl = townPeople(), rooms = [];
   for (const p of ppl) if (p.host && p.room) rooms.push({ code: p.room, host: p.name, hostAdm: !!p.admin, mine: p.key === myKey(), mode: MODES[p.mode] ? p.mode : 'duel',
-    max: Math.max(1, Math.min(SLOTS, p.max | 0 || 2)), shut: shutOf(p), map: p.map, game: p.game || null, n: ppl.filter(q => q.room === p.room).length });
+    max: Math.max(1, Math.min(SLOTS, p.max | 0 || 2)), shut: shutOf(p), map: p.map, game: p.game || null, n: ppl.filter(q => q.room === p.room).length,
+    seek: +p.seek || 0, vs: p.vs || null });
   return rooms.sort((x, y) => (x.n >= x.max) - (y.n >= y.max) || x.code.localeCompare(y.code));
 }
 const roomOf = code => townRooms().find(r => r.code === code);
@@ -915,6 +978,7 @@ function artImg(job, cls) {
   return im;
 }
 function renderColo() {
+  matchTick();
   renderRoom();
   if ($('m-colo').hidden) return;
   const mode = $('co-mode').value, rooms = townRooms().filter(r => !mode || r.mode === mode);
@@ -922,15 +986,15 @@ function renderColo() {
   co.page = Math.min(co.page, pages - 1);
   const box = $('co-rooms'); box.textContent = '';
   for (const r of rooms.slice(co.page * ROOMS_PER_PAGE, (co.page + 1) * ROOMS_PER_PAGE)) {
-    const full = r.n >= r.max, b = document.createElement('button'), map = MAPS.find(m => m.k === r.map);
-    b.type = 'button'; b.className = 'room' + (full ? ' full' : '');
+    const full = r.n >= r.max, b = document.createElement('button'), map = MAPS.find(m => m.k === r.map), seeking = r.seek && !r.game;
+    b.type = 'button'; b.className = 'room' + (full ? ' full' : '') + (seeking ? ' seek' : '');
     b.setAttribute('aria-label', `ห้อง ${r.code} ${MODES[r.mode]} ${r.n}/${r.max}${full ? ' เต็ม' : ''}`);
     b.innerHTML = `<span class="rl"><span class="md"></span><span class="no"></span><span class="host"></span></span>
       <span class="rm${map ? '' : ' rnd'}" style="background-image:url('${(map || MAPS[0]).img}')"><span class="st"></span><span class="map"></span><span class="ppl"></span></span>`;
     b.querySelector('.md').textContent = MODES[r.mode];
     b.querySelector('.no').textContent = 'หมายเลขห้อง ' + r.code;
     const hn = document.createElement('span'); hn.textContent = r.host; hn.classList.toggle('adm', r.hostAdm); b.querySelector('.host').append('หัวห้อง ', hn);
-    b.querySelector('.st').textContent = r.game ? 'กำลังเล่น' : full ? 'เต็ม' : 'รอผู้เล่น';
+    b.querySelector('.st').textContent = r.game ? 'กำลังเล่น' : seeking ? 'กำลังหาคู่' : full ? 'เต็ม' : 'รอผู้เล่น';
     b.querySelector('.map').textContent = map ? map.name : 'สุ่มแผนที่';
     b.querySelector('.ppl').textContent = `${r.n}/${r.max}`;
     b.onclick = () => enterRoom(r.code);
@@ -981,7 +1045,7 @@ function startPresence() {
 function makeRoom(mode) {
   const used = new Set(townRooms().map(r => r.code));
   let code; do code = String(1000 + Math.floor(Math.random() * 9000)); while (used.has(code));
-  Object.assign(co, { room: code, host: true, max: 2, shut: [2, 3], mode, map: mode === 'rush' ? null : MAPS[0].k, game: null, lastGame: null });
+  Object.assign(co, { room: code, host: true, max: 2, shut: [2, 3], mode, map: mode === 'rush' ? null : MAPS[0].k, game: null, lastGame: null, seek: 0, vs: null });
   sharePresence(); setRoom(code); showRoom();
 }
 function enterRoom(code) {
@@ -991,12 +1055,13 @@ function enterRoom(code) {
   if (!r) { coErr(`ไม่พบห้อง ${c}`); return; }
   if (r.mine) { showRoom(); return; }
   if (r.n >= r.max) { coErr(`ห้อง ${c} เต็มแล้ว`); return; }
+  if (r.vs) { coErr(`ห้อง ${c} เจอคู่แข่งแล้ว`); return; }
   Object.assign(co, { room: c, host: false, max: 2, game: null, lastGame: r.game }); // a match already running in it is not ours to join
   sharePresence(); setRoom(c); showRoom();
 }
 function showRoom() { fitColo(); $('m-colo').hidden = true; $('rm-msg').textContent = ''; openModal('m-room'); renderRoom(); }
 function leaveRoom(why) {
-  Object.assign(co, { room: null, host: false, max: 2, game: null, lastGame: null });
+  Object.assign(co, { room: null, host: false, max: 2, game: null, lastGame: null, seek: 0, vs: null });
   sharePresence(); $('m-room').hidden = true; openColo(); if (why) coErr(why);
 }
 function renderRoom() {
@@ -1036,12 +1101,15 @@ function renderRoom() {
   $('rm-map').classList.toggle('rnd', rnd && !co.rolling);
   $('rm-mapname').textContent = co.rolling || (rnd ? 'ทั้งหมด' : (map || MAPS[0]).name);
   $('rm-mapsub').textContent = rnd ? 'เครื่องสุ่มแผนที่' : 'เลือกแผนที่';
-  $('rm-rules').innerHTML = rnd ? '<li>ระบบสุ่มแผนที่ให้ทุกครั้ง</li><li>เลือกแผนที่เองไม่ได้</li><li>ครบ 2 คน หัวห้องกดลุยได้เลย</li>'
+  $('rm-rules').innerHTML = rnd ? '<li>ระบบสุ่มแผนที่ให้ทุกครั้ง</li><li>จับคู่กับห้องอื่นตามจำนวนคนในห้อง</li><li>1 คนเจอ 1-1, 2 คนเจอ 2-2</li>'
     : '<li>หัวห้องเลือกแผนที่</li><li>ครบ 2 คน หัวห้องกดลุยได้เลย</li>';
   const n = mem.length;
-  $('rm-go').disabled = !co.host || !!co.rolling;
-  $('rm-go').textContent = co.host ? 'ลุย' : 'รอหัวห้อง';
-  $('rm-state').textContent = r.game ? 'กำลังเล่นอยู่' : !co.host ? 'รอหัวห้องกดลุย' : n < 2 ? 'รอผู้เล่นเข้าห้อง' : n > GAME_MAX ? `ตอนนี้เกมเล่นได้ทีละ ${GAME_MAX} คน` : 'พร้อมแล้ว กดลุยได้เลย';
+  $('rm-go').disabled = !co.host || !!co.rolling || !!r.vs;
+  $('rm-go').textContent = !co.host ? 'รอหัวห้อง' : r.seek && !r.vs ? 'ยกเลิก' : 'ลุย';
+  if (rnd) { // ลุย: the room is one team; the opponent is another room with the same number of people
+    const t = r.seek ? Math.floor((Date.now() - r.seek) / 1000) : 0, clock = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+    $('rm-state').textContent = r.game ? 'กำลังเล่นอยู่' : r.vs ? `เจอคู่แข่งแล้ว ห้อง ${r.vs}` : r.seek ? `กำลังหาคู่แข่ง ${n}-${n} ${clock}` : !co.host ? 'รอหัวห้องกดลุย' : `กดลุยเพื่อหาคู่แข่ง ${n}-${n}`;
+  } else $('rm-state').textContent = r.game ? 'กำลังเล่นอยู่' : !co.host ? 'รอหัวห้องกดลุย' : n < 2 ? 'รอผู้เล่นเข้าห้อง' : n > GAME_MAX ? `ตอนนี้เกมเล่นได้ทีละ ${GAME_MAX} คน` : 'พร้อมแล้ว กดลุยได้เลย';
 }
 // the town presses the game's own buttons: online mode, stage, own class, then create or join
 function setupGame(d, slot, stage) {
@@ -1052,17 +1120,55 @@ function setupGame(d, slot, stage) {
 function joinGame(code) { launch(d => { setupGame(d, 1); d.getElementById('net-code').value = code; press(d, '#net-join'); }); }
 function startRoom() {
   const mem = membersOf(co.room), msg = $('rm-msg');
+  if (co.mode === 'rush') { seekMatch(); return; }
   if (mem.length < 2) { msg.textContent = 'ต้องมีผู้เล่นอย่างน้อย 2 คน'; return; }
   if (mem.length > GAME_MAX) { msg.textContent = `ตอนนี้เกมเล่นได้ทีละ ${GAME_MAX} คน ช่องที่ 3–4 จะใช้ได้เมื่อเกมรองรับหลายคน`; return; }
   msg.textContent = '';
   const go = map => { co.rolling = null; co.map = map.k; sharePresence(); launch(d => { setupGame(d, 0, map.k); press(d, '#net-make'); }, true); };
-  if (co.mode !== 'rush') { go(MAPS.find(m => m.k === co.map) || MAPS[0]); return; }
-  // ลุย: roll through the maps for a moment, then land on a random one
-  const pick = MAPS[Math.floor(Math.random() * MAPS.length)];
-  let t = 0; const roll = setInterval(() => {
-    co.rolling = MAPS[t++ % MAPS.length].name; renderRoom();
-    if (t > 10) { clearInterval(roll); co.rolling = pick.name; renderRoom(); setTimeout(() => go(pick), 500); }
-  }, 120);
+  go(MAPS.find(m => m.k === co.map) || MAPS[0]);
+}
+// ---------- ลุย matchmaking (Karoz 2026-10-07) ----------
+// The host presses ลุย and the room starts looking (presence `seek` = when it started). A room is one team, so it meets
+// another looking ลุย room with the same number of people: 1 vs 1, 2 vs 2. Every host sorts the looking rooms the same
+// way (oldest first) and pairs them off in order, so both sides agree without a server. The room with the lower code
+// makes the match: it shares `vs` and, once the other room shares `vs` back, rolls a random map and opens the game;
+// the other room joins the game code it shares. Guests follow their own host's game code as before.
+function seekMatch() {
+  const msg = $('rm-msg'), n = membersOf(co.room).length;
+  if (co.seek) { Object.assign(co, { seek: 0, vs: null }); msg.textContent = ''; sharePresence(); renderRoom(); return; } // ยกเลิก
+  if (n * 2 > GAME_MAX) { msg.textContent = `ตอนนี้เกมเล่นได้ทีละ ${GAME_MAX} คน ห้อง ${n} คนจะจับคู่ ${n}-${n} ได้เมื่อเกมรองรับ ${n * 2} คน`; return; }
+  msg.textContent = ''; Object.assign(co, { seek: Date.now(), vs: null }); sharePresence(); renderColo();
+}
+let matchClock = 0, matchStarted = null;
+function matchTick() {
+  clearTimeout(matchClock);
+  if (!co.room || !co.host || co.mode !== 'rush' || !co.seek) return;
+  matchClock = setTimeout(renderColo, 1000); // keeps the waiting clock moving
+  const rooms = townRooms(), me = rooms.find(r => r.mine); if (!me) return;
+  if (me.n * 2 > GAME_MAX && !co.vs) { co.seek = 0; sharePresence(); $('rm-msg').textContent = `ตอนนี้เกมเล่นได้ทีละ ${GAME_MAX} คน จึงหยุดหาคู่ให้ก่อน`; return; } // someone walked in while looking
+  const partner = co.vs && rooms.find(r => r.code === co.vs);
+  if (co.vs && (!partner || (partner.vs && partner.vs !== me.code) || (!partner.seek && !partner.game))) { co.vs = null; sharePresence(); } // they left or gave up: keep looking
+  if (!co.vs) {
+    // rooms still free to pair: looking, same size, not already pointing at another room
+    const pool = rooms.filter(r => r.mine || (r.mode === 'rush' && r.seek && !r.game && r.n === me.n && (!r.vs || r.vs === me.code)))
+      .sort((a, b) => a.seek - b.seek || a.code.localeCompare(b.code));
+    const i = pool.findIndex(r => r.mine), j = i % 2 === 0 ? i + 1 : i - 1;
+    if (i < 0 || !pool[j]) return;
+    co.vs = pool[j].code; sharePresence(); renderRoom(); return;
+  }
+  if (partner.vs !== me.code) return; // wait until they point back at us
+  const maker = me.code < partner.code;
+  if (maker && !co.game && matchStarted !== partner.code && gameBox.hidden) {
+    matchStarted = partner.code;
+    const pick = MAPS[Math.floor(Math.random() * MAPS.length)];
+    let t = 0; const roll = setInterval(() => { // roll through the maps for a moment, then land on a random one
+      co.rolling = MAPS[t++ % MAPS.length].name; renderRoom();
+      if (t > 10) { clearInterval(roll); co.rolling = pick.name; renderRoom(); setTimeout(() => { co.rolling = null; co.map = pick.k; sharePresence(); launch(d => { setupGame(d, 0, pick.k); press(d, '#net-make'); }, true); }, 500); }
+    }, 120);
+  }
+  if (!maker && partner.game && partner.game !== co.lastGame && gameBox.hidden) {
+    co.lastGame = co.game = partner.game; sharePresence(); joinGame(partner.game);
+  }
 }
 $('rm-go').onclick = startRoom;
 $('rm-back').onclick = () => leaveRoom();
@@ -1356,6 +1462,7 @@ async function startChat() {
   try {
     const sb = online.sb;
     await loadProfile();
+    if (online.me && online.me.tutorial_done === false) startTutorial();
     loadAdmins();
     // no history: each visit (and each refresh) starts with an empty chat and shows only new messages
     if (!online.v2) sysLine('ตอนนี้ใช้ได้แค่ช่องโลก ต้องรัน SQL ช่องแชทใน Supabase ก่อน');
