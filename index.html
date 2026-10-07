@@ -6,11 +6,14 @@
 <meta name="description" content="Ages of Aether เกมยิงปืนใหญ่ผลัดตา เล่นกับบอท เล่นสองคนเครื่องเดียว หรือเล่นออนไลน์กับเพื่อน">
 <script src="peerjs.min.js"></script>
 <title>Ages of Aether</title>
+<script>/* Karoz 2026-10-07: players only reach the game through the town (lobby); opened on its own, go to town */ if (window.top === window) location.replace('lobby/');</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Mitr:wght@400;600&family=Noto+Sans+Thai:wght@400;600&display=swap">
 </head>
 <body>
 <style>
+/* the setup menu is never shown to players (Karoz 2026-10-07): the town presses its buttons for them */
+#setup { display: none !important; }
 /* Layout: one column; setup panel above a 16:9 game canvas, touch controls below. Single "sky arena" look on purpose. */
 :root {
   --bg: #0f2340;
@@ -170,7 +173,7 @@ button.mk-prev { appearance: none; font: inherit; color: var(--fg); background: 
     <p id="result" class="result" hidden></p>
     <div class="modes" role="group" aria-label="โหมด">
       <button class="seg" id="mode-bot" aria-pressed="true">เล่นกับบอท</button>
-      <button class="seg" id="mode-pvp" aria-pressed="false">2 ผู้เล่น เครื่องเดียว</button>
+      <button class="seg" id="mode-pvp" aria-pressed="false" hidden>2 ผู้เล่น เครื่องเดียว</button>
       <button class="seg" id="mode-net" aria-pressed="false">ออนไลน์</button>
       <button class="seg" id="mode-slime" aria-pressed="false" hidden>ด่านสไลม์ (ทดสอบ)</button>
       <button class="seg" id="mode-tut" aria-pressed="false">บทสอนการเล่น</button>
