@@ -146,7 +146,6 @@ button, input { font: inherit; color: inherit; }
 /* admin names glow red everywhere a name shows */
 .adm, #log b.adm { color: #ff3a26 !important; font-weight: 800; text-shadow: 0 1px 1px rgba(60, 0, 0, .9), 0 0 5px rgba(255, 40, 20, .9), 0 0 11px rgba(255, 0, 0, .5); animation: admGlow 1.8s ease-in-out infinite alternate; }
 @keyframes admGlow { from { text-shadow: 0 1px 1px rgba(60, 0, 0, .9), 0 0 3px rgba(255, 40, 20, .7), 0 0 7px rgba(255, 0, 0, .3); } to { text-shadow: 0 1px 1px rgba(60, 0, 0, .9), 0 0 7px rgba(255, 40, 20, 1), 0 0 15px rgba(255, 0, 0, .7); } }
-#log b.me.adm { color: #ff3a26 !important; }
 #prof .nm.adm { color: #ff4a30 !important; text-shadow: 0 3px 3px rgba(60, 0, 0, .9), 0 0 16px rgba(255, 40, 20, .95), 0 0 36px rgba(255, 0, 0, .6); animation: admGlowBig 1.8s ease-in-out infinite alternate; }
 @keyframes admGlowBig { from { text-shadow: 0 3px 3px rgba(60, 0, 0, .9), 0 0 10px rgba(255, 40, 20, .7), 0 0 22px rgba(255, 0, 0, .35); } to { text-shadow: 0 3px 3px rgba(60, 0, 0, .9), 0 0 22px rgba(255, 40, 20, 1), 0 0 48px rgba(255, 0, 0, .75); } }
 @media (prefers-reduced-motion: reduce) { .adm { animation: none; } }
@@ -220,10 +219,9 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 #log b, #log b.me { color: #fff; } /* names are white; admins glow red (.adm) */
 #log .c-room { color: #9fd2ff; }
 #log .c-announce { color: #ffe066; font-weight: 700; text-shadow: 0 0 6px rgba(255, 200, 60, .5); }
-/* guild lines are all green and whispers all pink: tag, name and message in one colour */
-#log .c-guild, #log .c-guild .ch, #log .c-guild b, #log .c-guild b.me, #log .c-guild b.adm { color: #5ee36e !important; }
-#log .c-whisper, #log .c-whisper .ch, #log .c-whisper b, #log .c-whisper b.me, #log .c-whisper b.adm { color: #ff8fd2 !important; }
-#log .c-guild b.adm, #log .c-whisper b.adm { text-shadow: none; animation: none; font-weight: 700; }
+/* guild lines are all green and whispers all pink (tag, จาก/ถึง, name, message); an admin's name still glows red */
+#log .c-guild, #log .c-guild .ch, #log .c-guild b { color: #5ee36e !important; }
+#log .c-whisper, #log .c-whisper .ch, #log .c-whisper b { color: #ff8fd2 !important; }
 #chatform { grid-column: 1 / 4; display: flex; gap: 8px; position: relative; }
 #chan { flex: none; min-width: 132px; height: 56px; border-radius: 12px; border: 2px solid #b8862e; background: linear-gradient(#5a4320, #3a2a12);
   color: #ffe7a0; font-weight: 800; font-size: 22px; cursor: pointer; padding: 0 12px; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1239,11 +1237,13 @@ function addMsg(m) {
   const p = document.createElement('p'); p.className = 'c-' + ch;
   const tag = document.createElement('span'); tag.className = 'ch'; tag.textContent = `[${CH[ch].th}]`;
   const b = document.createElement('b');
-  if (ch === 'whisper') b.textContent = mine ? `ถึง ${m.to_name || '?'}: ` : `จาก ${m.name}: `;
-  else b.textContent = `[${m.name}]: `;
+  // only the name itself can glow red; "จาก"/"ถึง" and the brackets keep the line's colour
+  const who = document.createElement('span'); who.className = 'who';
+  if (ch === 'whisper') { who.textContent = mine ? m.to_name || '?' : m.name; b.append(mine ? 'ถึง ' : 'จาก ', who, ': '); }
+  else { who.textContent = m.name; b.append('[', who, ']: '); }
   if (mine && ch !== 'whisper') b.className = 'me';
   // the sender's name glows red when they are an admin (admin ids come from profiles.is_admin)
-  if (ch !== 'whisper' || !mine) { b.dataset.uid = m.user_id; if (isAdminId(m.user_id)) b.classList.add('adm'); }
+  if (ch !== 'whisper' || !mine) { who.dataset.uid = m.user_id; if (isAdminId(m.user_id)) who.classList.add('adm'); }
   const replyTo = ch === 'whisper' ? (mine ? { id: m.to_id, name: m.to_name } : { id: m.user_id, name: m.name }) : (mine ? null : { id: m.user_id, name: m.name });
   if (replyTo && replyTo.id) { b.title = `กระซิบหา ${replyTo.name}`; b.onclick = () => setSend('whisper', replyTo); }
   p.append(tag, b, document.createTextNode(m.body)); addLine(p, ch);
@@ -1380,7 +1380,7 @@ async function loadAdmins() {
   const { data, error } = await online.sb.from('profiles').select('id').eq('is_admin', true);
   if (error || !Array.isArray(data)) return;
   online.admins = new Set(data.map(r => r.id));
-  for (const b of document.querySelectorAll('#log b[data-uid]')) b.classList.toggle('adm', isAdminId(b.dataset.uid));
+  for (const w of document.querySelectorAll('#log .who[data-uid]')) w.classList.toggle('adm', isAdminId(w.dataset.uid));
   if (!$('m-colo').hidden) renderColo();
   renderRoom();
 }
