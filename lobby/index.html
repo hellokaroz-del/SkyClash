@@ -567,6 +567,9 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 @keyframes resStamp { from { transform: rotate(-14deg) scale(2.2); opacity: 0; } }
 @media (max-width: 720px) { .res { grid-template-columns: 1fr; } .res-l { min-height: 0; } .res-art img { height: 170px; } .res-total > span { font-size: 32px; } .res-total b { font-size: 30px; } }
 
+/* the game version, faint white at the bottom centre over everything (Karoz 2026-10-07); bump it with each update */
+#ver { position: fixed; left: 50%; bottom: max(4px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 50; pointer-events: none;
+  color: rgba(255, 255, 255, .45); font-size: 12px; letter-spacing: .05em; text-shadow: 0 1px 2px rgba(0, 0, 0, .5); white-space: nowrap; }
 #rotate { position: fixed; inset: 0; z-index: 15; display: none; place-items: center; text-align: center; padding: 24px;
   background: rgba(5, 4, 10, .85); font-size: 18px; color: #ffe7a0; }
 @media (orientation: portrait) and (max-width: 700px) { #rotate { display: grid; } }
@@ -966,7 +969,8 @@ function startTutorial() {
     if (!fr.isConnected) { clearInterval(tut.timer); return; }
     const r = fr.contentDocument && fr.contentDocument.getElementById('result');
     if (!r || r.hidden) return;
-    if (/จบบทสอนแล้ว/.test(r.textContent)) { clearInterval(tut.timer); finishTutorial(); }
+    // the summary waits 3 s after Victory shows (Karoz 2026-10-07)
+    if (/จบบทสอนแล้ว/.test(r.textContent)) { clearInterval(tut.timer); setTimeout(finishTutorial, 3000); }
     else if (/สไลม์ชนะ/.test(r.textContent)) { clearInterval(tut.timer); setTimeout(() => { if (tut.on && fr.isConnected) startTutorial(); }, 3000); }
   }, 500);
 }
@@ -1882,5 +1886,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
+<div id="ver">v0.58</div>
 </body>
 </html>
