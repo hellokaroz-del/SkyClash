@@ -172,6 +172,8 @@ button.mk-prev { appearance: none; font: inherit; color: var(--fg); background: 
       <button class="seg" id="mode-bot" aria-pressed="true">เล่นกับบอท</button>
       <button class="seg" id="mode-pvp" aria-pressed="false">2 ผู้เล่น เครื่องเดียว</button>
       <button class="seg" id="mode-net" aria-pressed="false">ออนไลน์</button>
+      <button class="seg" id="mode-slime" aria-pressed="false" hidden>ด่านสไลม์ (ทดสอบ)</button>
+      <button class="seg" id="mode-tut" aria-pressed="false">บทสอนการเล่น</button>
     </div>
     <div class="netbox" id="net" hidden>
       <button class="seg" id="net-make">สร้างห้อง</button>
@@ -859,21 +861,26 @@ function buildSetup() {
   }
 }
 function esc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]); }
-const modeBot = document.getElementById('mode-bot'), modePvp = document.getElementById('mode-pvp'), modeNet = document.getElementById('mode-net');
+const modeBot = document.getElementById('mode-bot'), modePvp = document.getElementById('mode-pvp'), modeNet = document.getElementById('mode-net'), modeSlime = document.getElementById('mode-slime');
+let mobMode = false; // the slime field (Karoz): one hero against the slimes; on the live game only the tutorial uses it
+let tutMode = false; // the tutorial (Karoz 2026-10-06): a hero with only the slot-1 skill on the slime field; walk, aim, charge a shot, use a skill, then beat 3 slimes
 function setMode(m) {
   const mode = m === true ? 'bot' : m === false ? 'pvp' : m;
   if (mode !== 'net' && NET.on) netLeave('');
-  vsBot = mode === 'bot'; NET.mode = mode === 'net';
-  modeBot.setAttribute('aria-pressed', String(mode === 'bot')); modePvp.setAttribute('aria-pressed', String(mode === 'pvp')); modeNet.setAttribute('aria-pressed', String(mode === 'net'));
+  tutMode = mode === 'tut'; mobMode = mode === 'slime' || tutMode; vsBot = mode === 'bot' || mobMode; NET.mode = mode === 'net';
+  modeBot.setAttribute('aria-pressed', String(mode === 'bot')); modePvp.setAttribute('aria-pressed', String(mode === 'pvp')); modeNet.setAttribute('aria-pressed', String(mode === 'net')); modeSlime.setAttribute('aria-pressed', String(mobMode && !tutMode)); document.getElementById('mode-tut').setAttribute('aria-pressed', String(tutMode));
   document.getElementById('p2-label').textContent = vsBot ? 'บอท เลือกอาชีพ' : 'ผู้เล่น 2 เลือกอาชีพ';
   if (mode !== 'net') netMsg('');
-  document.getElementById('botlv').hidden = !vsBot;
+  document.getElementById('botlv').hidden = mode !== 'bot';
+  // the slime stage has its own flat ground and no second player to pick
+  document.getElementById('cards-1').parentElement.hidden = mobMode; document.getElementById('stages').hidden = mobMode;
+  document.getElementById('p1-label').textContent = tutMode ? 'บทสอน: เลือกอาชีพ แล้วเริ่มฝึก' : mobMode ? 'เลือกอาชีพ แล้วสู้กับสไลม์ 15 ตัว' : 'ผู้เล่น 1 เลือกอาชีพ';
   netUI();
 }
 function showBotLv() { for (const b of document.querySelectorAll('#botlv .seg')) b.setAttribute('aria-pressed', String(b.dataset.lv === botLv)); }
 for (const b of document.querySelectorAll('#botlv .seg')) b.onclick = () => { botLv = b.dataset.lv; try { localStorage.setItem('sky-botlv', botLv); } catch (_) {} showBotLv(); };
 showBotLv();
-modeBot.onclick = () => setMode('bot'); modePvp.onclick = () => setMode('pvp'); modeNet.onclick = () => setMode('net');
+modeBot.onclick = () => setMode('bot'); modePvp.onclick = () => setMode('pvp'); modeNet.onclick = () => setMode('net'); modeSlime.onclick = () => setMode('slime'); document.getElementById('mode-tut').onclick = () => setMode('tut');
 
 // ---------- rng ----------
 function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -938,7 +945,7 @@ JUNGLE.fg.src = "assets/a095.webp";
 JUNGLE.col.src = "assets/a096.png";
 JUNGLE.bg.src = "assets/a097.webp";
 const BUILTIN_IMG = { 'jungle-bg': JUNGLE.bg, 'jungle-fg': JUNGLE.fg, 'jungle-col': JUNGLE.col };
-function refImage(ref) { if (!ref) return null; if (ref === 'hills' && !BUILTIN_IMG.hills) BUILTIN_IMG.hills = makeHills(); return ref.startsWith('a:') ? assetImage(ref) : BUILTIN_IMG[ref] || null; }
+function refImage(ref) { if (!ref) return null; if (ref === 'hills' && !BUILTIN_IMG.hills) BUILTIN_IMG.hills = makeHills(); if (ref === 'flat' && !BUILTIN_IMG.flat) BUILTIN_IMG.flat = makeFlat(); if (ref === 'flatcol' && !BUILTIN_IMG.flatcol) BUILTIN_IMG.flatcol = makeFlatCol(); return ref.startsWith('a:') ? assetImage(ref) : BUILTIN_IMG[ref] || null; }
 // a plain grassy hill ground (diggable) for stages without their own ground picture
 function makeHills() {
   const c = document.createElement('canvas'); c.width = WW; c.height = WH; const x = c.getContext('2d');
@@ -948,6 +955,31 @@ function makeHills() {
   x.fillStyle = g; x.fill();
   x.lineWidth = 14; x.strokeStyle = '#6fbf4a'; x.beginPath(); for (let X = 0; X <= WW; X += 6) x[X ? 'lineTo' : 'moveTo'](X, h(X) + 5); x.stroke();
   x.lineWidth = 4; x.strokeStyle = '#9ee06a'; x.beginPath(); for (let X = 0; X <= WW; X += 6) x[X ? 'lineTo' : 'moveTo'](X, h(X) + 1); x.stroke();
+  const im = new Image(); im.src = c.toDataURL('image/png'); return im;
+}
+// the slime test stage: dead flat ground of old stone blocks with grass on top; it can't be dug or broken (Karoz)
+const FLAT_Y = WH - 190;
+const SLIME_STAGE = { name: 'ทุ่งสไลม์', hard: true, spawn: [380, 1300], scanFrom: 0, music: 'sounds/SM_Stage_01.mp3', bg: 'jungle-bg', fg: 'flat', col: 'flatcol' };
+function makeFlat() {
+  const c = document.createElement('canvas'); c.width = WW; c.height = WH; const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, FLAT_Y, 0, WH); g.addColorStop(0, '#8d7b62'); g.addColorStop(1, '#4a3f33');
+  x.fillStyle = g; x.fillRect(0, FLAT_Y, WW, WH - FLAT_Y);
+  x.strokeStyle = 'rgba(30,22,16,.45)'; x.lineWidth = 2; // stone blocks, every other row shifted
+  for (let r = 0, y = FLAT_Y + 16; y < WH; r++, y += 34) {
+    x.beginPath(); x.moveTo(0, y); x.lineTo(WW, y); x.stroke();
+    for (let X = r % 2 ? 40 : 0; X < WW; X += 80) { x.beginPath(); x.moveTo(X, y); x.lineTo(X, y + 34); x.stroke(); }
+  }
+  x.fillStyle = 'rgba(255,255,255,.07)'; for (let y = FLAT_Y + 18; y < WH; y += 34) x.fillRect(0, y, WW, 4);
+  x.fillStyle = '#4f9a3a'; x.fillRect(0, FLAT_Y, WW, 14);
+  x.fillStyle = '#7fcf55'; x.fillRect(0, FLAT_Y, WW, 5);
+  x.fillStyle = '#9ee06a'; for (let X = 0; X < WW; X += 9) x.fillRect(X, FLAT_Y - 3 - (X * 7 % 5), 3, 4 + (X * 7 % 5)); // grass tufts
+  const im = new Image(); im.src = c.toDataURL('image/png'); return im;
+}
+// collision for the flat stage: one dead-flat line a little below the top of the grass, so the grass is only decoration
+// (the tufts no longer make tiny steps that catch the characters' feet)
+function makeFlatCol() {
+  const c = document.createElement('canvas'); c.width = WW; c.height = WH; const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, FLAT_Y + 6, WW, WH - FLAT_Y - 6);
   const im = new Image(); im.src = c.toDataURL('image/png'); return im;
 }
 function stageReady(st) { return Promise.all([st.bg, st.fg, st.col].map(refImage).filter(Boolean).map(im => im.decode().catch(() => {}))); }
@@ -981,16 +1013,29 @@ const NET = { on: false, mode: false, role: null, me: 0, rin: {}, acts: [], ev: 
 const MARKS = {}; let PBAR = null;
 function newMatch(demo) {
   for (const k in MARKS) delete MARKS[k];
-  STAGE = STAGES[stageKey] || Object.values(STAGES)[0];
+  STAGE = mobMode && !demo ? SLIME_STAGE : STAGES[stageKey] || Object.values(STAGES)[0];
   loadStage();
   const mk = (i, k, x, bot) => {
-    const c = CLASSES[k];
+    let c = CLASSES[k];
+    // tutorial (Karoz): only the starting skill in slot 1; the other slots, the ultimate and the passives are empty
+    if (tutMode && !demo) c = Object.assign({}, c, { sk: { s1: c.sk.s1 }, ult: null, passives: [], pv: {} });
     return { i, k, c, x, y: surfaceY(x), vy: 0, hp: c.hp, maxHp: c.hp, face: i === 0 ? 1 : -1, angle: 45, energy: c.maxEn, maxEn: c.maxEn,
       cds: [0, 0, 0, 0, 0, 0], warpCd: 0, frozen: 0, cck: '', ccRes: 0, bind: 0, shield: 0, buffs: [], debs: [], dots: [], marks: [], hidden: 0, seenX: x, fatigue: 0, once: {},
       walk: 0, armed: null, rage: 0, dmgAcc: 0, lossAcc: 0, iron: false, bot, alive: true, lastPower: null, items: 2, boost: false,
       name: bot ? 'บอท' : (vsBot ? 'คุณ' : 'ผู้เล่น ' + (i + 1)),
       guild: bot ? 'หุ่นเหล็ก' : i === 0 ? 'ฟ้าคราม' : 'ลมใต้', level: bot ? 15 : i === 0 ? 12 : 10 };
   };
+  if (mobMode && !demo) { // the slime stage: the hero always starts
+    const hero = mk(0, picks[0], STAGE.spawn[0], false);
+    S = { demo, players: [hero], mob: { total: tutMode ? TUT.slimes : SLIME.total, spawned: 0, corpses: [] }, turn: 0, state: 'aim', power: 0, timer: TURN_TIME, wind: 0, projs: [], settle: 0, zones: [],
+      banner: 0, bot: null, frame: 0, turnCount: 0 };
+    if (tutMode) S.tut = { step: 0, x0: hero.x, a0: hero.angle, shot: false, skill: false, spawned: false, flash: 0 };
+    else for (let i = 1; i <= SLIME.field; i++) { S.players.push(makeSlime(i)); S.mob.spawned++; }
+    fx.booms.length = fx.parts.length = fx.texts.length = fx.gfx.length = 0;
+    S.golem = null; S.golemDone = false;
+    startTurn(true);
+    return;
+  }
   const pls = [mk(0, picks[0], STAGE.spawn[0], false), mk(1, picks[1], STAGE.spawn[1], vsBot)];
   // the higher max Energy (from SPD) starts; a tie is a coin flip
   const e0 = pls[0].maxEn, e1 = pls[1].maxEn;
@@ -1009,27 +1054,41 @@ function addRage(pl, n) {
   const was = pl.rage; pl.rage = Math.min(POW_MAX, pl.rage + n);
   if (was < POW_MAX && pl.rage >= POW_MAX) fx.texts.push({ x: pl.x, y: pl.y - 90, s: 'POW เต็ม!', col: '#ffe066', t: 90 });
 }
-function other(p) { return S.players[1 - p.i]; }
+function other(p) {
+  if (S.players.length === 2) return S.players[1 - p.i];
+  // the slime stage: the nearest living enemy (or any enemy when all are down)
+  return S.players.filter(x => teamOf(x.i) !== teamOf(p.i)).sort((a, b) => (b.alive - a.alive) || Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
+}
+function nextTurn(t) {
+  if (!S.mob) return 1 - t;
+  const n = S.players.length;
+  for (let k = 1; k <= n; k++) { const j = (t + k) % n; if (S.players[j].alive) return j; }
+  return 0;
+}
 
 function startTurn(first) {
   if (!first) effFlush(cur());
   if (!first) { const pr = cur(); if (pr.passed) pr.passed = false; else addRage(pr, 5); } // finished own turn (+5), unless PASS already paid +15
   if (!first) { const prev = cur(); if (prev.thawNext) { prev.frozen = Math.max(0, prev.frozen - 1); prev.thawNext = false; prev.ccTurn = false; if (prev.frozen === 0 && prev.ccLen >= 2) prev.ccRes = CC_RES_TURNS; } }
-  if (!first) S.turn = 1 - S.turn;
+  if (!first) S.turn = nextTurn(S.turn);
   const p = cur();
-  if (!p.alive) { S.turn = 1 - S.turn; }
+  if (!p.alive) { S.turn = nextTurn(S.turn); }
   const q = cur();
   q.iron = false; q.energy = q.maxEn; q.armed = null; q.boost = false; q.ccTurn = false;
   for (let i = 0; i < q.cds.length; i++) if (q.cds[i] > 0) q.cds[i]--;
   if (q.warpCd > 0) q.warpCd--;
   // strength: anywhere in 0.0 ... 6.0 on the first turn, then at most 1.5 away from last turn's strength;
   // direction: random on the first turn, then a 30% chance each turn to swap sides
-  const was = Math.abs(S.wind), lo = first ? 0 : Math.max(0, was - 1.5), hi = first ? 6 : Math.min(6, was + 1.5);
-  if (first || !S.windDir) S.windDir = Math.random() < 0.5 ? -1 : 1;
-  else if (Math.random() < 0.3) S.windDir = -S.windDir;
-  S.wind = Math.round((lo + Math.random() * (hi - lo)) * 10) / 10 * S.windDir || 0;
-  S.state = 'aim'; S.power = 0; S.timer = TURN_TIME; S.banner = SIM ? 0 : 90; S.turnCount++;
-  S.bot = q.bot ? { phase: 'think', t: SIM ? 0 : 40 } : null;
+  if (!q.mob) { // the wind only changes on the hero's turns in the slime stage
+    const was = Math.abs(S.wind), lo = first ? 0 : Math.max(0, was - 1.5), hi = first ? 6 : Math.min(6, was + 1.5);
+    if (first || !S.windDir) S.windDir = Math.random() < 0.5 ? -1 : 1;
+    else if (Math.random() < 0.3) S.windDir = -S.windDir;
+    S.wind = Math.round((lo + Math.random() * (hi - lo)) * 10) / 10 * S.windDir || 0;
+    if (S.tut && !S.tut.spawned) S.wind = 0; // no wind while learning the controls
+  }
+  if (S.tut && S.tut.step >= 4 && !S.tut.spawned && !q.mob) tutSpawn();
+  S.state = 'aim'; S.power = 0; S.timer = TURN_TIME; S.banner = SIM || q.mob ? 0 : 90; S.turnCount++;
+  S.bot = q.bot && !q.mob ? { phase: 'think', t: SIM ? 0 : 40 } : null;
   cam.manual = false;
   if (!S.demo) turnStartEffects(q);
   if (first && !S.demo) say(q, `เริ่มก่อน! Energy ${q.maxEn}`, '#ffe9a8', 110, 96);
@@ -1047,6 +1106,7 @@ function startTurn(first) {
       fx.texts.push({ x: q.x, y: q.y - 60, s: q.frozen > 1 ? word + ' ข้ามเทิร์น (อีก ' + q.frozen + ')' : word + ' ข้ามเทิร์น', col: q.cck === 'stun' ? '#ffe14a' : '#bfeaff', t: 90 });
     }
   }
+  if (q.mob && S.state === 'aim') { S.state = 'mob'; S.mp = { phase: 'think', t: 16, hops: 0 }; }
   updatePad();
 }
 
@@ -1081,6 +1141,7 @@ function stepProj(q, players, wind) {
 function fire() {
   const p = cur();
   const power = Math.max(5, Math.min(100, S.power));
+  if (S.tut && !p.mob && p.armed !== 'z') { if (p.armed) { if (S.tut.step === 3) S.tut.skill = true; } else if (S.tut.step === 2 && power >= TUT.minPower) S.tut.shot = true; }
   p.lastPower = power;
   let up = p.boost ? 1.3 : 1;
   const list = [];
@@ -1211,6 +1272,7 @@ function useSlot(slot) {
   if (netGuard(slot)) return;
   const p = cur(), sk = p.c.sk[slot];
   if (!sk || S.state !== 'aim' || p.armed) return;
+  if (S.tut && slot !== 's1') { say(p, 'บทสอนใช้ได้แค่สกิลช่อง 1', '#ffe9a8', 80, 96); return; }
   if (p.frozen > 0 && !sk.purge) return; // frozen / stunned: only Purge works
   if (sk.hide && p.hidden > 0) return;
   const i = SLOT_IDS.indexOf(slot);
@@ -1234,8 +1296,8 @@ function payEnergy(p) {
 function useUlt() { useSlot('b'); }
 // the bolt orb marks a spot; lightning then drops on the enemy if within 3 slots of it, else on the spot
 function boltStrike(q) {
-  const owner = S.players[q.owner], e = other(owner);
-  const lx = Math.max(0, Math.min(WW, q.x));
+  const owner = S.players[q.owner], lx = Math.max(0, Math.min(WW, q.x));
+  const e = S.mob ? S.players.filter(x => x.alive && teamOf(x.i) !== teamOf(owner.i)).sort((a, b) => Math.hypot(a.x - lx, a.y - q.y) - Math.hypot(b.x - lx, b.y - q.y))[0] || other(owner) : other(owner);
   const homing = e.alive && !(e.hidden > 0) && Math.hypot(e.x - lx, (e.y - 14) - q.y) <= BOLT_R;
   const tx = homing ? e.x : lx, ty = homing ? e.y - 14 : Math.min(q.y, WH);
   fx.bolts.push({ x: tx, y: ty, gy: homing ? e.y : ty, t: -16 });
@@ -1667,6 +1729,173 @@ function settleGolem() {
   return false;
 }
 
+// ---------- slime test stage (Karoz) ----------
+// 15 slimes in all, 3 on the field at a time; when one dies the next drops in. Each slime takes its own short turn
+// after the hero: it hops towards the hero (2 hops, up to 1.5 slots) and, once next to the hero, slams into them (melee only).
+// Numbers for the test; tune them here.
+const SLIME = { total: 15, field: 3, hp: 400, atk: 18, def: 20, mdef: 20, luk: 5, hop: 72, hops: 2, reach: 62, acc: 0.85, scale: 2.5, door: 1480 };
+const SLIME_COL = ['#a8b4b4', '#9ccc4a', '#5ab8e0', '#e0b494', '#e8962e', '#d8503a', '#d050a8'];
+const SLIME_NAME = ['เทา', 'เขียว', 'ฟ้า', 'ครีม', 'ส้ม', 'แดง', 'ชมพู'];
+// the sheet: 7 colours x 6 moves, 14 frames each, 56 x 64 cells, the slime's centre 20 px from the left, feet on the bottom
+const SLIME_IMG = new Image(); SLIME_IMG.src = "assets/a220.png";
+const SL_ROWS = ['idle', 'move', 'jump', 'hurt', 'die', 'atk'];
+function slimeFrame(tint, row, f, sc, face) {
+  if (!ready(SLIME_IMG)) { ctx.fillStyle = SLIME_COL[tint] || '#9ccc4a'; ctx.beginPath(); ctx.ellipse(0, -7 * sc, 9 * sc, 7 * sc, 0, 0, 7); ctx.fill(); return; }
+  const sy = ((tint || 0) * SL_ROWS.length + SL_ROWS.indexOf(row)) * 64;
+  ctx.save(); if (face < 0) ctx.scale(-1, 1); ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(SLIME_IMG, Math.max(0, Math.min(13, f)) * 56, sy, 56, 64, -20 * sc, -64 * sc, 56 * sc, 64 * sc);
+  ctx.restore();
+}
+const mobKilled = () => S.mob.spawned - S.players.filter(x => x.mob && x.alive).length;
+// where a new slime appears: at the spawn point SLIME.door (the spot Karoz marked), a few px either way so a stack
+// of slimes still reads as several; slimes may stand on top of each other (Karoz), so nobody queues up any more
+function slimeSpot() { return Math.round(SLIME.door + (Math.random() - 0.5) * 24); }
+function makeSlime(i) {
+  const n = S.mob.spawned + 1, tint = Math.floor(Math.random() * SLIME_COL.length), x = slimeSpot(), hero = S.players[0];
+  const c = { name: 'สไลม์' + SLIME_NAME[tint], hp: SLIME.hp, atk: SLIME.atk, matk: 0, def: SLIME.def, mdef: SLIME.mdef, spd: 0, luk: SLIME.luk, pv: {}, sk: {}, ult: null,
+    r: 30, color: SLIME_COL[tint], nBase: 'atk', nPct: 100, maxEn: 0, vel: 1, gf: 1, shot: '' };
+  return { i, k: 'slime', mob: true, tint, c, x, y: surfaceY(x) - 240, vy: 0, hp: c.hp, maxHp: c.hp, face: x > hero.x ? -1 : 1, angle: 45, energy: 0, maxEn: 0,
+    cds: [0, 0, 0, 0, 0, 0], warpCd: 0, frozen: 0, cck: '', ccRes: 0, bind: 0, shield: 0, buffs: [], debs: [], dots: [], marks: [], hidden: 0, seenX: x, fatigue: 0, once: {},
+    walk: 0, armed: null, rage: 0, dmgAcc: 0, lossAcc: 0, iron: false, bot: true, alive: true, lastPower: null, items: 0, boost: false,
+    name: 'สไลม์ ' + n, guild: 'ทุ่งสไลม์', level: 1, anim: { k: 'idle', t: 0 } };
+}
+// ---------- tutorial ----------
+const TUT = { lv: 1, slimes: 3, walk: 60, angle: 10, minPower: 20 };
+const TUT_STEPS = [
+  ['เดิน', 'กด ← หรือ → (หรือปุ่มลูกศรบนจอ) เพื่อเดิน'],
+  ['ปรับองศา', 'กด ↑ หรือ ↓ เพื่อยกหรือลดองศาการยิง'],
+  ['กดค้างยิง', 'กด Space ค้างไว้ให้แถบพลังขึ้น แล้วปล่อยเพื่อยิง (พลัง 20 ขึ้นไป)'],
+  ['ลองใช้สกิล', 'กดปุ่ม 1 เลือกสกิลช่อง 1 แล้วกดค้างยิงเหมือนเดิม'],
+  ['ลองฆ่ามอน', 'สไลม์ 3 ตัวกำลังมา ยิงให้หมดทุกตัว'],
+];
+function tutTick(p) {
+  const t = S.tut, h = S.players[0];
+  if (t.flash > 0) t.flash--;
+  if (!t.spawned && S.state === 'aim' && p === h) S.timer = Math.max(S.timer, TURN_TIME - 0.5); // no clock while learning
+  const done = [() => Math.abs(h.x - t.x0) >= TUT.walk, () => Math.abs(h.angle - t.a0) >= TUT.angle, () => t.shot, () => t.skill];
+  while (t.step < done.length && done[t.step]()) {
+    t.step++; t.flash = 60;
+    if (t.step === 1) t.a0 = h.angle;
+    if (t.step === 3 && h.cds[0] > 0) h.cds[0] = 0; // the skill is ready for its lesson
+    say(h, 'ผ่าน! ' + TUT_STEPS[t.step - 1][0], '#c8ff9a', 80, 96);
+  }
+}
+function tutSpawn() {
+  S.tut.spawned = true;
+  for (let i = 1; i <= Math.min(SLIME.field, S.mob.total); i++) { S.players.push(makeSlime(i)); S.mob.spawned++; }
+}
+function drawTut() {
+  // between the portrait and the turn clock, so it never covers the clock or PASS; the hint wraps on spaces
+  const t = S.tut, w = 285, x = 140, y = 92, n = TUT_STEPS.length, cur = TUT_STEPS[Math.min(t.step, n - 1)];
+  ctx.font = `400 12px ${FONT}`;
+  const lines = [];
+  if (t.step < n) for (const word of cur[1].split(' ')) { const l = lines.length ? lines[lines.length - 1] + ' ' + word : word; if (lines.length && ctx.measureText(l).width <= w - 24) lines[lines.length - 1] = l; else lines.push(word); }
+  const top = y + 42 + lines.length * 16;
+  panel(x, y, w, top - y + 22, 12); // only the step in progress, not the whole list (Karoz)
+  ctx.textAlign = 'left'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(10,24,48,.85)';
+  const put = (s, xx, yy, font, col) => { ctx.font = font; ctx.fillStyle = col; ctx.strokeText(s, xx, yy); ctx.fillText(s, xx, yy); };
+  put(t.step < n ? `บทสอน ${t.step + 1}/${n} · ${cur[0]}` : 'บทสอนจบแล้ว', x + 12, y + 22, `600 15px ${FONT}`, '#ffd36a');
+  lines.forEach((l, k) => put(l, x + 12, y + 40 + k * 16, `400 12px ${FONT}`, '#ffffff'));
+  TUT_STEPS.forEach(([name], i) => {
+    if (i !== Math.min(t.step, n - 1)) return;
+    const ok = i < t.step, now = i === t.step, s = (ok ? '✓ ' : now ? '▶ ' : '○ ') + name + (i === 4 && t.spawned ? ` (${mobKilled()}/${S.mob.total})` : '');
+    put(s, x + 16, top + 4, `400 13px ${FONT}`, ok ? '#9fe08a' : now ? (t.flash > 0 && t.flash % 20 < 10 ? '#ffffff' : '#ffe9a8') : '#a9bfdc');
+  });
+}
+// after each turn: a dead slime's place goes to the next one (until all of them have come out)
+function mobRespawn() {
+  for (let i = 1; i < S.players.length; i++) {
+    const pl = S.players[i];
+    if (pl.alive || S.mob.spawned >= S.mob.total) continue;
+    S.mob.corpses.push(pl);
+    S.players[i] = makeSlime(i); S.mob.spawned++;
+    say(S.players[i], 'สไลม์ตัวใหม่!', '#c8ff9a', 80, -150);
+  }
+}
+// the match ends when the hero falls or all 15 slimes are beaten
+function mobOver() {
+  const h = S.players[0];
+  if (!h.alive) { endMatch(S.players.find(x => x.mob && x.alive) || S.players[1]); return true; }
+  if (mobKilled() >= S.mob.total) { endMatch(h); return true; }
+  return false;
+}
+// a slime's slam on the hero
+function mobHit(m, pl) {
+  if (!pl.alive) return;
+  if (Math.random() >= SLIME.acc) { say(pl, 'หลบได้!', '#c8d0e0', 60, 90); return; }
+  let dmg = hitDamage(m, pl, 'atk', 100); const crit = Math.random() < critChance(m); if (crit) dmg *= critMul(m);
+  if (pl.iron) dmg *= 1 - (pl.guard != null ? pl.guard : 50) / 100;
+  if (pl.nineNext && dmg > 0) { dmg *= 1 - (pl.c.pv.nineLives || 30) / 100; pl.nineNext = false; }
+  if (ADMIN.god && !NET.on && !pl.bot) { fx.texts.push({ x: pl.x, y: pl.y - 50, s: 'อมตะ', col: '#9fe0ff', t: 60 }); return; }
+  dmg = Math.round(dmg);
+  let soak = 0; if (pl.shield > 0 && dmg > 0) { soak = Math.min(pl.shield, dmg); pl.shield -= soak; dmg -= soak; }
+  const shown = dmg; dmg = Math.min(pl.hp, dmg); pl.hp -= dmg;
+  fx.texts.push({ x: pl.x, y: pl.y - 50, s: (crit ? 'คริติคอล! -' : '-') + shown + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff5a4a', t: 70 });
+  if (dmg > 0 || soak > 0) unhide(pl, false);
+  pl.lossAcc += dmg / pl.maxHp * 10; addRage(pl, 4 * Math.floor(pl.lossAcc) + 8); pl.lossAcc %= 1;
+  if (!SIM) cam.shake = Math.max(cam.shake, 6);
+  if (pl.hp <= 0) pl.alive = false; else lowHp(pl);
+}
+// a slime's turn: think, hop up to twice towards the hero, then slam if it is close enough
+function mobTick(p) {
+  const mp = S.mp, h = S.players[0];
+  if (!p.alive) { S.state = 'settle'; S.settle = 10; return; }
+  const tx = botSeeX(h), near = () => Math.abs(tx - p.x) <= SLIME.reach && !(h.hidden > 0); // a hidden hero can't be found, only guessed at
+  if (mp.phase === 'think') {
+    if (!solid(p.x, p.y)) return; // a new slime still dropping in
+    if (--mp.t > 0) return;
+    p.face = tx > p.x ? 1 : -1;
+    if (near()) { mp.phase = 'atk'; mp.t = 0; p.anim = { k: 'atk', t: 0 }; say(p, 'พุ่งชน!', '#c8ff9a', 50, 70); }
+    else if (mp.hops < SLIME.hops && !(p.bindNow)) { mp.phase = 'hop'; mp.t = 0; mp.left = SLIME.hop; p.anim = { k: 'jump', t: 0 }; }
+    else { S.state = 'settle'; S.settle = 16; p.anim = { k: 'idle', t: 0 }; }
+    return;
+  }
+  mp.t++; p.anim.t = mp.t;
+  if (mp.phase === 'hop') { // the jump row: crouch, airborne for frames 2-8, land
+    if (mp.t >= 6 && mp.t < 27 && mp.left > 0) {
+      const st = Math.min(mp.left, SLIME.hop / 21), nx = p.x + p.face * st;
+      const blocked = Math.abs(tx - nx) < SLIME.reach - 14 || nx < 20 || nx > WW - 20; // other slimes don't block: they can overlap (Karoz)
+      if (blocked) mp.left = 0; else { p.x = nx; p.y = surfaceY(Math.round(p.x)); mp.left -= st; }
+    }
+    if (mp.t >= 42) { mp.hops++; mp.phase = 'think'; mp.t = 4; p.anim = { k: 'idle', t: 0 };
+      if (!near() && (mp.hops >= SLIME.hops || mp.left > 0)) { S.state = 'settle'; S.settle = 16; } }
+  } else if (mp.phase === 'atk') { // the lunge lands on frame 3
+    if (mp.t === 10) mobHit(p, h);
+    if (mp.t >= 42) { S.state = 'settle'; S.settle = 20; p.anim = { k: 'idle', t: 0 }; }
+  }
+}
+function drawMob(p, active) {
+  const x = Math.round(p.x - cam.x), y = Math.round(p.y - cam.y), sc = SLIME.scale;
+  if (!p.alive) { p.dieT = (p.dieT || 0) + 1; if (p.dieT >= 44 || x < -80 || x > VW + 80) return; }
+  if (x < -80 || x > VW + 80) return;
+  if (p.alive && p.prevHp != null && p.hp < p.prevHp) p.hurtT = 1;
+  p.prevHp = p.hp;
+  let row = 'idle', f = Math.floor((S.frame + p.i * 5) / 3) % 14;
+  const moving = S.state === 'mob' && S.turn === p.i && p.anim && (p.anim.k === 'atk' || p.anim.k === 'jump');
+  if (!p.alive) { row = 'die'; f = Math.floor(p.dieT / 3); }
+  else if (moving) { row = p.anim.k; f = Math.floor(p.anim.t / 3); }
+  else if (p.hurtT > 0) { row = 'hurt'; f = 6 + Math.floor(p.hurtT / 3); if (++p.hurtT > 24) p.hurtT = 0; }
+  ctx.save(); ctx.translate(x, y);
+  if (p.alive) { ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(0, 0, 22, 4, 0, 0, 7); ctx.fill(); }
+  slimeFrame(p.tint, row, f, sc, p.face);
+  if (p.alive && p.frozen > 0 && p.cck === 'stun') {
+    for (let k = 0; k < 3; k++) { const a = S.frame * 0.12 + k * 2.1; ctx.fillStyle = '#ffe14a'; ctx.beginPath(); ctx.arc(Math.cos(a) * 14, -40 + Math.sin(a) * 4, 3, 0, 7); ctx.fill(); }
+  } else if (p.alive && p.frozen > 0) {
+    ctx.fillStyle = 'rgba(170,225,255,.5)'; ctx.strokeStyle = 'rgba(235,250,255,.95)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(-28, -42, 56, 44, 6); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+  if (!p.alive) return;
+  const w = 44;
+  ctx.fillStyle = 'rgba(10,24,48,.7)'; ctx.fillRect(x - w / 2 - 1, y + 6, w + 2, 6);
+  ctx.fillStyle = p.hp / p.maxHp > 0.35 ? '#5bdc6a' : '#ff5a4a'; ctx.fillRect(x - w / 2, y + 7, w * p.hp / p.maxHp, 4);
+  ctx.font = `600 11px ${FONT}`; ctx.textAlign = 'center';
+  ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,24,48,.8)'; ctx.strokeText(p.name, x, y + 24);
+  ctx.fillStyle = '#fff'; ctx.fillText(p.name, x, y + 24);
+  drawStatus(p, x, y + 30);
+  if (active) { const by = y - 56 + Math.sin(S.frame * 0.12) * 3; ctx.fillStyle = '#ffd36a'; ctx.beginPath(); ctx.moveTo(x - 7, by); ctx.lineTo(x + 7, by); ctx.lineTo(x, by + 9); ctx.fill(); }
+}
+
 // ---------- drawing ----------
 const ELEM_DRAW = ['fire', 'water', 'thunder', 'nature'].map(k => ELEM[k].col);
 function drawGolem() {
@@ -1806,6 +2035,7 @@ function update() {
   if (S.demo) { S.demoT = (S.demoT || 0) + 1; return; }
   if (S.state === 'over') return;
 
+  if (S.tut) tutTick(p);
   if (S.state === 'aim') { // the clock stops as soon as the fire button is pressed
     S.timer -= 1 / 60;
     if (S.timer <= 0) { fx.texts.push({ x: p.x, y: p.y - 50, s: 'หมดเวลา', col: '#fff', t: 60 }); S.state = 'settle'; S.settle = 30; }
@@ -1851,12 +2081,14 @@ function update() {
     if (!alive) { S.state = 'settle'; S.settle = SIM ? 1 : 50; }
   } else if (S.state === 'golem') {
     golemTick();
+  } else if (S.state === 'mob') {
+    mobTick(p);
   } else if (S.state === 'settle') {
     if (!settling && --S.settle <= 0) {
       const living = S.players.filter(x => x.alive);
-      if (living.length < 2) endMatch(living[0]);
+      if (S.mob ? mobOver() : living.length < 2) { if (!S.mob) endMatch(living[0]); }
       else if (golemTurnDue()) beginGolemTurn(); // the Golem acts right after its owner
-      else { if (S.golemDone) golemAfterTurn(); S.golemDone = false; startTurn(false); }
+      else { if (S.golemDone) golemAfterTurn(); S.golemDone = false; if (S.mob) mobRespawn(); startTurn(false); }
     }
   }
 
@@ -1919,6 +2151,10 @@ function endMatch(winner) {
     sub: !winner ? 'ทั้งสองฝ่ายล้มพร้อมกัน' : human ? (winner === human ? 'คุณชนะการต่อสู้!' : vsBot ? 'บอทชนะ ลองใหม่อีกครั้ง' : 'เพื่อนชนะ ลองใหม่อีกครั้ง') : `${winner.name} ชนะ!`, f0: S.frame,
     sparks: [] };
   res.textContent = !winner ? 'เสมอ! ทั้งสองฝ่ายล้มพร้อมกัน' : `${winner.name} (${winner.c.name}) ชนะ! เลือกอาชีพแล้วเริ่มรอบใหม่ได้เลย`;
+  if (S.mob) { const won = winner === S.players[0]; S.result.kind = won ? 'victory' : 'defeat'; S.result.sub = won ? `กำจัดสไลม์ครบ ${S.mob.total} ตัว!` : `สไลม์ชนะ (กำจัดได้ ${mobKilled()}/${S.mob.total} ตัว) ลองใหม่อีกครั้ง`; res.textContent = S.result.sub; }
+  if (S.tut) { const won = winner === S.players[0]; S.result.sub = won ? 'จบบทสอนแล้ว! คุณพร้อมออกผจญภัยแล้ว' : 'สไลม์ชนะ ลองบทสอนใหม่อีกครั้งนะ'; res.textContent = S.result.sub; 
+    // tell the lobby (which opens the game in a frame for new characters) that the tutorial is won
+    if (won && window.parent !== window) try { parent.postMessage({ type: 'aoa-tutorial-done' }, location.origin); } catch (_) {} }
   setTimeout(() => { document.getElementById('setup').hidden = false; document.getElementById('setup').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 5200);
 }
 
@@ -1952,6 +2188,11 @@ function drawMist() {
   ctx.fillStyle = g; ctx.fillRect(0, y0, VW, 80);
 }
 function drawAvatar(p, pose) {
+  if (p.mob) { // portraits: the slime's idle bounce, lifted into the frame
+    if (!p.alive) ctx.globalAlpha = 0.35;
+    ctx.save(); ctx.translate(0, pose === 'stand' ? -6 : -19); slimeFrame(p.tint, 'idle', Math.floor((S ? S.frame : 0) / 3) % 14, pose === 'stand' ? 1.8 : 1.6, 1); ctx.restore();
+    ctx.globalAlpha = 1; return;
+  }
   const f = p.face, c = p.c, prone = pose === 'prone';
   const breathe = prone && S ? Math.sin(S.frame * 0.08) * 0.6 : 0;
   if (!p.alive) ctx.globalAlpha = 0.35;
@@ -2118,6 +2359,7 @@ function drawCorpse(p) {
 // local ground height near (x, y): first solid pixel scanning down from just above the feet
 function groundNear(x, y) { for (let yy = y - 24; yy < y + 40; yy++) if (solid(x, yy)) return yy; return y; }
 function drawHero(p, active) {
+  if (p.mob) { drawMob(p, active); return; }
   const x = Math.round(p.x - cam.x), y = Math.round(p.y - cam.y), f = p.face, c = p.c;
   if (x < -60 || x > VW + 60 || p.gone) return;
   // lie flat along the slope underneath (smoothed so it doesn't jitter on bumpy ground)
@@ -2410,6 +2652,13 @@ function drawHUD() {
     if (!rs.length) continue;
     const edge = tm === 0 ? Math.min(...rs.map(r => r.x)) - 8 : Math.max(...rs.map(r => r.x + r.w)) + 8;
     drawTeamPlate(edge, 31, tm === 0 ? -1 : 1, tm === myTeam(), teamOf(S.turn) === tm);
+  }
+  if (S.tut) drawTut();
+  if (S.mob && (!S.tut || S.tut.spawned)) { // slimes still to beat, under the minimap
+    const s = `สไลม์เหลือ ${S.mob.total - mobKilled()}/${S.mob.total} ตัว`, sx = VW - 120, sy = 132;
+    panel(sx - 82, sy - 17, 164, 26, 13);
+    ctx.textAlign = 'center'; ctx.font = `600 15px ${FONT}`; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(10,24,48,.85)';
+    ctx.strokeText(s, sx, sy + 2); ctx.fillStyle = '#c8ff9a'; ctx.fillText(s, sx, sy + 2); ctx.textAlign = 'left';
   }
   // wind
   drawWind();
@@ -3001,6 +3250,7 @@ function draw() {
   if (!S) return;
   drawZones();
   drawGolem();
+  if (S.mob) { for (const d of S.mob.corpses) drawMob(d, false); S.mob.corpses = S.mob.corpses.filter(d => (d.dieT || 0) < 44); }
   // Hiding: the other side sees nothing; your own side sees a faint figure
   S.players.forEach(p => {
     const h = p.alive && p.hidden > 0;
@@ -3399,7 +3649,7 @@ document.getElementById('start').onclick = () => {
   document.getElementById('setup').hidden = true;
   document.getElementById('result').hidden = true;
   for (const k in input) input[k] = false;
-  const st = STAGES[stageKey] || Object.values(STAGES)[0];
+  const st = mobMode && !NET.mode ? SLIME_STAGE : STAGES[stageKey] || Object.values(STAGES)[0];
   playBgm(assetURL(st.music));
   stageReady(st).then(() => { newMatch(false); if (NET.on) netHostBegin(); else NET.inMatch = false; });
   document.querySelector('.stage').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -3691,7 +3941,7 @@ function netUI() {
   const inRoom = NET.on && NET.room;
   document.getElementById('net-make').hidden = document.getElementById('net-join').hidden = document.getElementById('net-code').hidden = !!inRoom;
   document.getElementById('net-leave').hidden = !inRoom;
-  document.getElementById('p1-label').textContent = NET.mode ? 'เจ้าของห้อง เลือกอาชีพ' + (inRoom && NET.me === 0 ? ' (คุณ)' : '') : 'ผู้เล่น 1 เลือกอาชีพ';
+  document.getElementById('p1-label').textContent = NET.mode ? 'เจ้าของห้อง เลือกอาชีพ' + (inRoom && NET.me === 0 ? ' (คุณ)' : '') : mobMode ? 'เลือกอาชีพ แล้วสู้กับสไลม์ 15 ตัว' : 'ผู้เล่น 1 เลือกอาชีพ';
   if (NET.mode) document.getElementById('p2-label').textContent = 'ผู้เข้าห้อง เลือกอาชีพ' + (inRoom && NET.me === 1 ? ' (คุณ)' : '');
   start.textContent = NET.mode && NET.role === 'guest' && inRoom ? 'รอเจ้าของห้องกดเริ่ม' : 'เริ่มต่อสู้';
   start.disabled = !!NET.mode && !(inRoom && NET.role === 'host' && NET.gpres);
