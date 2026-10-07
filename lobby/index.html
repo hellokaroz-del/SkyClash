@@ -648,7 +648,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
     <div class="amir l" aria-hidden="true"></div><div class="amir r" aria-hidden="true"></div>
     <h1 class="sr" id="a-title">Ages of Aether เข้าสู่ระบบ</h1>
     <label class="sr" for="a-email">อีเมล</label>
-    <input class="afld" id="a-email" type="email" autocomplete="email" placeholder="อีเมล" required>
+    <input class="afld" id="a-email" type="email" autocomplete="username" placeholder="อีเมล" required>
     <label class="sr" for="a-pass">รหัสผ่าน</label>
     <input class="afld" id="a-pass" type="password" autocomplete="current-password" placeholder="รหัสผ่าน" minlength="6">
     <i class="aring" id="r-email"></i><i class="aring" id="r-pass"></i>
@@ -1378,7 +1378,7 @@ const isAdminId = id => online.admins.has(id) || (online.user && id === online.u
 // everyone may read profiles, so the admin list comes straight from profiles.is_admin
 async function loadAdmins() {
   const { data, error } = await online.sb.from('profiles').select('id').eq('is_admin', true);
-  if (error || !data) return;
+  if (error || !Array.isArray(data)) return;
   online.admins = new Set(data.map(r => r.id));
   for (const b of document.querySelectorAll('#log b[data-uid]')) b.classList.toggle('adm', isAdminId(b.dataset.uid));
   if (!$('m-colo').hidden) renderColo();
@@ -1493,6 +1493,18 @@ $('a-remember').checked = remembered();
 try { $('a-email').value = localStorage.getItem(EMAIL_KEY) || ''; } catch {}
 $('a-remember').onchange = () => store(REM_KEY, $('a-remember').checked ? null : '0');
 function busy(btn, on) { btn.disabled = on; }
+// "จำรหัสผ่าน": hand the email and password to the browser's own password manager (never kept by the page itself)
+function savePass(email, pass) {
+  if (!remembered() || !window.PasswordCredential || !navigator.credentials) return;
+  navigator.credentials.store(new PasswordCredential({ id: email, password: pass, name: email })).catch(() => {});
+}
+async function fillPass() {
+  if (!remembered() || !window.PasswordCredential || !navigator.credentials) return;
+  try {
+    const c = await navigator.credentials.get({ password: true, mediation: 'optional' });
+    if (c && c.password && !$('a-pass').value) { $('a-email').value = c.id; $('a-pass').value = c.password; }
+  } catch {}
+}
 
 const isGoogle = u => (u.identities || []).some(i => i.provider === 'google') || (u.app_metadata && u.app_metadata.provider === 'google');
 function useHeld() { const s = held; held = null; holdIn = false; enterTown(s); }
@@ -1525,7 +1537,7 @@ $('a-form').onsubmit = async e => {
     : await sb.auth.signInWithPassword({ email, password: pass });
   busy(btn, false);
   if (r.error) { aMsg(authErr(r.error)); return; }
-  if (r.data.session) { enterTown(r.data.session); return; }
+  if (r.data.session) { savePass(email, pass); enterTown(r.data.session); return; }
   // sign-up with "Confirm email" on: no session until the link is clicked
   aMsg('', 'สมัครแล้ว เปิดอีเมลแล้วกดลิงก์ยืนยัน จากนั้นกลับมาเข้าสู่ระบบ');
   setAuthMode('in'); $('a-ok').textContent = 'สมัครแล้ว เปิดอีเมลแล้วกดลิงก์ยืนยัน จากนั้นกลับมาเข้าสู่ระบบ';
@@ -1568,7 +1580,7 @@ $('rc-form').onsubmit = async e => {
 };
 
 let entered = false;
-// a remembered sign-in is held on the login screen until the player presses a button (Karoz: the login screen shows on every visit)
+// a stored sign-in goes straight into town on refresh (Karoz 2026-10-07); with จำรหัสผ่าน off it lives in sessionStorage and ends with the browser
 let held = null, holdIn = true; // stays true until boot() has looked at the stored session (supabase fires SIGNED_IN for it while starting up)
 function enterTown(session) {
   if (entered || !session) return;
@@ -1605,8 +1617,7 @@ async function boot() {
     // old guest sessions from the test period: an account is required now
     await sb.auth.signOut().catch(() => {});
     aMsg('', 'ตอนนี้ต้องสมัครสมาชิกก่อนเข้าเมือง สมัครด้วยอีเมลหรือ Google ได้เลย');
-  } else if (session && fromLink) { enterTown(session); return; }
-  else if (session) held = session;
+  } else if (session) { holdIn = false; enterTown(session); return; } // a refresh (or coming back from a link) goes straight into town
   else holdIn = false;
   $('auth').hidden = false; chatState('ยังไม่ได้เข้าสู่ระบบ', false);
   if (held) {
@@ -1614,6 +1625,7 @@ async function boot() {
     aMsg('', isGoogle(held.user) ? 'จำบัญชีไว้แล้ว กดปุ่ม Google ได้เลย' : 'จำบัญชีไว้แล้ว กดเข้าสู่ระบบได้เลย');
   }
   if (error || urlErr) aMsg(authErr(error || urlErr));
+  await fillPass();
   setTimeout(() => ($('a-email').value ? $('a-pass') : $('a-email')).focus(), 50);
 }
 sysLine('ยินดีต้อนรับสู่เมือง กดที่อาคารเพื่อเข้าไป');
