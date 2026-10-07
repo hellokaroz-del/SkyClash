@@ -502,7 +502,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
   background: rgba(20, 16, 30, .85); color: #ffe7a0; font-weight: 700; cursor: pointer; font-size: 15px; }
 /* a new character stays in the tutorial until it is won (Karoz 2026-10-07): no way back to town until then */
 #game.tut #back { display: none; }
-#tut-done { position: absolute; inset: 0; z-index: 42; display: grid; place-items: center; background: rgba(5, 4, 10, .55); padding: 16px; }
+#tut-done { position: absolute; inset: 0; z-index: 42; display: grid; place-items: center; background: rgba(5, 4, 10, .75); padding: 16px; }
 #tut-done[hidden] { display: none; }
 #tut-done .card { text-align: center; }
 #tut-done .exp { font-size: 30px; font-weight: 800; color: var(--gold); margin: 6px 0 2px; }
@@ -849,7 +849,11 @@ function launch(setup, watchRoom) {
   fr.src = GAME_URL;
   fr.onload = () => {
     // the game's Admin button is only for admins (Karoz 2026-10-07)
-    try { if (!isAdmin()) { const st = fr.contentDocument.createElement('style'); st.textContent = '#admin-btn, #admin-pin, #admin-menu { display: none !important; }'; fr.contentDocument.head.appendChild(st); } } catch (e) {}
+    // and in the tutorial the game's own menu never comes back (it reappears 5 s after a match ends), so the player stays in the field
+    try {
+      const css = (isAdmin() ? '' : '#admin-btn, #admin-pin, #admin-menu { display: none !important; }') + (tut.on ? '#setup { display: none !important; }' : '');
+      if (css) { const st = fr.contentDocument.createElement('style'); st.textContent = css; fr.contentDocument.head.appendChild(st); }
+    } catch (e) {}
     // same site, so the town can press the game's own setup buttons for the player
     let tries = 0;
     const go = () => {
