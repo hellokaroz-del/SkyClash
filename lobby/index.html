@@ -499,6 +499,12 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 #game iframe { width: 100%; height: 100%; border: 0; display: block; }
 #back { position: fixed; left: 10px; top: 10px; z-index: 41; height: 38px; padding: 0 14px; border-radius: 999px; border: 2px solid rgba(245, 198, 74, .7);
   background: rgba(20, 16, 30, .85); color: #ffe7a0; font-weight: 700; cursor: pointer; font-size: 15px; }
+/* a new character stays in the tutorial until it is won (Karoz 2026-10-07): no way back to town until then */
+#game.tut #back { display: none; }
+#tut-done { position: absolute; inset: 0; z-index: 42; display: grid; place-items: center; background: rgba(5, 4, 10, .55); padding: 16px; }
+#tut-done[hidden] { display: none; }
+#tut-done .card { text-align: center; }
+#tut-done .exp { font-size: 30px; font-weight: 800; color: var(--gold); margin: 6px 0 2px; }
 
 #rotate { position: fixed; inset: 0; z-index: 15; display: none; place-items: center; text-align: center; padding: 24px;
   background: rgba(5, 4, 10, .85); font-size: 18px; color: #ffe7a0; }
@@ -697,6 +703,14 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 
 <div id="game" hidden>
   <button id="back" type="button">← กลับเมือง</button>
+  <div id="tut-done" hidden>
+    <div class="card" role="dialog" aria-labelledby="td-h">
+      <h2 id="td-h">จบบทสอนแล้ว!</h2>
+      <div class="exp" id="td-exp"></div>
+      <p id="td-msg"></p>
+      <button class="btn go wide" id="td-go" type="button">เข้าสู่เมือง</button>
+    </div>
+  </div>
 </div>
 
 <script src="supabase.min.js"></script>
@@ -824,9 +838,11 @@ try { if (localStorage.getItem('aoa-scroll') === '1') rollScroll(true); } catch 
 
 // ---------- open the game inside the town ----------
 const gameBox = $('game');
+const tut = { on: false, done: false, timer: 0 };
 function launch(setup, watchRoom) {
   for (const m of document.querySelectorAll('.modal')) m.hidden = true;
   const old = gameBox.querySelector('iframe'); if (old) old.remove();
+  gameBox.classList.toggle('tut', tut.on); $('tut-done').hidden = true;
   const fr = document.createElement('iframe');
   fr.title = 'Ages of Aether'; fr.allow = 'autoplay; fullscreen';
   fr.src = GAME_URL;
@@ -840,37 +856,52 @@ function launch(setup, watchRoom) {
     };
     go();
   };
-  gameBox.appendChild(fr); gameBox.hidden = false; $('back').focus();
+  gameBox.insertBefore(fr, $('back')); gameBox.hidden = false; if (!tut.on) $('back').focus();
 }
 // ---------- tutorial: a new character goes straight into the game's tutorial with the job they picked ----------
-// Finishing it gives the EXP from level 1 to 2 once (server function finish_tutorial, lobby/supabase-progress.sql).
+// Karoz 2026-10-07: the player stays in the tutorial (no way back to town, a loss starts it again) until it is won;
+// then the EXP from level 1 to 2 is given once (server function finish_tutorial, lobby/supabase-progress.sql)
+// and only then does the player walk into town.
 const TUT_EXP = 1000; // exp-table-v3: level 1 -> 2
-const tut = { on: false, done: false, timer: 0 };
 function startTutorial() {
   tut.on = true; tut.done = false;
   launch(d => {
-    if (!press(d, '#mode-tut')) { tut.on = false; $('back').click(); toast('เกมบนเว็บยังไม่มีบทสอน'); return; } // an older game build: stay in town
+    if (!press(d, '#mode-tut')) { endTutorial(); toast('เกมบนเว็บยังไม่มีบทสอน'); return; } // an older game build: stay in town
     press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#start');
   });
   const fr = gameBox.querySelector('iframe');
   clearInterval(tut.timer);
-  // the game shows "จบบทสอนแล้ว" in #result when the hero beats the tutorial slimes
+  // the game's #result says "จบบทสอนแล้ว" when the hero beats the tutorial slimes, "สไลม์ชนะ" when they lose
   tut.timer = setInterval(() => {
     if (!fr.isConnected) { clearInterval(tut.timer); return; }
     const r = fr.contentDocument && fr.contentDocument.getElementById('result');
-    if (r && !r.hidden && /จบบทสอนแล้ว/.test(r.textContent)) { clearInterval(tut.timer); finishTutorial(); }
+    if (!r || r.hidden) return;
+    if (/จบบทสอนแล้ว/.test(r.textContent)) { clearInterval(tut.timer); finishTutorial(); }
+    else if (/สไลม์ชนะ/.test(r.textContent)) { clearInterval(tut.timer); setTimeout(() => { if (tut.on && fr.isConnected) startTutorial(); }, 3000); }
   }, 500);
 }
 addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'aoa-tutorial-done') finishTutorial(); });
+function endTutorial() {
+  tut.on = false; clearInterval(tut.timer); gameBox.classList.remove('tut'); $('tut-done').hidden = true; $('back').click();
+}
 async function finishTutorial() {
-  if (!tut.on || tut.done) return; tut.done = true; tut.on = false;
-  if (!online.sb || !online.user || online.user.id === 'preview') { toast(`จบบทสอนแล้ว! ได้รับ ${TUT_EXP.toLocaleString()} EXP`); return; }
-  const { data, error } = await online.sb.rpc('finish_tutorial');
-  if (error) { console.warn('tutorial', error); toast('บันทึกผลบทสอนไม่ได้ ลองใหม่ภายหลัง'); tut.done = false; return; }
-  const p = Array.isArray(data) ? data[0] : data;
-  online.me = Object.assign(online.me || {}, p);
-  Object.assign(prof, { level: p.level || 1, exp: p.exp || 0 }); saveProf(); renderProf(); sharePresence();
-  toast(`จบบทสอนแล้ว! ได้รับ ${TUT_EXP.toLocaleString()} EXP ขึ้นเป็นเลเวล ${p.level}`);
+  if (!tut.on || tut.done) return; tut.done = true;
+  const box = $('tut-done'), go = $('td-go');
+  $('td-h').textContent = 'จบบทสอนแล้ว!'; $('td-exp').textContent = `+${TUT_EXP.toLocaleString()} EXP`;
+  $('td-msg').textContent = 'กำลังบันทึก...'; go.disabled = true; go.textContent = 'เข้าสู่เมือง'; box.hidden = false;
+  if (online.sb && online.user && online.user.id !== 'preview') {
+    const { data, error } = await online.sb.rpc('finish_tutorial');
+    if (error) { // the reward is not saved yet: stay here and let the player try again
+      console.warn('tutorial', error);
+      $('td-msg').textContent = 'บันทึกผลไม่สำเร็จ กดลองอีกครั้ง'; go.disabled = false; go.textContent = 'ลองอีกครั้ง';
+      go.onclick = () => { tut.done = false; finishTutorial(); }; return;
+    }
+    const p = Array.isArray(data) ? data[0] : data;
+    online.me = Object.assign(online.me || {}, p);
+    Object.assign(prof, { level: p.level || 1, exp: p.exp || 0 }); saveProf(); renderProf(); sharePresence();
+  } else Object.assign(prof, { level: Math.max(2, prof.level || 1), exp: 0 }), renderProf(); // the Claude preview has no account to save to
+  $('td-msg').textContent = `ขึ้นเป็นเลเวล ${prof.level} แล้ว ไปผจญภัยในเมืองกันเลย`;
+  go.disabled = false; go.onclick = endTutorial; go.focus();
 }
 // read the room code the game shows, so /r in town chat reaches the same room
 function watchGameRoom(fr) {
