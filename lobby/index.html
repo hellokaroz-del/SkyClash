@@ -1303,7 +1303,7 @@ function watchGameRoom(fr) {
     if (m && co.room && co.host && m[1] !== co.game) { co.game = m[1]; sharePresence(); } // guests in the waiting room follow this code
   }, 1500);
 }
-$('back').onclick = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; $('g-cover').hidden = true; if (co.room) { co.game = null; if (co.host && co.mode === 'rush') Object.assign(co, { map: null, seek: 0, vs: null, lastGame: null, pairAt: 0 }); matchStarted = null; sharePresence(); openModal('m-room'); renderRoom(); } };
+$('back').onclick = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; $('g-cover').hidden = true; if (co.room) { co.game = null; if (co.host && co.mode === 'rush') { Object.assign(co, { map: null, lastGame: null }); stopMatch(); } matchStarted = null; sharePresence(); openModal('m-room'); renderRoom(); } };
 const press = (d, sel) => { const el = d.querySelector(sel); if (el) el.click(); return !!el; };
 
 // ---------- Colosseum: room list and waiting room ----------
@@ -1373,7 +1373,6 @@ function artImg(job, cls) {
   return im;
 }
 function renderColo() {
-  matchTick();
   renderRoom();
   if ($('m-colo').hidden) return;
   const mode = $('co-mode').value, rooms = townRooms().filter(r => !mode || r.mode === mode);
@@ -1432,13 +1431,6 @@ addEventListener('resize', fitColo);
 function openColo() { fitColo(); if (co.room) { openModal('m-room'); renderRoom(); return; } coErr(''); co.page = 0; openModal('m-colo'); renderColo(); }
 // share where this player is: in town, hosting a room, or in someone's room
 function sharePresence() { co.at = Date.now(); if (co.live) co.ch.track(myPresence()).catch(() => {}); }
-// when this screen last saw each room's entry change (its own clock, so two machines' clocks never need to agree)
-const roomSeen = new Map();
-function roomFresh(r) {
-  const s = roomSeen.get(r.code);
-  if (!s || s.at !== r.at) { roomSeen.set(r.code, { at: r.at, t: Date.now() }); return true; }
-  return Date.now() - s.t < 20000;
-}
 function startPresence() {
   if (!online.sb || !online.user || co.ch) return;
   co.ch = online.sb.channel('town-presence', { config: { presence: { key: online.user.id } } })
@@ -1466,6 +1458,7 @@ function enterRoom(code) {
 }
 function showRoom() { fitColo(); $('m-colo').hidden = true; $('rm-msg').textContent = ''; openModal('m-room'); renderRoom(); }
 function leaveRoom(why) {
+  if (mm.on || co.seek) stopMatch();
   Object.assign(co, { room: null, host: false, max: 2, game: null, lastGame: null, seek: 0, vs: null });
   sharePresence(); $('m-room').hidden = true; openColo(); if (why) coErr(why);
 }
@@ -1550,82 +1543,54 @@ function startRoom() {
   const go = map => { co.rolling = null; co.map = map.k; sharePresence(); launch(d => { setupGame(d, 0, map.k); press(d, '#net-make'); }, true); };
   go(MAPS.find(m => m.k === co.map) || MAPS[0]);
 }
-// ---------- ลุย matchmaking (Karoz 2026-10-07) ----------
-// The host presses ลุย and the room starts looking (presence `seek` = when it started). A room is one team, so it meets
-// another looking ลุย room with the same number of people: 1 vs 1, 2 vs 2. Every host sorts the looking rooms the same
-// way (oldest first) and pairs them off in order, so both sides agree without a server. The room with the lower code
-// makes the match: it shares `vs` and, once the other room shares `vs` back, rolls a random map and opens the game;
-// the other room joins the game code it shares. Guests follow their own host's game code as before.
-function seekMatch() {
-  const msg = $('rm-msg'), n = membersOf(co.room).length;
-  if (co.seek) { Object.assign(co, { seek: 0, vs: null }); msg.textContent = ''; sharePresence(); renderRoom(); return; } // ยกเลิก
-  if (n * 2 > GAME_MAX) { msg.textContent = `ตอนนี้เกมเล่นได้ทีละ ${GAME_MAX} คน ห้อง ${n} คนจะจับคู่ ${n}-${n} ได้เมื่อเกมรองรับ ${n * 2} คน`; return; }
-  msg.textContent = ''; Object.assign(co, { seek: Date.now(), vs: null }); sharePresence(); renderColo();
-}
+// ---------- ลุย matchmaking (rebuilt by Karoz's request 2026-10-09) ----------
+// The server pairs players (lobby/supabase-match.sql): ลุย puts this player in the queue, the town asks every second
+// whether a match was made, and once it is, both sides go straight into the same game, no codes for anyone to type or
+// wait for: the server hands both the same game code and tells one of them to host it. The other side joins at once
+// and keeps trying while the host's game is still opening. Cancel takes the player out of the queue.
 let matchClock = 0, matchStarted = null;
+const mm = { on: false, busy: false };
+async function seekMatch() {
+  const msg = $('rm-msg'), n = membersOf(co.room).length;
+  if (co.seek) { stopMatch(); msg.textContent = ''; return; } // ยกเลิก
+  if (n * 2 > GAME_MAX) { msg.textContent = `ตอนนี้เกมเล่นได้ทีละ ${GAME_MAX} คน ห้อง ${n} คนจะจับคู่ ${n}-${n} ได้เมื่อเกมรองรับ ${n * 2} คน`; return; }
+  if (!online.sb || !online.user || online.user.id === 'preview') { msg.textContent = 'ต้องล็อกอินก่อนถึงจะจับคู่ได้'; return; }
+  msg.textContent = ''; Object.assign(co, { seek: Date.now(), vs: null, game: null }); sharePresence(); renderRoom();
+  const { data, error } = await online.sb.rpc('match_join', { p_room: co.room, p_size: n });
+  if (error) { stopMatch(); msg.textContent = /match_join|schema cache|function/.test(error.message || '') ? 'ต้องรัน supabase-match.sql ใน Supabase ก่อน' : why(error); return; }
+  mm.on = true; onMatch(data);
+}
+function stopMatch() {
+  mm.on = false; clearTimeout(matchClock);
+  if (online.sb && online.user) online.sb.rpc('match_leave').then(() => {}, () => {});
+  Object.assign(co, { seek: 0, vs: null }); sharePresence(); renderRoom();
+}
+function onMatch(d) {
+  if (!mm.on) return;
+  if (!d || d.status === 'none') { stopMatch(); $('rm-msg').textContent = 'หลุดจากคิว กดลุยอีกครั้ง'; return; }
+  if (d.status === 'matched') {
+    mm.on = false; clearTimeout(matchClock);
+    co.vs = d.partner_room || '?'; co.game = d.game_code; sharePresence(); renderRoom();
+    const code = d.game_code;
+    if (d.role === 'host') {
+      const pick = MAPS[Math.floor(Math.random() * MAPS.length)]; co.map = pick.k; sharePresence();
+      launch(g => { setupGame(g, 0, pick.k); g.getElementById('net-code').value = code; press(g, '#net-make'); }, true);
+    } else {
+      co.lastGame = code; joinGame(code);
+    }
+    return;
+  }
+  matchTick();
+}
+// while waiting: ask the server every second (that also tells it this player is still here)
 function matchTick() {
   clearTimeout(matchClock);
-  if (!co.room || !co.host || co.mode !== 'rush' || !co.seek) return;
-  matchClock = setTimeout(renderColo, 1000); // keeps the waiting clock moving
-  // Karoz 2026-10-09: a looking room says it is still there every 8 s; a room silent for 20 s (a closed tab, a dropped
-  // link) is not picked, and a room that does not answer within 8 s is dropped and skipped for 30 s, so nobody waits forever
-  if (Date.now() - (co.at || 0) > 8000) sharePresence();
-  const rooms = townRooms(), me = rooms.find(r => r.mine); if (!me) return;
-  for (const r of rooms) if (!r.mine) roomFresh(r);
-  const skip = co.skip || (co.skip = {});
-  if (me.n * 2 > GAME_MAX && !co.vs) { co.seek = 0; sharePresence(); $('rm-msg').textContent = `ตอนนี้เกมเล่นได้ทีละ ${GAME_MAX} คน จึงหยุดหาคู่ให้ก่อน`; return; } // someone walked in while looking
-  const partner = co.vs && rooms.find(r => r.code === co.vs);
-  // let go of the room we are paired with only when it has really gone. A room can drop out of the presence list for a
-  // moment (a reconnect, an update in flight) or show an older entry, so it has to stay gone or changed for 8 s; the
-  // reason is logged so a stuck match can be told apart from a lost one (Karoz 2026-10-09)
-  if (co.vs) {
-    const why = !partner ? 'gone' : partner.vs && partner.vs !== me.code ? 'paired elsewhere' : !partner.seek && !partner.game ? 'stopped looking'
-      : partner.vs !== me.code && !co.game ? 'no answer' : '';
-    if (!why) co.vsBad = 0;
-    else if (!co.vsBad) co.vsBad = Date.now();
-    else if (Date.now() - co.vsBad > 8000 && Date.now() - (co.vsAt || 0) > 8000) {
-      console.warn('ลุย: let go of room', co.vs, why);
-      // shown small in the room for now, so a screen recording says why a match was lost
-      const th = { gone: 'ห้องคู่แข่งหายไป', 'paired elsewhere': 'คู่แข่งไปจับคู่กับห้องอื่น', 'stopped looking': 'คู่แข่งหยุดหาคู่', 'no answer': 'คู่แข่งไม่ตอบ' }[why];
-      $('rm-msg').textContent = `หลุดจากห้อง ${co.vs}: ${th} กำลังหาคู่ใหม่`;
-      if (why === 'no answer' || why === 'gone') skip[co.vs] = Date.now();
-      co.vs = null; co.vsBad = 0; sharePresence();
-    }
-  }
-  if (!co.vs) {
-    // rooms still free to pair: looking, same size, not already pointing at another room
-    const pool = rooms.filter(r => r.mine || (r.mode === 'rush' && r.seek && !r.game && r.n === me.n && (!r.vs || r.vs === me.code)
-      && roomFresh(r) && !(Date.now() - (skip[r.code] || 0) < 30000)))
-      .sort((a, b) => a.seek - b.seek || a.code.localeCompare(b.code));
-    const i = pool.findIndex(r => r.mine), j = i % 2 === 0 ? i + 1 : i - 1;
-    if (i < 0 || !pool[j]) return;
-    co.vs = pool[j].code; co.vsAt = Date.now(); co.vsBad = 0; sharePresence(); renderRoom(); return;
-  }
-  if (!partner || partner.vs !== me.code) return; // wait until they point back at us (or come back into the list)
-  const maker = me.code < partner.code;
-  // Karoz 2026-10-09: both rooms work out the same game code from their two room codes, so the other room never has to
-  // wait for the maker's shared code to reach it (in the field that update did not always arrive): the maker hosts on it,
-  // the other room joins it a few seconds later and keeps trying while the maker's game is still opening
-  const pairCode = String(1000 + (Math.min(+me.code, +partner.code) * 31 + Math.max(+me.code, +partner.code)) % 9000);
-  if (!maker && gameBox.hidden && co.lastGame !== pairCode) {
-    if (!co.pairAt || co.pairWith !== partner.code) { co.pairAt = Date.now(); co.pairWith = partner.code; }
-    else if (Date.now() - co.pairAt > 5000) {
-      console.info('ลุย: joining paired game', pairCode, 'of room', partner.code);
-      co.lastGame = co.game = pairCode; sharePresence(); joinGame(pairCode); return;
-    }
-  }
-  if (maker && !co.game && matchStarted !== partner.code && gameBox.hidden) {
-    matchStarted = partner.code;
-    const pick = MAPS[Math.floor(Math.random() * MAPS.length)];
-    let t = 0; const roll = setInterval(() => { // roll through the maps for a moment, then land on a random one
-      co.rolling = MAPS[t++ % MAPS.length].name; renderRoom();
-      if (t > 10) { clearInterval(roll); co.rolling = pick.name; renderRoom(); setTimeout(() => { co.rolling = null; co.map = pick.k; sharePresence(); launch(d => { setupGame(d, 0, pick.k); d.getElementById('net-code').value = pairCode; press(d, '#net-make'); }, true); }, 500); }
-    }, 120);
-  }
-  if (!maker && partner.game && partner.game !== co.lastGame && partner.game !== pairCode && gameBox.hidden) { // the maker had to use another code
-    console.info('ลุย: joining game', partner.game, 'of room', partner.code);
-    co.lastGame = co.game = partner.game; sharePresence(); joinGame(partner.game);
-  }
+  if (!mm.on || !co.seek) return;
+  matchClock = setTimeout(async () => {
+    if (!mm.on || mm.busy) return; mm.busy = true;
+    try { const { data, error } = await online.sb.rpc('match_poll'); if (!error) onMatch(data); else matchTick(); }
+    catch (_) { matchTick(); } finally { mm.busy = false; }
+  }, 1000);
 }
 $('rm-go').onclick = startRoom;
 $('rm-back').onclick = () => leaveRoom();
@@ -2583,6 +2548,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.25</div>
+<div id="ver">v0.61.26</div>
 </body>
 </html>
