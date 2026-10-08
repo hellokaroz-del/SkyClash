@@ -610,7 +610,12 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .bg-slot:not([data-n])::before { display: none; }
 .bg-art { position: relative; display: flex; flex-direction: column; justify-content: center; border-radius: 14px; overflow: hidden;
   background: radial-gradient(circle at 50% 60%, rgba(255, 255, 255, .95), rgba(160, 210, 255, .5) 60%, transparent 75%); }
-.bg-art img { width: 100%; max-height: 380px; object-fit: contain; }
+.bg-art img, .bg-art canvas { width: 100%; max-height: 380px; object-fit: contain; }
+.bg-slot.has, .bg-grid .cell.has { cursor: pointer; }
+.bg-slot.has { place-items: center; padding: 0; color: transparent; }
+.bg-slot img, .bg-grid .cell img { width: 86%; height: 86%; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .35)); pointer-events: none; }
+.bg-grid .cell.has { display: grid; place-items: center; background: linear-gradient(#fff7e6, #f5dfb3); border-color: #e6c27a; }
+.bg-slot.has:hover, .bg-grid .cell.has:hover { filter: brightness(1.08); box-shadow: 0 0 0 2px #2a7fe0; }
 .bg-pow { margin: 8px 0 6px; display: flex; align-items: center; justify-content: center; gap: 10px; background: linear-gradient(90deg, transparent, #1d3f73 20%, #1d3f73 80%, transparent);
   color: #ffe08a; font-weight: 900; font-size: 20px; padding: 4px; border-radius: 10px; }
 .bg-pow b { color: #fff; font-size: 22px; }
@@ -1493,14 +1498,68 @@ const BAG_CELLS = 42;
 let classStats = null; // job stats from the game's data file, loaded the first time the bag opens
 function bagSlots(id, names, numbered) {
   const box = $(id); if (box.childElementCount) return;
-  names.forEach((n, i) => { const d = document.createElement('div'); d.className = 'bg-slot'; if (numbered) d.dataset.n = i + 1; d.textContent = n; box.appendChild(d); });
+  names.forEach((n, i) => { const d = document.createElement('div'); d.className = 'bg-slot'; if (numbered) d.dataset.n = i + 1; d.textContent = n; if (n === 'อาวุธ') d.id = 'bg-weapon'; box.appendChild(d); });
 }
+// ---------- gear on the character (Karoz 2026-10-08): the job's art drawn empty-handed, the weapon laid into each hand ----------
+// A rig is the empty-handed art and, per hand, where the fist is (art px), whether the weapon is mirrored, and the fist's
+// box, which is drawn again over the weapon so the fingers close round the grip. Only the Assassin has one so far.
+const RIGS = {
+  thief: { base: 'img/cls-thief-base.webp', w: 942, h: 1269, pad: 210, hands: [
+    { x: 70, y: 790, flip: false, fist: [18, 755, 125, 835] },
+    { x: 540, y: 795, flip: true, fist: [485, 755, 600, 840] },
+  ] },
+};
+// items: grip is the point in the item art the hand holds; scale sizes the art to the character
+const ITEMS = {
+  dagger_wood: { name: 'มีดไม้', slot: 'weapon', jobs: ['thief'], img: 'img/wpn-dagger-wood.webp', grip: [490, 170], scale: 0.56 },
+};
+// until items are kept on the server, every character starts with these and what is worn is saved on this device
+const STARTER = ['dagger_wood'];
+const gearOf = () => (prof.gear && typeof prof.gear === 'object') ? prof.gear : (prof.gear = {});
+const imgCache = {};
+const loadImg = src => imgCache[src] || (imgCache[src] = new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = src; }));
+async function gearArt(job) {
+  const rig = RIGS[job]; if (!rig) return null;
+  const w = gearOf().weapon && ITEMS[gearOf().weapon];
+  const [base, wp] = await Promise.all([loadImg(rig.base), w ? loadImg(w.img) : null]);
+  const cv = document.createElement('canvas'); cv.width = rig.w + rig.pad * 2; cv.height = rig.h; cv.className = 'bg-im';
+  const g = cv.getContext('2d'); g.translate(rig.pad, 0); g.drawImage(base, 0, 0);
+  if (wp) for (const h of rig.hands) {
+    const ww = wp.width * w.scale, wh = wp.height * w.scale, gx = w.grip[0] * w.scale, gy = w.grip[1] * w.scale;
+    g.save(); g.translate(h.x, h.y);
+    if (h.flip) g.scale(-1, 1);
+    g.drawImage(wp, -gx, -gy, ww, wh); g.restore();
+    const [x0, y0, x1, y1] = h.fist; g.drawImage(base, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
+  }
+  return cv;
+}
+function itemImg(id) { const im = document.createElement('img'); im.src = ITEMS[id].img; im.alt = ITEMS[id].name; return im; }
+function equip(id) {
+  const it = ITEMS[id]; if (!it) return;
+  if (!it.jobs.includes(prof.job)) { toast(`${it.name} ใช้ได้เฉพาะอาชีพ ${it.jobs.map(k => (jobOf(k) || {}).th || k).join(', ')}`); return; }
+  gearOf()[it.slot] = id; saveProf(); renderBag();
+}
+function unequip(slot) { delete gearOf()[slot]; saveProf(); renderBag(); }
+let artSeq = 0;
 function renderBag() {
   bagSlots('bg-left', BAG_LEFT, true); bagSlots('bg-right', BAG_RIGHT, true);
   const grid = $('bg-grid'); if (!grid.childElementCount) for (let i = 0; i < BAG_CELLS; i++) { const c = document.createElement('div'); c.className = 'cell'; grid.appendChild(c); }
   const j = jobOf(prof.job), lv = Math.max(1, prof.level | 0 || 1), need = expNeed(lv), cur = Math.max(0, prof.exp | 0);
   $('bg-name').textContent = prof.name || 'ผู้เล่น'; $('bg-job').textContent = j ? `${j.th} · ${j.name}` : 'ยังไม่มีอาชีพ'; $('bg-lv').textContent = lv;
-  const art = $('bg-art'); art.textContent = ''; const im = artImg(prof.job, 'bg-im'); if (im) art.appendChild(im);
+  const art = $('bg-art'), seq = ++artSeq;
+  if (RIGS[prof.job]) gearArt(prof.job).then(cv => { if (seq === artSeq && cv) { art.textContent = ''; art.appendChild(cv); } }).catch(() => {});
+  else { art.textContent = ''; const im = artImg(prof.job, 'bg-im'); if (im) art.appendChild(im); }
+  // the weapon slot shows what is worn (click to take it off); the grid shows the rest (click to wear)
+  const ws = $('bg-weapon'), worn = gearOf().weapon;
+  ws.textContent = 'อาวุธ'; ws.classList.toggle('has', !!ITEMS[worn]); ws.onclick = null; ws.title = '';
+  if (ITEMS[worn]) { ws.textContent = ''; ws.appendChild(itemImg(worn)); ws.title = `${ITEMS[worn].name} (กดเพื่อถอด)`; ws.onclick = () => unequip('weapon'); }
+  const items = STARTER.filter(id => id !== worn);
+  [...grid.children].forEach((c, i) => {
+    c.textContent = ''; c.className = 'cell'; c.onclick = null; c.title = '';
+    const id = items[i]; if (!id) return;
+    c.classList.add('has'); c.appendChild(itemImg(id)); c.title = `${ITEMS[id].name} (กดเพื่อสวมใส่)`; c.onclick = () => equip(id);
+  });
+  document.querySelector('#m-bag .bg-empty').hidden = items.length > 0;
   $('bg-expbar').style.width = Math.min(100, cur * 100 / need) + '%'; $('bg-exp').textContent = `${(cur * 100 / need).toFixed(2)}%`;
   $('bg-exp').title = `${cur.toLocaleString()} / ${need.toLocaleString()}`;
   const c = classStats && prof.job && classStats[prof.job], st = $('bg-stats'); st.textContent = '';
@@ -2048,6 +2107,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.2</div>
+<div id="ver">v0.61.3</div>
 </body>
 </html>
