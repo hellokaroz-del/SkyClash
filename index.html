@@ -1784,14 +1784,15 @@ function slimeFrame(tint, row, f, sc, face) {
   ctx.restore();
 }
 // Karoz's water-drop slime (2026-10-08): 8 frames of a hop, in the same 7 tints as the old sheet, one tint per row.
-// Cells are 195 x 181 with the slime's feet centred at x 97.5 on the bottom edge. Frames: 0 rest, 1 dip, 2 crouch,
+// Cells are 195 x 181 with the slime's feet centred at x 97.5 on the bottom edge, set 207 x 193 apart: a clear 6 px gap
+// round every cell, so drawing one never picks up the edge of the slime next to it (Karoz saw faint lines without it). Frames: 0 rest, 1 dip, 2 crouch,
 // 3 launch (tall), 4 in the air, 5 coming down, 6 landing (flat), 7 settling back
 const HOP_IMG = new Image(); HOP_IMG.src = 'assets/slime-hop.webp';
-const HOP = { w: 195, h: 181, foot: 97.5, scale: 0.5 };
+const HOP = { w: 195, h: 181, sw: 207, sh: 193, gap: 6, foot: 97.5, scale: 0.5 };
 function hopFrame(tint, f, face, sx = 1, sy = 1) {
   ctx.save(); if (face < 0) ctx.scale(-1, 1); ctx.scale(sx, sy);
   const w = HOP.w * HOP.scale, h = HOP.h * HOP.scale;
-  ctx.drawImage(HOP_IMG, (f | 0) * HOP.w, (tint || 0) * HOP.h, HOP.w, HOP.h, -HOP.foot * HOP.scale, -h, w, h);
+  ctx.drawImage(HOP_IMG, (f | 0) * HOP.sw + HOP.gap, (tint || 0) * HOP.sh + HOP.gap, HOP.w, HOP.h, -HOP.foot * HOP.scale, -h, w, h);
   ctx.restore();
 }
 // which frame, how high off the ground and how far forward, at tick t of a hop (42 ticks) or a lunge (42 ticks)
