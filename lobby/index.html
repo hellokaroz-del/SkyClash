@@ -645,6 +645,64 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 }
 @media (max-width: 480px) { .bg-eq { grid-template-columns: 60px minmax(0, 1fr) 60px; } .bg-acts, .bg-cash { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bg-slot { font-size: 11px; } }
 
+.bg-slot.has, .bg-grid .cell.has { position: relative; }
+.qty { position: absolute; right: 4px; bottom: 2px; font-style: normal; font-size: 13px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px #000, 0 0 3px #000; }
+
+/* mail (Karoz's DDTank reference 2026-10-08): letters on the left, the open letter with its items on the right */
+.mail { position: relative; width: min(860px, 100%); max-height: 100%; overflow: auto; border-radius: 14px; padding: 12px;
+  background: linear-gradient(#6b4423, #4a2d16); border: 3px solid #c99a3c; box-shadow: 0 0 0 2px #2a170a inset, 0 20px 60px rgba(0, 0, 0, .7); color: #3a2410; }
+.mail h2 { margin: 0 0 10px; color: #ffe2a0; font-size: 20px; text-shadow: 0 2px 0 #2a170a; }
+.mail .x { position: absolute; right: 10px; top: 8px; width: 38px; height: 34px; border-radius: 8px; border: 2px solid #ffd27a; background: linear-gradient(#e0502a, #a8240f); color: #fff; font-size: 18px; cursor: pointer; }
+.ml-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.ml-pane { background: #e9d5a8; border: 2px solid #8a6630; border-radius: 10px; padding: 8px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.ml-tabs { display: flex; gap: 6px; }
+.ml-tabs button, .ml-btn { border: 2px solid #ffd27a; border-radius: 8px; background: linear-gradient(#b5652a, #7a3d14); color: #fff; font: 700 14px/1 inherit; padding: 8px 12px; cursor: pointer; }
+.ml-tabs button.on { background: linear-gradient(#ff7a3a, #c4401a); }
+.ml-btn.gold { background: linear-gradient(#ffd566, #e0a020); color: #3a2410; }
+.ml-btn:disabled { filter: grayscale(.7); opacity: .6; cursor: default; }
+.ml-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; min-height: 300px; }
+.ml-list li { display: grid; grid-template-columns: 22px 44px minmax(0, 1fr); gap: 6px; align-items: center; padding: 4px 6px; border-radius: 8px; background: #f5e8c8; border: 2px solid #d9bc80; cursor: pointer; position: relative; }
+.ml-list li.on { border-color: #e0502a; background: #fff3d6; }
+.ml-list li .ic { width: 44px; height: 44px; border-radius: 6px; background: #7a4d22; display: grid; place-items: center; font-size: 24px; }
+.ml-list li .ic img { width: 38px; height: 38px; object-fit: contain; }
+.ml-list li b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ml-list li small { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; color: #6a4a24; }
+.ml-list li .new { position: absolute; right: 6px; top: 4px; font-style: normal; font-size: 11px; font-weight: 800; color: #fff; background: #3a9a3a; border-radius: 4px; padding: 1px 6px; transform: rotate(-8deg); }
+.ml-list .none { display: block; cursor: default; text-align: center; color: #6a4a24; background: none; border: 0; padding: 30px 0; }
+.ml-foot { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
+.ml-head { display: grid; grid-template-columns: 70px 1fr; border: 2px solid #c9a86a; border-radius: 6px; overflow: hidden; font-size: 14px; }
+.ml-head span { background: #a57a42; color: #fff; padding: 5px 8px; font-weight: 700; }
+.ml-head b { background: #f5e8c8; padding: 5px 8px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ml-text { flex: 1; min-height: 170px; padding: 8px 10px; white-space: pre-wrap; font-size: 14px; line-height: 28px; border-radius: 6px;
+  background: repeating-linear-gradient(transparent 0 27px, #c9a86a 27px 28px) 0 8px / 100% 28px, #f5e8c8; }
+.ml-att { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; padding: 6px; border-radius: 8px; background: #6b4423; }
+.ml-att div { aspect-ratio: 1; border-radius: 6px; background: #4a2d16; border: 2px solid #8a6630; display: grid; place-items: center; position: relative; }
+.ml-att div img { width: 80%; height: 80%; object-fit: contain; }
+@media (max-width: 700px) { .ml-body { grid-template-columns: minmax(0, 1fr); } .ml-list { min-height: 0; } }
+.ico .dot { position: absolute; right: 10px; top: 8px; width: 20px; height: 20px; border-radius: 50%; background: #ff3b2a; border: 3px solid #fff; box-shadow: 0 0 8px #ff3b2a; pointer-events: none; }
+
+/* admin item tool: only admins see the button, and the server refuses anyone else */
+.gm { width: min(620px, 100%); }
+.gm h3 { margin: 12px 0 6px; font-size: 15px; color: var(--gold); }
+.gm-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+.gm-items button { aspect-ratio: 1; border-radius: 10px; border: 2px solid var(--line); background: #15111f; padding: 4px; cursor: pointer; position: relative; }
+.gm-items button.on { border-color: var(--gold); box-shadow: 0 0 10px rgba(245, 198, 74, .6); }
+.gm-items button img { width: 100%; height: 100%; object-fit: contain; }
+.gm-items button span { position: absolute; left: 0; right: 0; bottom: 2px; font-size: 11px; color: #fff; text-shadow: 0 1px 2px #000; }
+.gm-row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.gm-row label { display: inline-flex; gap: 6px; align-items: center; font-size: 15px; cursor: pointer; }
+.gm select, .gm input[type=number], .gm input[type=text], .gm textarea { height: 40px; border-radius: 10px; border: 2px solid var(--line); background: #15111f; padding: 0 10px; font-size: 15px; color: #fff; }
+.gm textarea { height: 70px; padding: 8px 10px; width: 100%; resize: vertical; font-family: inherit; }
+.gm input[type=text] { flex: 1; min-width: 0; }
+.gm input[type=number] { width: 100px; }
+.gm-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; }
+.gm-stats label { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.gm-stats input { width: 80px !important; }
+.gm .seg { display: inline-flex; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; }
+.gm .seg button { border: 0; background: #2f2742; color: #fff; padding: 8px 14px; font-weight: 700; cursor: pointer; }
+.gm .seg button.on { background: var(--gold); color: #2b1d00; }
+#m-mail, #m-gm { z-index: 22; }
+
 #rotate { position: fixed; inset: 0; z-index: 15; display: none; place-items: center; text-align: center; padding: 24px;
   background: rgba(5, 4, 10, .85); font-size: 18px; color: #ffe7a0; }
 @media (orientation: portrait) and (max-width: 700px) { #rotate { display: grid; } }
@@ -842,6 +900,53 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
   </div>
 </div>
 
+<div class="modal" id="m-mail" hidden role="dialog" aria-modal="true" aria-labelledby="t-mail">
+  <div class="mail">
+    <button class="x" type="button" data-close aria-label="ปิด">✕</button>
+    <h2 id="t-mail">จดหมาย</h2>
+    <div class="ml-body">
+      <div class="ml-pane">
+        <div class="ml-tabs" id="ml-tabs"><button type="button" class="on" data-t="all">จดหมาย</button><button type="button" data-t="unread">ไม่ได้อ่าน</button><button type="button" data-t="sent">ส่งแล้ว</button></div>
+        <ul class="ml-list" id="ml-list"></ul>
+        <div class="ml-foot"><button type="button" class="ml-btn" id="ml-pick">เลือกทั้งหมด</button><button type="button" class="ml-btn" id="ml-del">ลบ</button><button type="button" class="ml-btn gold" id="ml-all">รับทั้งหมด</button></div>
+      </div>
+      <div class="ml-pane">
+        <div class="ml-head"><span>ผู้ส่ง</span><b id="ml-from"></b><span>หัวข้อ</span><b id="ml-subj"></b></div>
+        <div class="ml-text" id="ml-text"></div>
+        <div class="ml-att" id="ml-att"></div>
+        <div class="ml-foot"><button type="button" class="ml-btn" id="ml-write">เขียนจดหมาย</button><button type="button" class="ml-btn gold" id="ml-take" disabled>รับไอเทม</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="m-gm" hidden role="dialog" aria-modal="true" aria-labelledby="t-gm">
+  <form class="card gm" id="gm-form" novalidate>
+    <button class="x" type="button" data-close aria-label="ปิด">✕</button>
+    <h2 id="t-gm">เสกไอเทม (แอดมิน)</h2>
+    <h3>1. ไอเทม</h3>
+    <div class="gm-row"><select id="gm-cat" aria-label="หมวดหมู่"></select></div>
+    <div class="gm-items" id="gm-items" style="margin-top:8px"></div>
+    <h3>2. ผู้รับ</h3>
+    <div class="gm-row"><input type="text" id="gm-to" placeholder="ชื่อผู้เล่น คั่นด้วย , ได้หลายคน" aria-label="ชื่อผู้รับ"><label><input type="checkbox" id="gm-online"> ทุกคนที่ออนไลน์ (<span id="gm-n">0</span>)</label></div>
+    <h3>3. จำนวน</h3>
+    <div class="gm-row"><input type="number" id="gm-qty" min="1" max="9999" value="1" aria-label="จำนวน"></div>
+    <h3>4. สถานะ</h3>
+    <div class="gm-row"><span class="seg" id="gm-bound"><button type="button" class="on" data-v="1">ส่วนตัว</button><button type="button" data-v="0">สาธารณะ</button></span></div>
+    <div id="gm-stat-box"><h3>5. สเตตัสไอเทม</h3><div class="gm-stats" id="gm-stats"></div></div>
+    <h3>6. วันหมดอายุ</h3>
+    <div class="gm-row"><input type="number" id="gm-days" min="1" max="3650" value="7" aria-label="จำนวนวัน"> วัน <label><input type="checkbox" id="gm-forever"> ถาวร</label></div>
+    <h3>7. ส่งเข้า</h3>
+    <div class="gm-row"><span class="seg" id="gm-via"><button type="button" class="on" data-v="bag">กระเป๋า</button><button type="button" data-v="mail">จดหมาย</button></span></div>
+    <div id="gm-mailbox" hidden style="margin-top:8px">
+      <div class="gm-row"><input type="text" id="gm-subj" maxlength="60" placeholder="หัวข้อ (ไม่ใส่ = ของขวัญจาก GM)" aria-label="หัวข้อจดหมาย"></div>
+      <textarea id="gm-body" maxlength="500" placeholder="ข้อความ" aria-label="ข้อความ" style="margin-top:6px"></textarea>
+    </div>
+    <p class="err" id="gm-err" role="alert" style="margin-top:10px"></p>
+    <button class="btn go wide" type="submit" id="gm-send">ส่ง</button>
+  </form>
+</div>
+
 <div class="modal" id="m-acct" hidden role="dialog" aria-modal="true" aria-labelledby="t-acct">
   <div class="card">
     <button class="x" type="button" data-close aria-label="ปิด">✕</button>
@@ -855,6 +960,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
     </form>
     <p class="err" id="ac-err" role="alert"></p>
     <p class="ok" id="ac-ok" role="status"></p>
+    <button type="button" class="btn wide go" id="ac-gm" hidden style="margin-top:10px">เสกไอเทม (แอดมิน)</button>
     <hr>
     <button type="button" class="btn wide" id="ac-out">ออกจากระบบ</button>
   </div>
@@ -947,7 +1053,7 @@ const ICONS = [
   { name: 'Daily', tip: 'Daily', below: true, onScroll: true, img: 'top-daily', v: 2, box: [1466, 49, 120, 94] },
   // bottom-right tray: Karoz's icons, one per slot (centred between the tray's red gems)
   { name: 'Backpack', tip: 'กระเป๋า', img: 'bag', box: [1182, 941, 100, 100], act: () => openBag() }, { name: 'Shop', tip: 'ร้านค้า', img: 'shop', box: [1293, 941, 100, 100] },
-  { name: 'Quest', tip: 'เควส', img: 'quest', box: [1406, 941, 100, 100] }, { name: 'Mail', tip: 'จดหมาย', img: 'mail', box: [1524, 941, 100, 100] },
+  { name: 'Quest', tip: 'เควส', img: 'quest', box: [1406, 941, 100, 100] }, { name: 'Mail', tip: 'จดหมาย', img: 'mail', box: [1524, 941, 100, 100], act: () => openMail() },
   { name: 'Social', tip: 'Social', img: 'social', box: [1639, 941, 100, 100] },
   { name: 'Setting', tip: 'Setting', img: 'setting', box: [1752, 941, 100, 100], act: () => acctModal() },
 ];
@@ -1504,25 +1610,62 @@ function bagSlots(id, names, numbered) {
 // Each job has its art drawn empty-handed, and each weapon has the job's art drawn holding it: wearing a weapon swaps
 // the picture. (Laying a weapon over the empty-handed art never looked held, so every weapon/job pair is drawn whole.)
 const BARE = { thief: 'img/cls-thief-base.webp' };
+// item kinds: cat is the admin tool's category, stats are the defaults a new one gets (the admin may change them)
+const CATS = { weapon: 'อาวุธ', armor: 'ชุดและเกราะ', accessory: 'เครื่องประดับ', consumable: 'ของใช้', material: 'วัตถุดิบ' };
+const STAT_NAMES = { hp: 'HP', atk: 'ATK', matk: 'MATK', def: 'DEF', mdef: 'MDEF', spd: 'SPD', luk: 'LUK' };
 const ITEMS = {
-  dagger_wood: { name: 'มีดไม้', slot: 'weapon', jobs: ['thief'], img: 'img/wpn-dagger-wood.webp', art: { thief: 'img/cls-thief-dagger-wood.webp' } },
+  dagger_wood: { name: 'มีดไม้', cat: 'weapon', slot: 'weapon', jobs: ['thief'], stats: { atk: 10 }, img: 'img/wpn-dagger-wood.webp', art: { thief: 'img/cls-thief-dagger-wood.webp' } },
 };
-// until items are kept on the server, every character starts with these and what is worn is saved on this device
+// ---------- the player's items ----------
+// With supabase-items.sql run, items live in public.player_items (inv.live). Before that, or on the preview page,
+// every character has the starter items on this device only and what is worn is kept in prof.gear.
 const STARTER = ['dagger_wood'];
+const inv = { live: false, rows: [] };
 const gearOf = () => (prof.gear && typeof prof.gear === 'object') ? prof.gear : (prof.gear = {});
+const alive = r => ITEMS[r.item_id] && (!r.expires_at || new Date(r.expires_at) > new Date());
+function localRows() {
+  return STARTER.map((id, i) => ({ id: 'L' + i, item_id: id, slot: ITEMS[id].slot, qty: 1, bound: true, stats: ITEMS[id].stats || {}, expires_at: null, equipped: gearOf()[ITEMS[id].slot] === id }));
+}
+async function loadInv() {
+  if (online.sb && online.user && online.user.id !== 'preview') {
+    await online.sb.rpc('tidy_items').then(() => {}, () => {});
+    const { data, error } = await online.sb.from('player_items').select('id, item_id, slot, qty, bound, stats, expires_at, equipped').is('mail_id', null).order('id');
+    if (!error && Array.isArray(data)) { inv.live = true; inv.rows = data; return; }
+  }
+  inv.live = false; inv.rows = localRows();
+}
+const invRows = () => inv.rows.filter(alive);
+const wornIn = slot => invRows().find(r => r.equipped && r.slot === slot);
 function gearArt(job) {
-  const w = ITEMS[gearOf().weapon], src = (w && w.art && w.art[job]) || BARE[job];
+  const r = wornIn('weapon'), w = r && ITEMS[r.item_id], src = (w && w.art && w.art[job]) || BARE[job];
   if (!src) return artImg(job, 'bg-im');
   const im = document.createElement('img'); im.className = 'bg-im'; im.src = src; im.alt = (jobOf(job) || {}).name || '';
   return im;
 }
 function itemImg(id) { const im = document.createElement('img'); im.src = ITEMS[id].img; im.alt = ITEMS[id].name; return im; }
-function equip(id) {
-  const it = ITEMS[id]; if (!it) return;
-  if (!it.jobs.includes(prof.job)) { toast(`${it.name} ใช้ได้เฉพาะอาชีพ ${it.jobs.map(k => (jobOf(k) || {}).th || k).join(', ')}`); return; }
-  gearOf()[it.slot] = id; saveProf(); renderBag();
+// a cell or slot showing an item: picture, how many, and a tooltip with its stats, personal/public and time left
+function itemTip(r) {
+  const it = ITEMS[r.item_id], st = Object.entries(r.stats || {}).filter(([, v]) => +v).map(([k, v]) => `${STAT_NAMES[k] || k} +${v}`);
+  const left = r.expires_at ? `เหลือ ${Math.max(0, Math.ceil((new Date(r.expires_at) - new Date()) / 864e5))} วัน` : 'ถาวร';
+  return [it.name + (r.qty > 1 ? ` x${r.qty}` : ''), st.join(' '), (r.bound ? 'ส่วนตัว' : 'สาธารณะ') + ' · ' + left].filter(Boolean).join('\n');
 }
-function unequip(slot) { delete gearOf()[slot]; saveProf(); renderBag(); }
+function fillItem(el, r) {
+  el.appendChild(itemImg(r.item_id));
+  if (r.qty > 1) { const q = document.createElement('i'); q.className = 'qty'; q.textContent = r.qty; el.appendChild(q); }
+}
+async function setWorn(r, on) {
+  const it = ITEMS[r.item_id];
+  if (on && it.jobs && !it.jobs.includes(prof.job)) { toast(`${it.name} ใช้ได้เฉพาะอาชีพ ${it.jobs.map(k => (jobOf(k) || {}).th || k).join(', ')}`); return; }
+  if (inv.live) {
+    const { error } = await online.sb.rpc('equip_item', { p_id: r.id, p_on: on });
+    if (error) { toast(why(error)); return; }
+    await loadInv();
+  } else {
+    if (on) gearOf()[r.slot] = r.item_id; else delete gearOf()[r.slot];
+    saveProf(); inv.rows = localRows();
+  }
+  renderBag();
+}
 function renderBag() {
   bagSlots('bg-left', BAG_LEFT, true); bagSlots('bg-right', BAG_RIGHT, true);
   const grid = $('bg-grid'); if (!grid.childElementCount) for (let i = 0; i < BAG_CELLS; i++) { const c = document.createElement('div'); c.className = 'cell'; grid.appendChild(c); }
@@ -1530,34 +1673,179 @@ function renderBag() {
   $('bg-name').textContent = prof.name || 'ผู้เล่น'; $('bg-job').textContent = j ? `${j.th} · ${j.name}` : 'ยังไม่มีอาชีพ'; $('bg-lv').textContent = lv;
   const art = $('bg-art'); art.textContent = ''; const im = gearArt(prof.job); if (im) art.appendChild(im);
   // the weapon slot shows what is worn (click to take it off); the grid shows the rest (click to wear)
-  const ws = $('bg-weapon'), worn = gearOf().weapon;
-  ws.textContent = 'อาวุธ'; ws.classList.toggle('has', !!ITEMS[worn]); ws.onclick = null; ws.title = '';
-  if (ITEMS[worn]) { ws.textContent = ''; ws.appendChild(itemImg(worn)); ws.title = `${ITEMS[worn].name} (กดเพื่อถอด)`; ws.onclick = () => unequip('weapon'); }
-  const items = STARTER.filter(id => id !== worn);
+  const ws = $('bg-weapon'), worn = wornIn('weapon');
+  ws.textContent = 'อาวุธ'; ws.classList.toggle('has', !!worn); ws.onclick = null; ws.title = '';
+  if (worn) { ws.textContent = ''; fillItem(ws, worn); ws.title = itemTip(worn) + '\n(กดเพื่อถอด)'; ws.onclick = () => setWorn(worn, false); }
+  const items = invRows().filter(r => !r.equipped);
   [...grid.children].forEach((c, i) => {
     c.textContent = ''; c.className = 'cell'; c.onclick = null; c.title = '';
-    const id = items[i]; if (!id) return;
-    c.classList.add('has'); c.appendChild(itemImg(id)); c.title = `${ITEMS[id].name} (กดเพื่อสวมใส่)`; c.onclick = () => equip(id);
+    const r = items[i]; if (!r) return;
+    c.classList.add('has'); fillItem(c, r); c.title = itemTip(r) + (ITEMS[r.item_id].slot ? '\n(กดเพื่อสวมใส่)' : ''); if (ITEMS[r.item_id].slot) c.onclick = () => setWorn(r, true);
   });
   document.querySelector('#m-bag .bg-empty').hidden = items.length > 0;
   $('bg-expbar').style.width = Math.min(100, cur * 100 / need) + '%'; $('bg-exp').textContent = `${(cur * 100 / need).toFixed(2)}%`;
   $('bg-exp').title = `${cur.toLocaleString()} / ${need.toLocaleString()}`;
   const c = classStats && prof.job && classStats[prof.job], st = $('bg-stats'); st.textContent = '';
+  const gear = {}; for (const r of invRows()) if (r.equipped) for (const [k, v] of Object.entries(r.stats || {})) gear[k] = (gear[k] || 0) + (+v || 0);
   for (const [k, label] of [['hp', 'HP'], ['atk', 'ATK'], ['matk', 'MATK'], ['def', 'DEF'], ['mdef', 'MDEF'], ['spd', 'SPD'], ['luk', 'LUK']]) {
     const d = document.createElement('div'), a = document.createElement('span'), b = document.createElement('b');
-    a.textContent = label; b.textContent = c ? c[k] : '-'; d.append(a, b); st.appendChild(d);
+    const add = gear[k] || 0; a.textContent = label; b.textContent = c ? c[k] + add : '-'; if (add) b.title = `อาชีพ ${c ? c[k] : 0} + ไอเทม ${add}`; d.append(a, b); st.appendChild(d);
   }
-  // power: a simple sum of the job's stats until gear adds to them
-  $('bg-pow').textContent = c ? Math.round(c.hp / 10 + c.atk + c.matk + c.def + c.mdef + c.spd + c.luk).toLocaleString() : '0';
+  // power: a simple sum of the job's stats plus what worn items add
+  const sum = k => (c ? c[k] : 0) + (gear[k] || 0);
+  $('bg-pow').textContent = c ? Math.round(sum('hp') / 10 + sum('atk') + sum('matk') + sum('def') + sum('mdef') + sum('spd') + sum('luk')).toLocaleString() : '0';
 }
 function openBag() {
   renderBag(); openModal('m-bag');
+  loadInv().then(renderBag);
   if (!classStats) fetch('../game-data.json').then(r => r.json()).then(d => { classStats = d.classes || {}; renderBag(); }).catch(() => {});
 }
 // tabs and buttons that come later
 for (const b of $('bg-tabs').querySelectorAll('button')) if (!b.classList.contains('on')) b.onclick = () => toast(`${b.textContent} ${SOON}`);
 for (const b of $('bg-side').querySelectorAll('button')) b.onclick = () => { for (const o of $('bg-side').children) o.classList.toggle('on', o === b); };
 for (const b of $('bg-acts').querySelectorAll('button')) b.onclick = () => toast(`${b.textContent} ${SOON}`);
+
+// ---------- mail ----------
+const mail = { rows: [], items: [], tab: 'all', open: null, picked: new Set() };
+const serverOn = () => !!(online.sb && online.user && online.user.id !== 'preview');
+async function loadMail() {
+  if (!serverOn()) { mail.rows = []; mail.items = []; return false; }
+  await online.sb.rpc('tidy_items').then(() => {}, () => {});
+  const [m, it] = await Promise.all([
+    online.sb.from('mails').select('id, from_name, subject, body, read_at, created_at, expires_at').order('created_at', { ascending: false }).limit(60),
+    online.sb.from('player_items').select('id, item_id, qty, bound, stats, expires_at, mail_id').not('mail_id', 'is', null),
+  ]);
+  if (m.error) return false;
+  mail.rows = m.data || []; mail.items = it.data || [];
+  return true;
+}
+const mailItems = id => mail.items.filter(r => r.mail_id === id && ITEMS[r.item_id]);
+function renderMail() {
+  const ul = $('ml-list'); ul.textContent = '';
+  for (const b of $('ml-tabs').children) b.classList.toggle('on', b.dataset.t === mail.tab);
+  const rows = mail.tab === 'unread' ? mail.rows.filter(m => !m.read_at) : mail.tab === 'sent' ? [] : mail.rows;
+  if (!rows.length) { const li = document.createElement('li'); li.className = 'none'; li.textContent = mail.tab === 'sent' ? 'ยังไม่มีจดหมายที่ส่ง' : 'ไม่มีจดหมาย'; ul.appendChild(li); }
+  for (const m of rows) {
+    const li = document.createElement('li'); li.classList.toggle('on', mail.open === m.id);
+    const ck = document.createElement('input'); ck.type = 'checkbox'; ck.checked = mail.picked.has(m.id); ck.setAttribute('aria-label', 'เลือก');
+    ck.onclick = e => { e.stopPropagation(); if (ck.checked) mail.picked.add(m.id); else mail.picked.delete(m.id); };
+    const ic = document.createElement('span'); ic.className = 'ic'; const at = mailItems(m.id);
+    if (at.length) ic.appendChild(itemImg(at[0].item_id)); else ic.textContent = '✉';
+    const tx = document.createElement('span'), b = document.createElement('b'), sm = document.createElement('small');
+    b.textContent = m.subject || '(ไม่มีหัวข้อ)';
+    const left = Math.max(0, Math.ceil((new Date(m.expires_at) - new Date()) / 864e5));
+    sm.innerHTML = '<span></span><span></span>'; sm.children[0].textContent = 'ผู้ส่ง ' + m.from_name; sm.children[1].textContent = `เวลาคงเหลือ ${left} วัน`;
+    tx.append(b, sm); li.append(ck, ic, tx);
+    if (!m.read_at) { const n = document.createElement('i'); n.className = 'new'; n.textContent = 'ใหม่'; li.appendChild(n); }
+    li.onclick = () => openLetter(m);
+    ul.appendChild(li);
+  }
+  const m = mail.rows.find(x => x.id === mail.open);
+  $('ml-from').textContent = m ? m.from_name : ''; $('ml-subj').textContent = m ? m.subject : ''; $('ml-text').textContent = m ? m.body : '';
+  const att = $('ml-att'); att.textContent = ''; const items = m ? mailItems(m.id) : [];
+  for (let i = 0; i < 5; i++) { const d = document.createElement('div'); const r = items[i]; if (r) { fillItem(d, r); d.title = itemTip(r); } att.appendChild(d); }
+  $('ml-take').disabled = !items.length;
+  $('ml-all').disabled = !mail.items.length;
+  markMailIcon();
+}
+async function openLetter(m) {
+  mail.open = m.id; renderMail();
+  if (!m.read_at) { m.read_at = new Date().toISOString(); renderMail(); online.sb.rpc('read_mail', { p_mail: m.id }).then(() => {}, () => {}); }
+}
+async function openMail() {
+  mail.open = null; mail.picked.clear(); renderMail(); openModal('m-mail');
+  if (!serverOn()) { $('ml-text').textContent = 'จดหมายใช้ได้เมื่อล็อกอินแล้ว'; return; }
+  if (!await loadMail()) { $('ml-text').textContent = 'ต้องรัน supabase-items.sql ใน Supabase ก่อน จดหมายถึงจะใช้ได้'; return; }
+  renderMail();
+}
+async function claim(id) {
+  const { data, error } = await online.sb.rpc('claim_mail', { p_mail: id });
+  if (error) { toast(why(error)); return; }
+  toast(data ? `รับไอเทม ${data} ชิ้นเข้ากระเป๋าแล้ว` : 'ไม่มีไอเทมให้รับ');
+  await loadMail(); renderMail(); loadInv().then(() => { if (!$('m-bag').hidden) renderBag(); });
+}
+$('ml-take').onclick = () => mail.open && claim(mail.open);
+$('ml-all').onclick = () => claim(null);
+$('ml-pick').onclick = () => { const all = mail.rows.every(m => mail.picked.has(m.id)); mail.picked = new Set(all ? [] : mail.rows.map(m => m.id)); renderMail(); };
+$('ml-del').onclick = async () => {
+  const ids = [...mail.picked]; if (!ids.length) { toast('ติ๊กเลือกจดหมายที่จะลบก่อน'); return; }
+  if (ids.some(id => mailItems(id).length) && !confirm('จดหมายที่เลือกยังมีไอเทมที่ยังไม่ได้รับ ลบแล้วไอเทมจะหายไปด้วย ลบเลยไหม')) return;
+  const { error } = await online.sb.rpc('delete_mail', { p_ids: ids });
+  if (error) { toast(why(error)); return; }
+  mail.picked.clear(); if (ids.includes(mail.open)) mail.open = null;
+  await loadMail(); renderMail();
+};
+$('ml-write').onclick = () => toast(`เขียนจดหมาย ${SOON}`);
+for (const b of $('ml-tabs').children) b.onclick = () => { mail.tab = b.dataset.t; renderMail(); };
+// red dot on the tray's mail icon while a letter is unread (checked with the EXP refresh)
+function markMailIcon() {
+  const ic = document.querySelector('.ico[aria-label=Mail]'); if (!ic) return;
+  let d = ic.querySelector('.dot'); const on = mail.rows.some(m => !m.read_at);
+  if (on && !d) { d = document.createElement('i'); d.className = 'dot'; ic.appendChild(d); } else if (!on && d) d.remove();
+}
+
+// ---------- admin: create items for players (Karoz 2026-10-08) ----------
+const gm = { item: null, bound: true, via: 'bag' };
+function gmOnline() { return co.live ? townPeople().map(p => p.key).filter(k => k && k !== 'me') : []; }
+function gmItems() {
+  const box = $('gm-items'); box.textContent = '';
+  const list = Object.entries(ITEMS).filter(([, it]) => it.cat === $('gm-cat').value);
+  if (!list.length) { const p = document.createElement('p'); p.textContent = 'หมวดนี้ยังไม่มีไอเทม'; p.style.margin = '0'; box.appendChild(p); }
+  for (const [id, it] of list) {
+    const b = document.createElement('button'); b.type = 'button'; b.title = it.name; b.classList.toggle('on', gm.item === id);
+    b.appendChild(itemImg(id)); const n = document.createElement('span'); n.textContent = it.name; b.appendChild(n);
+    b.onclick = () => { gm.item = id; gmItems(); gmStats(); };
+    box.appendChild(b);
+  }
+}
+function gmStats() {
+  const it = ITEMS[gm.item], box = $('gm-stats'); box.textContent = '';
+  const keys = it && it.stats ? Object.keys(it.stats) : [];
+  $('gm-stat-box').hidden = !keys.length;
+  for (const k of keys) {
+    const l = document.createElement('label'), sp = document.createElement('span'), inp = document.createElement('input');
+    sp.textContent = STAT_NAMES[k] || k; inp.type = 'number'; inp.dataset.k = k; inp.value = it.stats[k]; l.append(sp, inp); box.appendChild(l);
+  }
+}
+function openGm() {
+  if (!isAdmin()) return;
+  const cat = $('gm-cat'); if (!cat.childElementCount) for (const [k, v] of Object.entries(CATS)) { const o = document.createElement('option'); o.value = k; o.textContent = v; cat.appendChild(o); }
+  if (!gm.item) gm.item = Object.keys(ITEMS).find(id => ITEMS[id].cat === cat.value) || null;
+  $('gm-n').textContent = gmOnline().length; $('gm-err').textContent = '';
+  gmItems(); gmStats(); openModal('m-gm');
+}
+$('gm-cat').onchange = () => { gm.item = Object.keys(ITEMS).find(id => ITEMS[id].cat === $('gm-cat').value) || null; gmItems(); gmStats(); };
+$('gm-online').onchange = () => { $('gm-n').textContent = gmOnline().length; };
+$('gm-forever').onchange = () => { $('gm-days').disabled = $('gm-forever').checked; };
+for (const [id, key] of [['gm-bound', 'bound'], ['gm-via', 'via']]) for (const b of $(id).children) b.onclick = () => {
+  for (const o of $(id).children) o.classList.toggle('on', o === b);
+  gm[key] = key === 'bound' ? b.dataset.v === '1' : b.dataset.v;
+  $('gm-mailbox').hidden = gm.via !== 'mail';
+};
+$('gm-form').onsubmit = async e => {
+  e.preventDefault(); const err = $('gm-err'); err.textContent = '';
+  const it = ITEMS[gm.item]; if (!it) { err.textContent = 'เลือกไอเทมก่อน'; return; }
+  const names = $('gm-to').value.split(',').map(x => x.trim()).filter(Boolean), ids = $('gm-online').checked ? gmOnline() : [];
+  if (!names.length && !ids.length) { err.textContent = 'ใส่ชื่อผู้รับ หรือติ๊กทุกคนที่ออนไลน์'; return; }
+  const qty = $('gm-qty').value | 0; if (qty < 1 || qty > 9999) { err.textContent = 'จำนวนต้องอยู่ระหว่าง 1 ถึง 9999'; return; }
+  const forever = $('gm-forever').checked, days = $('gm-days').value | 0;
+  if (!forever && (days < 1 || days > 3650)) { err.textContent = 'วันหมดอายุต้องอยู่ระหว่าง 1 ถึง 3650 วัน หรือติ๊กถาวร'; return; }
+  const stats = {}; for (const inp of $('gm-stats').querySelectorAll('input')) stats[inp.dataset.k] = +inp.value || 0;
+  if (!serverOn()) { err.textContent = 'ต้องล็อกอินก่อน'; return; }
+  const btn = $('gm-send'); btn.disabled = true;
+  const { data, error } = await online.sb.rpc('admin_give_item', {
+    p_names: names, p_ids: ids, p_item: gm.item, p_slot: it.slot || null, p_qty: qty, p_bound: gm.bound, p_stats: stats,
+    p_days: forever ? null : days, p_via: gm.via, p_subject: $('gm-subj').value, p_body: $('gm-body').value,
+  });
+  btn.disabled = false;
+  if (error) {
+    const msg = String(error.message || '');
+    err.textContent = /not_admin/.test(msg) ? 'บัญชีนี้ไม่ใช่แอดมิน' : /no_target/.test(msg) ? 'ไม่พบผู้เล่นชื่อนี้' : /admin_give_item|schema cache|function/.test(msg) ? 'ต้องรัน supabase-items.sql ใน Supabase ก่อน' : why(error);
+    return;
+  }
+  toast(`ส่ง ${it.name} x${qty} ให้ ${data} คน ${gm.via === 'mail' ? 'ทางจดหมาย' : 'เข้ากระเป๋า'}แล้ว`);
+  loadInv().then(() => { if (!$('m-bag').hidden) renderBag(); });
+};
 
 const JOBS = [
   { k: 'blade', foot: 0.69, th: 'นักดาบ', name: 'Swordman', diff: 1, desc: 'นักสู้แนวหน้า ยืนรับดาเมจแทนทีม',
@@ -1776,6 +2064,13 @@ async function refreshProgress() {
   saveProf(); renderProf(); sharePresence();
   if (!$('m-bag').hidden) renderBag();
 }
+// new letters (and items sent straight into the bag) show up within 15 s too
+async function refreshMail() {
+  if (!serverOn() || document.hidden) return;
+  if (await loadMail()) { markMailIcon(); if (!$('m-mail').hidden) renderMail(); }
+  if (!$('m-bag').hidden) { await loadInv(); renderBag(); }
+}
+setInterval(refreshMail, 15000);
 setInterval(refreshProgress, 15000);
 addEventListener('focus', refreshProgress);
 document.addEventListener('visibilitychange', refreshProgress);
@@ -1793,7 +2088,7 @@ async function startChat() {
     const sb = online.sb;
     await loadProfile();
     if (online.me && online.me.tutorial_done === false) startTutorial();
-    loadAdmins();
+    loadAdmins(); refreshMail();
     // no history: each visit (and each refresh) starts with an empty chat and shows only new messages
     if (!online.v2) sysLine('ตอนนี้ใช้ได้แค่ช่องโลก ต้องรัน SQL ช่องแชทใน Supabase ก่อน');
     else if (online.me.guild) sysLine(`คุณอยู่กิลด์ ${online.me.guild}`);
@@ -2006,8 +2301,10 @@ function acctModal() {
   $('ac-name').textContent = prof.name || '-';
   $('ac-kind').textContent = [ids.includes('google') ? 'Google' : '', u.email || ''].filter(Boolean).join(' · ');
   $('ac-pass-f').hidden = !u.email;
+  $('ac-gm').hidden = !isAdmin();
   acMsg(); openModal('m-acct');
 }
+$('ac-gm').onclick = () => { closeModal($('m-acct')); openGm(); };
 $('ac-rename').onclick = () => { closeModal($('m-acct')); nameModal(false); };
 $('ac-pass-f').onsubmit = async e => {
   e.preventDefault(); acMsg();
@@ -2087,6 +2384,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.5</div>
+<div id="ver">v0.61.6</div>
 </body>
 </html>
