@@ -921,7 +921,7 @@ img { -webkit-user-drag: none; user-drag: none; }
         <div class="bg-acts" id="bg-acts"><button type="button">จัดอัตโนมัติ</button><button type="button">ขาย</button><button type="button">แยก</button><button type="button">จัดเรียง</button></div>
         <div class="bg-cash"><span>ทอง <i id="bg-gold">0</i></span><span>เพชร <i id="bg-gem">0</i></span><span>คูปอง <i id="bg-coupon">0</i></span></div>
       </div>
-      <div class="bg-side" id="bg-side"><button type="button" class="on">ทั้งหมด</button><button type="button">ไอเทม</button><button type="button">แฟชั่น</button><button type="button">ของใช้</button></div>
+      <div class="bg-side" id="bg-side"><button type="button" class="on" data-tab="gear">อุปกรณ์</button><button type="button" data-tab="use">ของใช้</button><button type="button" data-tab="mat">วัตถุดิบ</button><button type="button" data-tab="fashion">แฟชั่น</button></div>
     </div>
   </div>
 </div>
@@ -1659,7 +1659,10 @@ function bagSlots(id, names, numbered) {
 // the picture. (Laying a weapon over the empty-handed art never looked held, so every weapon/job pair is drawn whole.)
 const BARE = { thief: 'img/cls-thief-base.webp' };
 // item kinds: cat is the admin tool's category, stats are the defaults a new one gets (the admin may change them)
-const CATS = { weapon: 'อาวุธ', armor: 'ชุดและเกราะ', accessory: 'เครื่องประดับ', consumable: 'ของใช้', material: 'วัตถุดิบ' };
+const CATS = { weapon: 'อาวุธ', armor: 'ชุดและเกราะ', accessory: 'เครื่องประดับ', consumable: 'ของใช้', material: 'วัตถุดิบ', fashion: 'แฟชั่น' };
+// the bag's side tabs and the item categories each one shows (Karoz 2026-10-08)
+const BAG_TABS = { gear: ['weapon', 'armor', 'accessory'], use: ['consumable'], mat: ['material'], fashion: ['fashion'] };
+let bagTab = 'gear';
 const STAT_NAMES = { hp: 'HP', atk: 'ATK', matk: 'MATK', def: 'DEF', mdef: 'MDEF', spd: 'SPD', luk: 'LUK' };
 const ITEMS = {
   dagger_wood: { name: 'มีดไม้', cat: 'weapon', slot: 'weapon', jobs: ['thief'], stats: { atk: 10 }, img: 'img/wpn-dagger-wood.webp', art: { thief: 'img/cls-thief-dagger-wood.webp' } },
@@ -1731,7 +1734,7 @@ function renderBag() {
   ws.textContent = 'อาวุธ'; ws.classList.toggle('has', !!worn); ws.onclick = null; ws.title = '';
   ws.onpointerdown = null;
   if (worn) { ws.textContent = ''; fillItem(ws, worn); ws.title = itemTip(worn) + '\n(กดเพื่อถอด หรือลากออกนอกกระเป๋าเพื่อทำลาย)'; ws.onclick = () => drag.justDropped || setWorn(worn, false); ws.onpointerdown = e => dragStart(e, worn, ws); }
-  const items = invRows().filter(r => !r.equipped);
+  const items = invRows().filter(r => !r.equipped && BAG_TABS[bagTab].includes(ITEMS[r.item_id].cat));
   [...grid.children].forEach((c, i) => {
     c.textContent = ''; c.className = 'cell'; c.onclick = null; c.onpointerdown = null; c.title = '';
     const r = items[i]; if (!r) return;
@@ -1760,7 +1763,7 @@ function openBag() {
 }
 // tabs and buttons that come later
 for (const b of $('bg-tabs').querySelectorAll('button')) if (!b.classList.contains('on')) b.onclick = () => toast(`${b.textContent} ${SOON}`);
-for (const b of $('bg-side').querySelectorAll('button')) b.onclick = () => { for (const o of $('bg-side').children) o.classList.toggle('on', o === b); };
+for (const b of $('bg-side').querySelectorAll('button')) b.onclick = () => { bagTab = b.dataset.tab; for (const o of $('bg-side').children) o.classList.toggle('on', o === b); renderBag(); };
 for (const b of $('bg-acts').querySelectorAll('button')) b.onclick = () => toast(`${b.textContent} ${SOON}`);
 
 // a yes/no question in the game's own window (the browser's confirm box looks out of place)
@@ -2514,6 +2517,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.11</div>
+<div id="ver">v0.61.12</div>
 </body>
 </html>
