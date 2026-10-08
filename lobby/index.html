@@ -708,6 +708,7 @@ img { -webkit-user-drag: none; user-drag: none; }
 .gm textarea { height: 70px; padding: 8px 10px; width: 100%; resize: vertical; font-family: inherit; }
 .gm input[type=text] { flex: 1; min-width: 0; }
 .gm input[type=number] { width: 100px; }
+.gm-note { margin: 6px 0 0 !important; font-size: 13px !important; color: var(--muted); }
 .gm-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; }
 .gm-stats label { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
 .gm-stats input { width: 80px !important; }
@@ -967,10 +968,13 @@ img { -webkit-user-drag: none; user-drag: none; }
     <div class="gm-row"><input type="number" id="gm-qty" min="1" max="9999" value="1" aria-label="จำนวน"></div>
     <h3>4. สถานะ</h3>
     <div class="gm-row"><span class="seg" id="gm-bound"><button type="button" class="on" data-v="1">ส่วนตัว</button><button type="button" data-v="0">สาธารณะ</button></span></div>
+    <p class="gm-note">ส่วนตัว: เทรดหรือให้คนอื่นไม่ได้ · สาธารณะ: เทรดหรือให้คนอื่นได้ แต่พอสวมใส่แล้วจะกลายเป็นส่วนตัวทันที</p>
     <div id="gm-stat-box"><h3>5. สเตตัสไอเทม</h3><div class="gm-stats" id="gm-stats"></div></div>
-    <h3>6. วันหมดอายุ</h3>
+    <h3>6. เลเวลขั้นต่ำที่ใช้ได้</h3>
+    <div class="gm-row">Lv. <input type="number" id="gm-lv" min="1" max="100" value="1" aria-label="เลเวลขั้นต่ำที่ใช้ได้"></div>
+    <h3>7. วันหมดอายุ</h3>
     <div class="gm-row"><input type="number" id="gm-days" min="1" max="3650" value="7" aria-label="จำนวนวัน"> วัน <label><input type="checkbox" id="gm-forever"> ถาวร</label></div>
-    <h3>7. ส่งเข้า</h3>
+    <h3>8. ส่งเข้า</h3>
     <div class="gm-row"><span class="seg" id="gm-via"><button type="button" class="on" data-v="bag">กระเป๋า</button><button type="button" data-v="mail">จดหมาย</button></span></div>
     <div id="gm-mailbox" hidden style="margin-top:8px">
       <div class="gm-row"><input type="text" id="gm-subj" maxlength="60" placeholder="หัวข้อ (ไม่ใส่ = ของขวัญจาก GM)" aria-label="หัวข้อจดหมาย"></div>
@@ -1668,12 +1672,12 @@ const inv = { live: false, rows: [], err: '' };
 const gearOf = () => (prof.gear && typeof prof.gear === 'object') ? prof.gear : (prof.gear = {});
 const alive = r => ITEMS[r.item_id] && (!r.expires_at || new Date(r.expires_at) > new Date());
 function localRows() {
-  return STARTER.filter(id => !(prof.gone || []).includes(id)).map((id, i) => ({ id: 'L' + i, item_id: id, slot: ITEMS[id].slot, qty: 1, bound: true, stats: ITEMS[id].stats || {}, expires_at: null, equipped: gearOf()[ITEMS[id].slot] === id }));
+  return STARTER.filter(id => !(prof.gone || []).includes(id)).map((id, i) => ({ id: 'L' + i, item_id: id, slot: ITEMS[id].slot, qty: 1, bound: true, stats: ITEMS[id].stats || {}, expires_at: null, min_level: 1, equipped: gearOf()[ITEMS[id].slot] === id }));
 }
 async function loadInv() {
   if (online.sb && online.user && online.user.id !== 'preview') {
     await online.sb.rpc('tidy_items').then(() => {}, () => {});
-    const { data, error } = await online.sb.from('player_items').select('id, item_id, slot, qty, bound, stats, expires_at, equipped').is('mail_id', null).order('id');
+    const { data, error } = await online.sb.from('player_items').select('id, item_id, slot, qty, bound, stats, expires_at, equipped, min_level').is('mail_id', null).order('id');
     if (!error && Array.isArray(data)) { inv.live = true; inv.err = ''; inv.rows = data; return; }
     inv.err = 'โหลดไอเทมจากเซิร์ฟเวอร์ไม่ได้: ' + (error && error.message || 'ไม่ทราบสาเหตุ');
     console.warn('items', error);
@@ -1693,7 +1697,8 @@ function itemImg(id) { const im = document.createElement('img'); im.src = ITEMS[
 function itemTip(r) {
   const it = ITEMS[r.item_id], st = Object.entries(r.stats || {}).filter(([, v]) => +v).map(([k, v]) => `${STAT_NAMES[k] || k} +${v}`);
   const left = r.expires_at ? `เหลือ ${Math.max(0, Math.ceil((new Date(r.expires_at) - new Date()) / 864e5))} วัน` : 'ถาวร';
-  return [it.name + (r.qty > 1 ? ` x${r.qty}` : ''), st.join(' '), (r.bound ? 'ส่วนตัว' : 'สาธารณะ') + ' · ' + left].filter(Boolean).join('\n');
+  const lv = (r.min_level | 0) > 1 ? `ใช้ได้ตั้งแต่ Lv.${r.min_level}` : '';
+  return [it.name + (r.qty > 1 ? ` x${r.qty}` : ''), st.join(' '), lv, (r.bound ? 'ส่วนตัว (เทรดไม่ได้)' : 'สาธารณะ (เทรดได้ ใส่แล้วจะเป็นส่วนตัว)') + ' · ' + left].filter(Boolean).join('\n');
 }
 function fillItem(el, r) {
   el.appendChild(itemImg(r.item_id));
@@ -1702,9 +1707,12 @@ function fillItem(el, r) {
 async function setWorn(r, on) {
   const it = ITEMS[r.item_id];
   if (on && it.jobs && !it.jobs.includes(prof.job)) { toast(`${it.name} ใช้ได้เฉพาะอาชีพ ${it.jobs.map(k => (jobOf(k) || {}).th || k).join(', ')}`); return; }
+  if (on && (prof.level || 1) < (r.min_level | 0)) { toast(`${it.name} ใช้ได้ตั้งแต่ Lv.${r.min_level}`); return; }
   if (inv.live) {
     const { error } = await online.sb.rpc('equip_item', { p_id: r.id, p_on: on });
-    if (error) { toast(why(error)); return; }
+    if (error) { const m = String(error.message || ''); toast(/low_level/.test(m) ? `${it.name} ใช้ได้ตั้งแต่ Lv.${r.min_level}` : /expired/.test(m) ? `${it.name} หมดอายุแล้ว` : why(error)); return; }
+    // wearing a public item binds it to this character (the server does it; this just says so)
+    if (on && !r.bound) toast(`${it.name} กลายเป็นของส่วนตัวแล้ว เทรดไม่ได้อีก`);
     await loadInv();
   } else {
     if (on) gearOf()[r.slot] = r.item_id; else delete gearOf()[r.slot];
@@ -1947,6 +1955,7 @@ $('gm-form').onsubmit = async e => {
   const names = $('gm-to').value.split(',').map(x => x.trim()).filter(Boolean), ids = $('gm-online').checked ? gmOnline() : [];
   if (!names.length && !ids.length) { err.textContent = 'ใส่ชื่อผู้รับ หรือติ๊กทุกคนที่ออนไลน์'; return; }
   const qty = $('gm-qty').value | 0; if (qty < 1 || qty > 9999) { err.textContent = 'จำนวนต้องอยู่ระหว่าง 1 ถึง 9999'; return; }
+  const minLv = $('gm-lv').value | 0; if (minLv < 1 || minLv > 100) { err.textContent = 'เลเวลขั้นต่ำต้องอยู่ระหว่าง 1 ถึง 100'; return; }
   const forever = $('gm-forever').checked, days = $('gm-days').value | 0;
   if (!forever && (days < 1 || days > 3650)) { err.textContent = 'วันหมดอายุต้องอยู่ระหว่าง 1 ถึง 3650 วัน หรือติ๊กถาวร'; return; }
   const stats = {}; for (const inp of $('gm-stats').querySelectorAll('input')) stats[inp.dataset.k] = +inp.value || 0;
@@ -1954,13 +1963,13 @@ $('gm-form').onsubmit = async e => {
   const btn = $('gm-send'); btn.disabled = true; btn.textContent = 'กำลังส่ง...';
   const { data, error } = await online.sb.rpc('admin_give_item', {
     p_names: names, p_ids: ids, p_item: gm.item, p_slot: it.slot || null, p_qty: qty, p_bound: gm.bound, p_stats: stats,
-    p_days: forever ? null : days, p_via: gm.via, p_subject: $('gm-subj').value, p_body: $('gm-body').value,
+    p_days: forever ? null : days, p_via: gm.via, p_subject: $('gm-subj').value, p_body: $('gm-body').value, p_min_level: minLv,
   });
   btn.disabled = false; btn.textContent = 'ส่ง';
   if (error) {
     const msg = String(error.message || '');
     console.warn('admin_give_item', error);
-    err.textContent = (/not_admin/.test(msg) ? 'บัญชีนี้ไม่ใช่แอดมินในฐานข้อมูล (profiles.is_admin)' : /no_target/.test(msg) ? `ไม่พบผู้เล่นชื่อ ${names.join(', ') || '(ไม่มีคนออนไลน์)'}` : /admin_give_item|schema cache|function/.test(msg) ? 'ต้องรัน supabase-items.sql ใน Supabase ก่อน' : 'ส่งไม่สำเร็จ') + ` [${msg}]`;
+    err.textContent = (/not_admin/.test(msg) ? 'บัญชีนี้ไม่ใช่แอดมินในฐานข้อมูล (profiles.is_admin)' : /no_target/.test(msg) ? `ไม่พบผู้เล่นชื่อ ${names.join(', ') || '(ไม่มีคนออนไลน์)'}` : /admin_give_item|schema cache|function/.test(msg) ? 'ต้องรัน supabase-items.sql ใน Supabase อีกครั้งก่อน (มีเลเวลขั้นต่ำเพิ่ม)' : 'ส่งไม่สำเร็จ') + ` [${msg}]`;
     return;
   }
   const done = `ส่ง ${it.name} x${qty} ให้ ${data} คน ${gm.via === 'mail' ? 'ทางจดหมาย' : 'เข้ากระเป๋า'}แล้ว (${new Date().toLocaleTimeString('th-TH')})`;
@@ -2505,6 +2514,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.10</div>
+<div id="ver">v0.61.11</div>
 </body>
 </html>
