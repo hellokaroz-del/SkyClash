@@ -1725,6 +1725,21 @@ async function loadProfile() {
   saveProf(); renderProf();
   online.v2 = 'guild' in online.me;
 }
+// EXP and level can change outside this page (another tab, the server, an admin in Supabase), so they are read again
+// every 15 s while the page is on screen and whenever it comes back into view; the frame and the bag update without a reload
+async function refreshProgress() {
+  if (!online.sb || !online.user || online.user.id === 'preview' || !online.me || document.hidden) return;
+  const { data, error } = await online.sb.from('profiles').select('level, exp').eq('id', online.user.id).maybeSingle();
+  if (error || !data) return;
+  const level = data.level || 1, exp = data.exp || 0;
+  if (level === (prof.level || 1) && exp === (prof.exp || 0)) return;
+  Object.assign(online.me, { level, exp }); Object.assign(prof, { level, exp });
+  saveProf(); renderProf(); sharePresence();
+  if (!$('m-bag').hidden) renderBag();
+}
+setInterval(refreshProgress, 15000);
+addEventListener('focus', refreshProgress);
+document.addEventListener('visibilitychange', refreshProgress);
 async function setProfile(patch) {
   const r = await online.sb.from('profiles').update(patch).eq('id', online.user.id);
   if (r.error) { toast(/guild|room|column/.test(r.error.message) ? 'ต้องรัน SQL ช่องแชทใน Supabase ก่อน' : why(r.error)); return false; }
@@ -2033,6 +2048,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.1</div>
+<div id="ver">v0.61.2</div>
 </body>
 </html>
