@@ -1032,8 +1032,9 @@ function newMatch(demo) {
     return { i, k, c, x, y: surfaceY(x), vy: 0, hp: c.hp, maxHp: c.hp, face: i === 0 ? 1 : -1, angle: 45, energy: c.maxEn, maxEn: c.maxEn,
       cds: [0, 0, 0, 0, 0, 0], warpCd: 0, frozen: 0, cck: '', ccRes: 0, bind: 0, shield: 0, buffs: [], debs: [], dots: [], marks: [], hidden: 0, seenX: x, fatigue: 0, once: {},
       walk: 0, armed: null, rage: 0, dmgAcc: 0, lossAcc: 0, iron: false, bot, alive: true, lastPower: null, items: 2, boost: false,
+      // no made-up players (Karoz 2026-10-09): name, level and guild come from the town (applyInfo) or stay blank
       name: bot ? 'บอท' : (vsBot ? 'คุณ' : 'ผู้เล่น ' + (i + 1)),
-      guild: bot ? 'หุ่นเหล็ก' : i === 0 ? 'ฟ้าคราม' : 'ลมใต้', level: bot ? 15 : i === 0 ? 12 : 10 };
+      guild: '', level: bot ? ((myInfo() || {}).lv || null) : null };
   };
   if (mobMode && !demo) { // the slime stage: the hero always starts
     const hero = mk(0, picks[0], STAGE.spawn[0], false);
@@ -3456,7 +3457,7 @@ function drawTip() {
   const i = S.players.findIndex((_, k) => { const r = portraitRect(k); return mouse.x >= r.x && mouse.x <= r.x + r.w && mouse.y >= r.y && mouse.y <= r.y + r.h + 12; });
   if (i < 0) return;
   const pl = S.players[i], r = portraitRect(i);
-  const lines = [[pl.name, '#ffd36a', 600], [`กิลด์: ${pl.guild || 'ไม่มีกิลด์'}`, '#fff', 400], [`เลเวล ${pl.level} · ${pl.c.name}`, '#fff', 400], [`HP ${pl.hp}/${pl.maxHp}`, '#9fe0ff', 400], [`POW ${Math.floor(pl.rage)}/${POW_MAX}`, '#ffe066', 400]];
+  const lines = [[pl.name, '#ffd36a', 600], [`กิลด์: ${pl.guild || 'ไม่มีกิลด์'}`, '#fff', 400], [`เลเวล ${pl.level || '-'} · ${pl.c.name}`, '#fff', 400], [`HP ${pl.hp}/${pl.maxHp}`, '#9fe0ff', 400], [`POW ${Math.floor(pl.rage)}/${POW_MAX}`, '#ffe066', 400]];
   const w = 150, h = 16 + lines.length * 18, x = Math.min(VW - w - 6, r.x), y = r.y + r.h + 16;
   panel(x, y, w, h, 8);
   ctx.textAlign = 'left';
