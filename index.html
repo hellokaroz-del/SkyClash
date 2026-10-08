@@ -1788,7 +1788,10 @@ function slimeFrame(tint, row, f, sc, face) {
 // round every cell, so drawing one never picks up the edge of the slime next to it (Karoz saw faint lines without it). Frames: 0 rest, 1 dip, 2 crouch,
 // 3 launch (tall), 4 in the air, 5 coming down, 6 landing (flat), 7 settling back
 const HOP_IMG = new Image(); HOP_IMG.src = 'assets/slime-hop.webp';
-const HOP = { w: 195, h: 181, sw: 207, sh: 193, gap: 6, foot: 97.5, scale: 0.5 };
+// how big the slime is drawn on the field: 40 px tall at rest (its rest frame is 147 px in the sheet), about a hero on
+// the field (the crawl pictures are 41-47 px) (Karoz 2026-10-08)
+const SLIME_DRAW = 40 / 147;
+const HOP = { w: 195, h: 181, sw: 207, sh: 193, gap: 6, foot: 97.5, scale: SLIME_DRAW };
 // Karoz's hurt faces (2026-10-08), laid out exactly like the hop sheet: 0 startled, 1 sad and squashed, 2 wailing
 // (a hard hit), 3 sad standing (low HP)
 const HURT_IMG = new Image(); HURT_IMG.src = 'assets/slime-hurt.webp';
@@ -1801,7 +1804,7 @@ function hopFrame(tint, f, face, sx = 1, sy = 1, img = HOP_IMG) {
 // Karoz's death (2026-10-08): 8 frames, the slime cracks, breaks apart and ends as a puddle with droplets, same 7 tints.
 // Cells are 244 x 152 (wider, for the flying pieces), feet centred at x 122 on the bottom edge, set 256 x 164 apart
 const DIE_IMG = new Image(); DIE_IMG.src = 'assets/slime-die.webp';
-const DIE = { w: 244, h: 152, sw: 256, sh: 164, gap: 6, foot: 122, scale: 0.5, step: 5, hold: 24, fade: 16 };
+const DIE = { w: 244, h: 152, sw: 256, sh: 164, gap: 6, foot: 122, scale: SLIME_DRAW, step: 5, hold: 24, fade: 16 };
 function dieFrame(tint, f, face) {
   ctx.save(); if (face < 0) ctx.scale(-1, 1);
   ctx.drawImage(DIE_IMG, f * DIE.sw + DIE.gap, (tint || 0) * DIE.sh + DIE.gap, DIE.w, DIE.h, -DIE.foot * DIE.scale, -DIE.h * DIE.scale, DIE.w * DIE.scale, DIE.h * DIE.scale);
@@ -1812,7 +1815,7 @@ const dieTime = () => ready(DIE_IMG) ? DIE.step * 8 + DIE.hold + DIE.fade : 44;
 // which frame, how high off the ground and how far forward, at tick t of a hop (42 ticks) or a lunge (42 ticks)
 function hopPose(t) {
   const f = t < 2 ? 0 : t < 4 ? 1 : t < 6 ? 2 : t < 12 ? 3 : t < 21 ? 4 : t < 28 ? 5 : t < 34 ? 6 : t < 39 ? 7 : 0;
-  return { f, lift: t >= 6 && t < 28 ? Math.sin(Math.PI * (t - 6) / 22) * 46 : 0, push: 0 };
+  return { f, lift: t >= 6 && t < 28 ? Math.sin(Math.PI * (t - 6) / 22) * 26 : 0, push: 0 };
 }
 function lungePose(t) {
   const f = t < 4 ? 1 : t < 8 ? 2 : t < 14 ? 3 : t < 22 ? 4 : t < 27 ? 5 : t < 33 ? 6 : t < 38 ? 7 : 0;
@@ -1823,7 +1826,7 @@ function lungePose(t) {
 // 1 dip, 2 crouch, 3 spring forward, 4 dash (streaking, droplets behind), 5 impact (splat), 6 springing back, 7 rest.
 // Cells are 312 x 172 with the feet at x 192.4 on the bottom edge (room behind for the trail), set 324 x 184 apart
 const ATK_IMG = new Image(); ATK_IMG.src = 'assets/slime-atk.webp';
-const ATK = { w: 312, h: 172, sw: 324, sh: 184, gap: 6, foot: 192.38, scale: 0.5, hit: 23 };
+const ATK = { w: 312, h: 172, sw: 324, sh: 184, gap: 6, foot: 192.38, scale: SLIME_DRAW, hit: 23 };
 function atkFrame(tint, f, face) {
   ctx.save(); if (face < 0) ctx.scale(-1, 1);
   ctx.drawImage(ATK_IMG, f * ATK.sw + ATK.gap, (tint || 0) * ATK.sh + ATK.gap, ATK.w, ATK.h, -ATK.foot * ATK.scale, -ATK.h * ATK.scale, ATK.w * ATK.scale, ATK.h * ATK.scale);
@@ -1832,7 +1835,7 @@ function atkFrame(tint, f, face) {
 // the lunge's 42 ticks: wind up, dash forward 30 px, hit on the impact frame (tick ATK.hit), hold, slide back
 function atkPose(t) {
   const f = t < 4 ? 0 : t < 8 ? 1 : t < 12 ? 2 : t < 17 ? 3 : t < ATK.hit ? 4 : t < 30 ? 5 : t < 36 ? 6 : 7;
-  const push = t < 12 ? 0 : t < ATK.hit ? 30 * (t - 12) / (ATK.hit - 12) : t < 30 ? 30 : 30 * Math.max(0, 1 - (t - 30) / 12);
+  const push = t < 12 ? 0 : t < ATK.hit ? 20 * (t - 12) / (ATK.hit - 12) : t < 30 ? 20 : 20 * Math.max(0, 1 - (t - 30) / 12);
   return { f, lift: 0, push, atk: true };
 }
 const mobKilled = () => S.mob.spawned - S.players.filter(x => x.mob && x.alive).length;
@@ -1990,7 +1993,7 @@ function drawMob(p, active) {
     }
     if (p.alive) { // the shadow shrinks as the slime leaves the ground
       const g = 1 - Math.min(0.6, pose.lift / 80);
-      ctx.fillStyle = `rgba(0,0,0,${0.22 * g})`; ctx.beginPath(); ctx.ellipse(p.face * pose.push, 0, 24 * g, 4 * g, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = `rgba(0,0,0,${0.22 * g})`; ctx.beginPath(); ctx.ellipse(p.face * pose.push, 0, 14 * g, 3 * g, 0, 0, 7); ctx.fill();
     }
     ctx.save(); ctx.globalAlpha = alpha; ctx.translate(p.face * pose.push + shake, -pose.lift);
     if (pose.atk) atkFrame(p.tint, pose.f, p.face); else hopFrame(p.tint, pose.f, p.face, sx, sy, sheet);
@@ -2403,7 +2406,7 @@ function drawAvatar(p, pose) {
     if (!p.alive) ctx.globalAlpha = 0.35;
     ctx.save(); ctx.translate(0, pose === 'stand' ? -6 : -19);
     if (ready(HOP_IMG)) { // the whole water-drop slime fits the card (it is drawn larger in its cell than the old one was)
-      const b = Math.sin((S ? S.frame : 0) * 0.09), k = pose === 'stand' ? 0.5 : 0.42; ctx.scale(k, k); hopFrame(p.tint, 0, 1, 1 - 0.03 * b, 1 + 0.035 * b); }
+      const b = Math.sin((S ? S.frame : 0) * 0.09), k = (pose === 'stand' ? 0.5 : 0.42) * 0.5 / SLIME_DRAW; ctx.scale(k, k); hopFrame(p.tint, 0, 1, 1 - 0.03 * b, 1 + 0.035 * b); }
     else slimeFrame(p.tint, 'idle', Math.floor((S ? S.frame : 0) / 3) % 14, pose === 'stand' ? 1.8 : 1.6, 1);
     ctx.restore();
     ctx.globalAlpha = 1; return;
