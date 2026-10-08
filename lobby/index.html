@@ -1303,7 +1303,7 @@ function watchGameRoom(fr) {
     if (m && co.room && co.host && m[1] !== co.game) { co.game = m[1]; sharePresence(); } // guests in the waiting room follow this code
   }, 1500);
 }
-$('back').onclick = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; $('g-cover').hidden = true; if (co.room) { co.game = null; if (co.host && co.mode === 'rush') Object.assign(co, { map: null, seek: 0, vs: null }); matchStarted = null; sharePresence(); openModal('m-room'); renderRoom(); } };
+$('back').onclick = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; $('g-cover').hidden = true; if (co.room) { co.game = null; if (co.host && co.mode === 'rush') Object.assign(co, { map: null, seek: 0, vs: null, lastGame: null, pairAt: 0 }); matchStarted = null; sharePresence(); openModal('m-room'); renderRoom(); } };
 const press = (d, sel) => { const el = d.querySelector(sel); if (el) el.click(); return !!el; };
 
 // ---------- Colosseum: room list and waiting room ----------
@@ -1603,15 +1603,26 @@ function matchTick() {
   }
   if (!partner || partner.vs !== me.code) return; // wait until they point back at us (or come back into the list)
   const maker = me.code < partner.code;
+  // Karoz 2026-10-09: both rooms work out the same game code from their two room codes, so the other room never has to
+  // wait for the maker's shared code to reach it (in the field that update did not always arrive): the maker hosts on it,
+  // the other room joins it a few seconds later and keeps trying while the maker's game is still opening
+  const pairCode = String(1000 + (Math.min(+me.code, +partner.code) * 31 + Math.max(+me.code, +partner.code)) % 9000);
+  if (!maker && gameBox.hidden && co.lastGame !== pairCode) {
+    if (!co.pairAt || co.pairWith !== partner.code) { co.pairAt = Date.now(); co.pairWith = partner.code; }
+    else if (Date.now() - co.pairAt > 5000) {
+      console.info('ลุย: joining paired game', pairCode, 'of room', partner.code);
+      co.lastGame = co.game = pairCode; sharePresence(); joinGame(pairCode); return;
+    }
+  }
   if (maker && !co.game && matchStarted !== partner.code && gameBox.hidden) {
     matchStarted = partner.code;
     const pick = MAPS[Math.floor(Math.random() * MAPS.length)];
     let t = 0; const roll = setInterval(() => { // roll through the maps for a moment, then land on a random one
       co.rolling = MAPS[t++ % MAPS.length].name; renderRoom();
-      if (t > 10) { clearInterval(roll); co.rolling = pick.name; renderRoom(); setTimeout(() => { co.rolling = null; co.map = pick.k; sharePresence(); launch(d => { setupGame(d, 0, pick.k); press(d, '#net-make'); }, true); }, 500); }
+      if (t > 10) { clearInterval(roll); co.rolling = pick.name; renderRoom(); setTimeout(() => { co.rolling = null; co.map = pick.k; sharePresence(); launch(d => { setupGame(d, 0, pick.k); d.getElementById('net-code').value = pairCode; press(d, '#net-make'); }, true); }, 500); }
     }, 120);
   }
-  if (!maker && partner.game && partner.game !== co.lastGame && gameBox.hidden) {
+  if (!maker && partner.game && partner.game !== co.lastGame && partner.game !== pairCode && gameBox.hidden) { // the maker had to use another code
     console.info('ลุย: joining game', partner.game, 'of room', partner.code);
     co.lastGame = co.game = partner.game; sharePresence(); joinGame(partner.game);
   }
@@ -2572,6 +2583,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.24</div>
+<div id="ver">v0.61.25</div>
 </body>
 </html>
