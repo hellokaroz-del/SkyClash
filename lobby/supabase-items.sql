@@ -129,3 +129,13 @@ language sql security definer set search_path = public as $$
 $$;
 revoke all on function public.read_mail(bigint), public.claim_mail(bigint), public.delete_mail(bigint[]), public.tidy_items() from public;
 grant execute on function public.read_mail(bigint), public.claim_mail(bigint), public.delete_mail(bigint[]), public.tidy_items() to authenticated;
+
+-- 6) destroy an item from the bag (Karoz 2026-10-08: dragging an item out of the bag, after a warning)
+create or replace function public.destroy_item(p_id bigint) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from public.player_items where id = p_id and owner = auth.uid() and mail_id is null;
+  if not found then raise exception 'no_item'; end if;
+end $$;
+revoke all on function public.destroy_item(bigint) from public;
+grant execute on function public.destroy_item(bigint) to authenticated;

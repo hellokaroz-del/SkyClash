@@ -715,6 +715,18 @@ img { -webkit-user-drag: none; user-drag: none; }
 .gm .seg button { border: 0; background: #2f2742; color: #fff; padding: 8px 14px; font-weight: 700; cursor: pointer; }
 .gm .seg button.on { background: var(--gold); color: #2b1d00; }
 #m-mail, #m-gm { z-index: 22; }
+#m-ask { z-index: 26; }
+.ask { text-align: center; }
+.ask-item { width: 84px; height: 84px; margin: 6px auto 10px; border-radius: 12px; border: 2px solid #e6c27a; background: linear-gradient(#fff7e6, #f5dfb3); display: grid; place-items: center; position: relative; }
+.ask-item img { width: 80%; height: 80%; object-fit: contain; }
+.btn.bad { background: #c0392b; border-color: #e8705f; color: #fff; }
+.btn.bad:hover { background: #d9483a; }
+/* dragging an item: the picture follows the pointer; a slot it fits lights up; outside the bag turns it red (destroy) */
+.drag-ghost { position: fixed; z-index: 60; width: 64px; height: 64px; pointer-events: none; transform: translate(-50%, -50%) scale(1.1); filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .45)); }
+.drag-ghost.out { filter: drop-shadow(0 0 8px #ff3b2a) drop-shadow(0 0 2px #ff3b2a); }
+.bg-slot.fit, .bg-grid.fit .cell { box-shadow: 0 0 0 3px #2a7fe0, 0 0 12px rgba(42, 127, 224, .7); }
+.bg-slot.has, .bg-grid .cell.has { touch-action: none; }
+.dragging { opacity: .35; }
 
 #rotate { position: fixed; inset: 0; z-index: 15; display: none; place-items: center; text-align: center; padding: 24px;
   background: rgba(5, 4, 10, .85); font-size: 18px; color: #ffe7a0; }
@@ -881,7 +893,7 @@ img { -webkit-user-drag: none; user-drag: none; }
   </form>
 </div>
 
-<div class="modal" id="m-bag" hidden role="dialog" aria-modal="true" aria-labelledby="t-bag">
+<div class="modal" id="m-bag" hidden role="dialog" aria-modal="true" aria-labelledby="t-bag" data-xonly>
   <div class="bag">
     <button class="x" type="button" data-close aria-label="ปิด">✕</button>
     <h2 id="t-bag">กระเป๋า</h2>
@@ -910,6 +922,15 @@ img { -webkit-user-drag: none; user-drag: none; }
       </div>
       <div class="bg-side" id="bg-side"><button type="button" class="on">ทั้งหมด</button><button type="button">ไอเทม</button><button type="button">แฟชั่น</button><button type="button">ของใช้</button></div>
     </div>
+  </div>
+</div>
+
+<div class="modal" id="m-ask" hidden role="alertdialog" aria-modal="true" aria-labelledby="t-ask" data-xonly>
+  <div class="card ask">
+    <h2 id="t-ask">ทำลายไอเทม</h2>
+    <div class="ask-item" id="ask-item"></div>
+    <p id="ask-text"></p>
+    <div class="row"><button type="button" class="btn wide" id="ask-no">ยกเลิก</button><button type="button" class="btn wide bad" id="ask-yes">ทำลาย</button></div>
   </div>
 </div>
 
@@ -1048,9 +1069,9 @@ let lastFocus = null;
 function openModal(id) { lastFocus = document.activeElement; const m = $(id); m.hidden = false; const f = m.querySelector('input, .btn'); if (f) f.focus(); }
 function closeModal(m) { if (m.dataset.lock) return; m.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
 for (const m of document.querySelectorAll('.modal')) {
-  m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-close]')) closeModal(m); });
+  m.addEventListener('click', e => { if ((e.target === m && !m.hasAttribute('data-xonly')) || e.target.closest('[data-close]')) closeModal(m); });
 }
-addEventListener('keydown', e => { if (e.key === 'Escape') for (const m of document.querySelectorAll('.modal:not([hidden])')) closeModal(m); });
+addEventListener('keydown', e => { if (e.key === 'Escape') for (const m of document.querySelectorAll('.modal:not([hidden]):not([data-xonly])')) closeModal(m); });
 
 // ---------- buildings and icons ----------
 // label position in the 1920x1080 town space; HL holds each glow image's box and the building outline (made by hl2.py in the project files)
@@ -1647,7 +1668,7 @@ const inv = { live: false, rows: [], err: '' };
 const gearOf = () => (prof.gear && typeof prof.gear === 'object') ? prof.gear : (prof.gear = {});
 const alive = r => ITEMS[r.item_id] && (!r.expires_at || new Date(r.expires_at) > new Date());
 function localRows() {
-  return STARTER.map((id, i) => ({ id: 'L' + i, item_id: id, slot: ITEMS[id].slot, qty: 1, bound: true, stats: ITEMS[id].stats || {}, expires_at: null, equipped: gearOf()[ITEMS[id].slot] === id }));
+  return STARTER.filter(id => !(prof.gone || []).includes(id)).map((id, i) => ({ id: 'L' + i, item_id: id, slot: ITEMS[id].slot, qty: 1, bound: true, stats: ITEMS[id].stats || {}, expires_at: null, equipped: gearOf()[ITEMS[id].slot] === id }));
 }
 async function loadInv() {
   if (online.sb && online.user && online.user.id !== 'preview') {
@@ -1700,12 +1721,15 @@ function renderBag() {
   // the weapon slot shows what is worn (click to take it off); the grid shows the rest (click to wear)
   const ws = $('bg-weapon'), worn = wornIn('weapon');
   ws.textContent = 'อาวุธ'; ws.classList.toggle('has', !!worn); ws.onclick = null; ws.title = '';
-  if (worn) { ws.textContent = ''; fillItem(ws, worn); ws.title = itemTip(worn) + '\n(กดเพื่อถอด)'; ws.onclick = () => setWorn(worn, false); }
+  ws.onpointerdown = null;
+  if (worn) { ws.textContent = ''; fillItem(ws, worn); ws.title = itemTip(worn) + '\n(กดเพื่อถอด หรือลากออกนอกกระเป๋าเพื่อทำลาย)'; ws.onclick = () => drag.justDropped || setWorn(worn, false); ws.onpointerdown = e => dragStart(e, worn, ws); }
   const items = invRows().filter(r => !r.equipped);
   [...grid.children].forEach((c, i) => {
-    c.textContent = ''; c.className = 'cell'; c.onclick = null; c.title = '';
+    c.textContent = ''; c.className = 'cell'; c.onclick = null; c.onpointerdown = null; c.title = '';
     const r = items[i]; if (!r) return;
-    c.classList.add('has'); fillItem(c, r); c.title = itemTip(r) + (ITEMS[r.item_id].slot ? '\n(กดเพื่อสวมใส่)' : ''); if (ITEMS[r.item_id].slot) c.onclick = () => setWorn(r, true);
+    c.classList.add('has'); fillItem(c, r); c.title = itemTip(r) + (ITEMS[r.item_id].slot ? '\n(กดเพื่อสวมใส่)' : '') + '\n(ลากออกนอกกระเป๋าเพื่อทำลาย)';
+    if (ITEMS[r.item_id].slot) c.onclick = () => drag.justDropped || setWorn(r, true);
+    c.onpointerdown = e => dragStart(e, r, c);
   });
   const empty = document.querySelector('#m-bag .bg-empty');
   empty.textContent = inv.err || 'ยังไม่มีไอเทม'; empty.hidden = items.length > 0 && !inv.err;
@@ -1730,6 +1754,74 @@ function openBag() {
 for (const b of $('bg-tabs').querySelectorAll('button')) if (!b.classList.contains('on')) b.onclick = () => toast(`${b.textContent} ${SOON}`);
 for (const b of $('bg-side').querySelectorAll('button')) b.onclick = () => { for (const o of $('bg-side').children) o.classList.toggle('on', o === b); };
 for (const b of $('bg-acts').querySelectorAll('button')) b.onclick = () => toast(`${b.textContent} ${SOON}`);
+
+// a yes/no question in the game's own window (the browser's confirm box looks out of place)
+function askDestroy(r) {
+  return new Promise(done => {
+    const box = $('ask-item'); box.textContent = ''; fillItem(box, r);
+    $('ask-text').textContent = `ทำลาย ${ITEMS[r.item_id].name}${r.qty > 1 ? ` x${r.qty}` : ''} ใช่ไหม? ทำลายแล้วกู้คืนไม่ได้`;
+    const end = v => { $('m-ask').hidden = true; done(v); };
+    $('ask-yes').onclick = () => end(true); $('ask-no').onclick = () => end(false);
+    $('m-ask').hidden = false; $('ask-no').focus();
+  });
+}
+async function destroyItem(r) {
+  if (!await askDestroy(r)) return;
+  if (inv.live) {
+    const { error } = await online.sb.rpc('destroy_item', { p_id: r.id });
+    if (error) { toast(/destroy_item|schema cache|function/.test(error.message || '') ? 'ต้องรัน supabase-items.sql ใน Supabase อีกครั้งก่อน (มีฟังก์ชันทำลายไอเทมเพิ่ม)' : why(error)); return; }
+    await loadInv();
+  } else {
+    if (r.equipped) delete gearOf()[r.slot];
+    prof.gone = [...new Set([...(prof.gone || []), r.item_id])]; saveProf(); inv.rows = localRows();
+  }
+  toast(`ทำลาย ${ITEMS[r.item_id].name} แล้ว`); renderBag();
+}
+
+// ---------- dragging items in the bag (Karoz 2026-10-08) ----------
+// Press and hold an item, then move: drop a piece of gear on its slot to wear it, a worn piece back on the grid to take it
+// off, or anything outside the bag window to destroy it (after asking). A press without moving is still a click.
+const drag = { r: null, from: null, ghost: null, x: 0, y: 0, on: false, el: null };
+function dragStart(e, r, el) {
+  if (e.button !== undefined && e.button !== 0) return;
+  Object.assign(drag, { r, el, x: e.clientX, y: e.clientY, on: false });
+  el.setPointerCapture && el.setPointerCapture(e.pointerId);
+}
+function dragTarget(x, y, r = drag.r) {
+  const t = document.elementFromPoint(x, y);
+  if (!t || !t.closest('#m-bag .bag')) return { out: true };
+  const slot = t.closest('#bg-weapon'), grid = t.closest('#bg-grid');
+  return { slot: slot && ITEMS[r.item_id].slot === 'weapon' ? slot : null, grid };
+}
+addEventListener('pointermove', e => {
+  if (!drag.r) return;
+  if (!drag.on) {
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
+    drag.on = true; drag.el.classList.add('dragging');
+    const g = itemImg(drag.r.item_id); g.className = 'drag-ghost'; document.body.appendChild(g); drag.ghost = g;
+  }
+  drag.ghost.style.left = e.clientX + 'px'; drag.ghost.style.top = e.clientY + 'px';
+  const t = dragTarget(e.clientX, e.clientY);
+  drag.ghost.classList.toggle('out', !!t.out);
+  $('bg-weapon').classList.toggle('fit', !!t.slot && !drag.r.equipped);
+  $('bg-grid').classList.toggle('fit', !!t.grid && !!drag.r.equipped);
+});
+function dragEnd(e) {
+  if (!drag.r) return;
+  const r = drag.r, was = drag.on;
+  if (drag.ghost) drag.ghost.remove();
+  if (drag.el) drag.el.classList.remove('dragging');
+  $('bg-weapon').classList.remove('fit'); $('bg-grid').classList.remove('fit');
+  Object.assign(drag, { r: null, el: null, ghost: null, on: false });
+  if (!was) return; // a plain click: the element's own click does the rest
+  drag.justDropped = true; setTimeout(() => { drag.justDropped = false; }, 0);
+  const t = dragTarget(e.clientX, e.clientY, r);
+  if (t.out) destroyItem(r);
+  else if (t.slot && !r.equipped) setWorn(r, true);
+  else if (t.grid && r.equipped) setWorn(r, false);
+}
+addEventListener('pointerup', dragEnd);
+addEventListener('pointercancel', () => { if (drag.ghost) drag.ghost.remove(); if (drag.el) drag.el.classList.remove('dragging'); Object.assign(drag, { r: null, el: null, ghost: null, on: false }); });
 
 // ---------- mail ----------
 const mail = { rows: [], items: [], tab: 'all', open: null, picked: new Set() };
@@ -2413,6 +2505,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.9</div>
+<div id="ver">v0.61.10</div>
 </body>
 </html>
