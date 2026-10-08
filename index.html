@@ -4209,8 +4209,8 @@ async function netOpen(role, code) {
   catch (e) {
     const c = e && e.code;
     if (c === 'taken' && role === 'host') return netOpen('host', netCode());
-    if (role !== 'host' && c !== 'not_permitted' && (NET.tries || 0) < 2) { // a link that did not come up: try again by itself
-      NET.tries = (NET.tries || 0) + 1; netMsg(`กำลังลองต่อห้อง ${code} ใหม่ (${NET.tries}/2)...`);
+    if (role !== 'host' && c !== 'not_permitted' && (NET.tries || 0) < 6) { // a link that did not come up (or a host not open yet): try again
+      NET.tries = (NET.tries || 0) + 1; netMsg(`กำลังลองต่อห้อง ${code} ใหม่ (${NET.tries}/6)...`);
       setTimeout(() => netOpen(role, code), 1500); return;
     }
     netMsg(c === 'not_permitted' ? 'บัญชีนี้เข้าห้องออนไลน์ไม่ได้ (ต้องได้รับแชร์เกมโดยตรงจากเจ้าของ)' : c === 'not_found' ? `ไม่พบห้อง ${code} ตรวจรหัสอีกครั้ง`
@@ -4243,7 +4243,8 @@ function netLeave(msg) {
 }
 const netCode = () => String(1000 + Math.floor(Math.random() * 9000));
 const netGo = (role, code) => { if (NET.busy) return; NET.busy = true; netOpen(role, code).finally(() => { NET.busy = false; }); };
-document.getElementById('net-make').onclick = () => netGo('host', netCode());
+// the town may put a code in the box first (ลุย matchmaking agrees on it in advance); otherwise a random one
+document.getElementById('net-make').onclick = () => { const c = document.getElementById('net-code').value.replace(/\D/g, ''); netGo('host', c.length === 4 ? c : netCode()); };
 document.getElementById('net-join').onclick = () => {
   NET.tries = 0; NET.joinTries = 0;
   const c = document.getElementById('net-code').value.replace(/\D/g, '');
