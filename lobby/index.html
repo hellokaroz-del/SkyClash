@@ -679,6 +679,13 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .ml-att div { aspect-ratio: 1; border-radius: 6px; background: #4a2d16; border: 2px solid #8a6630; display: grid; place-items: center; position: relative; }
 .ml-att div img { width: 80%; height: 80%; object-fit: contain; }
 @media (max-width: 700px) { .ml-body { grid-template-columns: minmax(0, 1fr); } .ml-list { min-height: 0; } }
+/* a letter is waiting: the mail icon glows gold and slowly pulses (Karoz 2026-10-08) */
+.ico.pic.glow img { animation: mailGlow 2.4s ease-in-out infinite; }
+@keyframes mailGlow {
+  0%, 100% { filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .5)) drop-shadow(0 0 0 rgba(255, 214, 90, 0)); }
+  50% { filter: drop-shadow(0 0 10px rgba(255, 224, 120, 1)) drop-shadow(0 0 24px rgba(255, 190, 60, .9)) brightness(1.18); }
+}
+@media (prefers-reduced-motion: reduce) { .ico.pic.glow img { animation: none; filter: drop-shadow(0 0 10px rgba(255, 224, 120, 1)); } }
 .ico .dot { position: absolute; right: 10px; top: 8px; width: 20px; height: 20px; border-radius: 50%; background: #ff3b2a; border: 3px solid #fff; box-shadow: 0 0 8px #ff3b2a; pointer-events: none; }
 
 /* admin item tool: only admins see the button, and the server refuses anyone else */
@@ -1781,6 +1788,7 @@ for (const b of $('ml-tabs').children) b.onclick = () => { mail.tab = b.dataset.
 function markMailIcon() {
   const ic = document.querySelector('.ico[aria-label=Mail]'); if (!ic) return;
   let d = ic.querySelector('.dot'); const on = mail.rows.some(m => !m.read_at);
+  ic.classList.toggle('glow', on);
   if (on && !d) { d = document.createElement('i'); d.className = 'dot'; ic.appendChild(d); } else if (!on && d) d.remove();
 }
 
@@ -2384,6 +2392,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.6</div>
+<div id="ver">v0.61.7</div>
 </body>
 </html>
