@@ -950,6 +950,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
       <textarea id="gm-body" maxlength="500" placeholder="ข้อความ" aria-label="ข้อความ" style="margin-top:6px"></textarea>
     </div>
     <p class="err" id="gm-err" role="alert" style="margin-top:10px"></p>
+    <p class="ok" id="gm-ok" role="status" style="margin-top:10px"></p>
     <button class="btn go wide" type="submit" id="gm-send">ส่ง</button>
   </form>
 </div>
@@ -1627,7 +1628,7 @@ const ITEMS = {
 // With supabase-items.sql run, items live in public.player_items (inv.live). Before that, or on the preview page,
 // every character has the starter items on this device only and what is worn is kept in prof.gear.
 const STARTER = ['dagger_wood'];
-const inv = { live: false, rows: [] };
+const inv = { live: false, rows: [], err: '' };
 const gearOf = () => (prof.gear && typeof prof.gear === 'object') ? prof.gear : (prof.gear = {});
 const alive = r => ITEMS[r.item_id] && (!r.expires_at || new Date(r.expires_at) > new Date());
 function localRows() {
@@ -1637,7 +1638,9 @@ async function loadInv() {
   if (online.sb && online.user && online.user.id !== 'preview') {
     await online.sb.rpc('tidy_items').then(() => {}, () => {});
     const { data, error } = await online.sb.from('player_items').select('id, item_id, slot, qty, bound, stats, expires_at, equipped').is('mail_id', null).order('id');
-    if (!error && Array.isArray(data)) { inv.live = true; inv.rows = data; return; }
+    if (!error && Array.isArray(data)) { inv.live = true; inv.err = ''; inv.rows = data; return; }
+    inv.err = 'โหลดไอเทมจากเซิร์ฟเวอร์ไม่ได้: ' + (error && error.message || 'ไม่ทราบสาเหตุ');
+    console.warn('items', error);
   }
   inv.live = false; inv.rows = localRows();
 }
@@ -1689,7 +1692,8 @@ function renderBag() {
     const r = items[i]; if (!r) return;
     c.classList.add('has'); fillItem(c, r); c.title = itemTip(r) + (ITEMS[r.item_id].slot ? '\n(กดเพื่อสวมใส่)' : ''); if (ITEMS[r.item_id].slot) c.onclick = () => setWorn(r, true);
   });
-  document.querySelector('#m-bag .bg-empty').hidden = items.length > 0;
+  const empty = document.querySelector('#m-bag .bg-empty');
+  empty.textContent = inv.err || 'ยังไม่มีไอเทม'; empty.hidden = items.length > 0 && !inv.err;
   $('bg-expbar').style.width = Math.min(100, cur * 100 / need) + '%'; $('bg-exp').textContent = `${(cur * 100 / need).toFixed(2)}%`;
   $('bg-exp').title = `${cur.toLocaleString()} / ${need.toLocaleString()}`;
   const c = classStats && prof.job && classStats[prof.job], st = $('bg-stats'); st.textContent = '';
@@ -1831,7 +1835,7 @@ for (const [id, key] of [['gm-bound', 'bound'], ['gm-via', 'via']]) for (const b
   $('gm-mailbox').hidden = gm.via !== 'mail';
 };
 $('gm-form').onsubmit = async e => {
-  e.preventDefault(); const err = $('gm-err'); err.textContent = '';
+  e.preventDefault(); const err = $('gm-err'); err.textContent = ''; $('gm-ok').textContent = '';
   const it = ITEMS[gm.item]; if (!it) { err.textContent = 'เลือกไอเทมก่อน'; return; }
   const names = $('gm-to').value.split(',').map(x => x.trim()).filter(Boolean), ids = $('gm-online').checked ? gmOnline() : [];
   if (!names.length && !ids.length) { err.textContent = 'ใส่ชื่อผู้รับ หรือติ๊กทุกคนที่ออนไลน์'; return; }
@@ -1840,18 +1844,20 @@ $('gm-form').onsubmit = async e => {
   if (!forever && (days < 1 || days > 3650)) { err.textContent = 'วันหมดอายุต้องอยู่ระหว่าง 1 ถึง 3650 วัน หรือติ๊กถาวร'; return; }
   const stats = {}; for (const inp of $('gm-stats').querySelectorAll('input')) stats[inp.dataset.k] = +inp.value || 0;
   if (!serverOn()) { err.textContent = 'ต้องล็อกอินก่อน'; return; }
-  const btn = $('gm-send'); btn.disabled = true;
+  const btn = $('gm-send'); btn.disabled = true; btn.textContent = 'กำลังส่ง...';
   const { data, error } = await online.sb.rpc('admin_give_item', {
     p_names: names, p_ids: ids, p_item: gm.item, p_slot: it.slot || null, p_qty: qty, p_bound: gm.bound, p_stats: stats,
     p_days: forever ? null : days, p_via: gm.via, p_subject: $('gm-subj').value, p_body: $('gm-body').value,
   });
-  btn.disabled = false;
+  btn.disabled = false; btn.textContent = 'ส่ง';
   if (error) {
     const msg = String(error.message || '');
-    err.textContent = /not_admin/.test(msg) ? 'บัญชีนี้ไม่ใช่แอดมิน' : /no_target/.test(msg) ? 'ไม่พบผู้เล่นชื่อนี้' : /admin_give_item|schema cache|function/.test(msg) ? 'ต้องรัน supabase-items.sql ใน Supabase ก่อน' : why(error);
+    console.warn('admin_give_item', error);
+    err.textContent = (/not_admin/.test(msg) ? 'บัญชีนี้ไม่ใช่แอดมินในฐานข้อมูล (profiles.is_admin)' : /no_target/.test(msg) ? `ไม่พบผู้เล่นชื่อ ${names.join(', ') || '(ไม่มีคนออนไลน์)'}` : /admin_give_item|schema cache|function/.test(msg) ? 'ต้องรัน supabase-items.sql ใน Supabase ก่อน' : 'ส่งไม่สำเร็จ') + ` [${msg}]`;
     return;
   }
-  toast(`ส่ง ${it.name} x${qty} ให้ ${data} คน ${gm.via === 'mail' ? 'ทางจดหมาย' : 'เข้ากระเป๋า'}แล้ว`);
+  const done = `ส่ง ${it.name} x${qty} ให้ ${data} คน ${gm.via === 'mail' ? 'ทางจดหมาย' : 'เข้ากระเป๋า'}แล้ว (${new Date().toLocaleTimeString('th-TH')})`;
+  $('gm-ok').textContent = done; toast(done);
   loadInv().then(() => { if (!$('m-bag').hidden) renderBag(); });
 };
 
@@ -2392,6 +2398,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.7</div>
+<div id="ver">v0.61.8</div>
 </body>
 </html>
