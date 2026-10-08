@@ -1042,7 +1042,10 @@ img { -webkit-user-drag: none; user-drag: none; }
 'use strict';
 const SB_URL = 'https://wslkvlysmdjxlxcihyqh.supabase.co';
 const SB_KEY = 'sb_publishable_dDNp9wKERhV3Ms9fUctNEw_hPIR0FDw'; // publishable key, safe in the browser
-const GAME_URL = '../index.html';
+// the version label doubles as a cache key: a browser that kept an older game page from before an update would mix an
+// old game with a new town (Karoz 2026-10-09: one side showed real names, the other placeholders), so each version
+// loads its own copy of the game
+const gameURL = () => '../index.html?v=' + encodeURIComponent(($('ver') && $('ver').textContent.trim()) || Date.now()); // read at launch: the label sits at the end of the page
 
 const $ = id => document.getElementById(id);
 const world = $('world');
@@ -1195,7 +1198,7 @@ function launch(setup, watchRoom) {
   gameBox.classList.toggle('tut', tut.on); $('tut-done').hidden = true;
   const fr = document.createElement('iframe');
   fr.title = 'Ages of Aether'; fr.allow = 'autoplay; fullscreen';
-  fr.src = GAME_URL;
+  fr.src = gameURL();
   // Karoz 2026-10-07: players never see the game's own menu page (modes, 2 players on one machine, class cards...), in any
   // mode: the town sets everything up. The style goes in as soon as the game's page exists, and a cover hides the game
   // until the match has really started. The game's Admin button is only for admins.
@@ -1317,23 +1320,12 @@ const ROOMS_PER_PAGE = 6, SLOTS = 4, GAME_MAX = 2; // the game plays 2 at a time
 const MAPS = [{ k: 'jungle', name: 'อารยธรรมโบราณ', img: 'img/map-jungle.webp?v=1' }];
 const MODES = { duel: 'ดวล', rush: 'ลุย' }; // ลุย (Karoz): the map is always picked at random
 const co = { page: 0, room: null, host: false, max: 2, shut: [2, 3], mode: 'duel', map: MAPS[0].k, game: null, lastGame: null, ch: null, live: false, seek: 0, vs: null };
-// sample people for the preview page, which cannot sign in
-const DEMO = [
-  { name: 'ชินดี้', job: 'blade', level: 70, exp: 35, room: '1517', host: true, max: 2, mode: 'duel', map: 'jungle' },
-  { name: 'Filmza', job: 'archer', level: 70, exp: 80, room: '6630', host: true, max: 3, mode: 'rush' },
-  { name: 'Irene', job: 'cleric', level: 69, exp: 60, room: '1517' },
-  { name: 'qwerx', job: 'thief', level: 69, exp: 12, room: '6651', host: true, max: 2, mode: 'rush' },
-  { name: 'Chin-Cang', job: 'merchant', level: 68, room: '5320', host: true, max: 2, mode: 'duel', map: 'jungle' },
-  { name: 'ZEDD2', job: 'archer', level: 66, room: '5320' },
-  { name: 'Moji', job: 'mage', level: 41 },
-  { name: 'GM_Luna', job: 'cleric', level: 12, admin: true },
-].map((p, i) => Object.assign({ key: 'demo' + i }, p));
 const myKey = () => co.live ? online.user.id : 'me';
 const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, exp: prof.exp | 0, admin: isAdmin(), room: co.room, host: co.host, max: co.max, shut: co.shut, mode: co.mode, map: co.map, game: co.game, seek: co.seek || 0, vs: co.vs || null, at: co.at || 0 });
 // everyone in town; this player's own entry is always the local state, so it never lags behind a sync
 function townPeople() {
   const me = Object.assign({ key: myKey() }, myPresence());
-  if (!co.live) return DEMO.concat([me]);
+  if (!co.live) return [me]; // not connected yet: only this player (no made-up people, Karoz 2026-10-09)
   const st = co.ch.presenceState(), out = [];
   for (const k in st) {
     if (!st[k].length || k === me.key) continue;
@@ -2550,6 +2542,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.27</div>
+<div id="ver">v0.61.29</div>
 </body>
 </html>
