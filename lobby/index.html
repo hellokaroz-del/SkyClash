@@ -1188,6 +1188,8 @@ async function loadIce() {
 }
 function launch(setup, watchRoom) {
   window.__iceReady = loadIce();
+  // the game reads who is playing from here (name, level, guild) and shows it to both sides online
+  window.__me = { name: prof.name || 'ผู้เล่น', level: prof.level || 1, guild: (online.me && online.me.guild) || '' };
   for (const m of document.querySelectorAll('.modal')) m.hidden = true;
   const old = gameBox.querySelector('iframe'); if (old) old.remove();
   gameBox.classList.toggle('tut', tut.on); $('tut-done').hidden = true;
@@ -2548,6 +2550,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.26</div>
+<div id="ver">v0.61.27</div>
 </body>
 </html>
