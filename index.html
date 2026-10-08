@@ -2402,7 +2402,8 @@ function drawAvatar(p, pose) {
   if (p.mob) { // portraits: the slime's idle bounce, lifted into the frame
     if (!p.alive) ctx.globalAlpha = 0.35;
     ctx.save(); ctx.translate(0, pose === 'stand' ? -6 : -19);
-    if (ready(HOP_IMG)) { const b = Math.sin((S ? S.frame : 0) * 0.09), k = pose === 'stand' ? 0.75 : 0.66; ctx.scale(k, k); hopFrame(p.tint, 0, 1, 1 - 0.03 * b, 1 + 0.035 * b); }
+    if (ready(HOP_IMG)) { // the whole water-drop slime fits the card (it is drawn larger in its cell than the old one was)
+      const b = Math.sin((S ? S.frame : 0) * 0.09), k = pose === 'stand' ? 0.5 : 0.42; ctx.scale(k, k); hopFrame(p.tint, 0, 1, 1 - 0.03 * b, 1 + 0.035 * b); }
     else slimeFrame(p.tint, 'idle', Math.floor((S ? S.frame : 0) / 3) % 14, pose === 'stand' ? 1.8 : 1.6, 1);
     ctx.restore();
     ctx.globalAlpha = 1; return;
