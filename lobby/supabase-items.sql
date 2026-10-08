@@ -41,6 +41,8 @@ create table if not exists public.player_items (
   created_at timestamptz not null default now()
 );
 create index if not exists player_items_owner_idx on public.player_items (owner);
+-- the lowest level that may wear it (Karoz 2026-10-08)
+alter table public.player_items add column if not exists min_level int not null default 1;
 alter table public.player_items enable row level security;
 revoke all on public.player_items from anon, authenticated;
 grant select on public.player_items to authenticated;
@@ -48,10 +50,12 @@ drop policy if exists "read own items" on public.player_items;
 create policy "read own items" on public.player_items for select to authenticated using (owner = auth.uid());
 
 -- 3) admin: create an item for players, into their bag or by mail
---    p_names: in-game names; p_ids: player ids (the town sends everyone online this way); p_days null = ถาวร
+--    p_names: in-game names; p_ids: player ids (the town sends everyone online this way); p_days null = ถาวร;
+--    p_min_level: the lowest level that may wear it. (The version without p_min_level is dropped.)
+drop function if exists public.admin_give_item(text[], uuid[], text, text, int, boolean, jsonb, int, text, text, text);
 create or replace function public.admin_give_item(
   p_names text[], p_ids uuid[], p_item text, p_slot text, p_qty int, p_bound boolean, p_stats jsonb, p_days int,
-  p_via text, p_subject text, p_body text
+  p_via text, p_subject text, p_body text, p_min_level int
 ) returns int
 language plpgsql security definer set search_path = public as $$
 declare me public.profiles; t record; n int := 0; mid bigint; exp timestamptz;
@@ -62,6 +66,7 @@ begin
   if p_qty is null or p_qty < 1 or p_qty > 9999 then raise exception 'bad_qty'; end if;
   if p_days is not null and (p_days < 1 or p_days > 3650) then raise exception 'bad_days'; end if;
   if p_via not in ('bag', 'mail') then raise exception 'bad_via'; end if;
+  if p_min_level is null or p_min_level < 1 or p_min_level > 100 then raise exception 'bad_level'; end if;
   exp := case when p_days is null then null else now() + make_interval(days => p_days) end;
   for t in
     select distinct id from public.profiles
@@ -74,28 +79,33 @@ begin
       values (t.id, me.name, left(coalesce(nullif(btrim(p_subject), ''), 'ของขวัญจาก GM'), 60), left(coalesce(p_body, ''), 500))
       returning id into mid;
     end if;
-    insert into public.player_items (owner, item_id, slot, qty, bound, stats, expires_at, mail_id)
-    values (t.id, p_item, p_slot, p_qty, coalesce(p_bound, true), coalesce(p_stats, '{}'::jsonb), exp, mid);
+    insert into public.player_items (owner, item_id, slot, qty, bound, stats, expires_at, mail_id, min_level)
+    values (t.id, p_item, p_slot, p_qty, coalesce(p_bound, true), coalesce(p_stats, '{}'::jsonb), exp, mid, p_min_level);
     n := n + 1;
   end loop;
   if n = 0 then raise exception 'no_target'; end if;
   return n;
 end $$;
-revoke all on function public.admin_give_item(text[], uuid[], text, text, int, boolean, jsonb, int, text, text, text) from public;
-grant execute on function public.admin_give_item(text[], uuid[], text, text, int, boolean, jsonb, int, text, text, text) to authenticated;
+revoke all on function public.admin_give_item(text[], uuid[], text, text, int, boolean, jsonb, int, text, text, text, int) from public;
+grant execute on function public.admin_give_item(text[], uuid[], text, text, int, boolean, jsonb, int, text, text, text, int) to authenticated;
 
--- 4) wear / take off: one item per slot
+-- 4) wear / take off: one item per slot, only from its minimum level; wearing a public (สาธารณะ) item makes it
+--    personal (ส่วนตัว) for good, so it can no longer be traded (Karoz 2026-10-08)
 create or replace function public.equip_item(p_id bigint, p_on boolean) returns void
 language plpgsql security definer set search_path = public as $$
-declare it public.player_items;
+declare it public.player_items; lv int;
 begin
   select * into it from public.player_items where id = p_id and owner = auth.uid() and mail_id is null for update;
   if not found then raise exception 'no_item'; end if;
-  if it.expires_at is not null and it.expires_at < now() then raise exception 'expired'; end if;
   if p_on then
+    if it.expires_at is not null and it.expires_at < now() then raise exception 'expired'; end if;
+    select level into lv from public.profiles where id = auth.uid();
+    if coalesce(lv, 1) < it.min_level then raise exception 'low_level'; end if;
     update public.player_items set equipped = false where owner = auth.uid() and slot = it.slot and id <> p_id;
+    update public.player_items set equipped = true, bound = true where id = p_id;
+  else
+    update public.player_items set equipped = false where id = p_id;
   end if;
-  update public.player_items set equipped = p_on where id = p_id;
 end $$;
 revoke all on function public.equip_item(bigint, boolean) from public;
 grant execute on function public.equip_item(bigint, boolean) to authenticated;
