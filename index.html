@@ -3922,12 +3922,20 @@ const netMsg = t => { document.getElementById('net-msg').textContent = t; };
 async function netTransport() {
   if (window.__netMock) return window.__netMock;
   try { if (window.claude && window.claude.use) return await window.claude.use('room'); } catch (_) {}
+  // the town fetches TURN relay servers as it opens the game; wait for them (at most 4 s) so the first try can use them
+  try { const r = window.parent !== window && window.parent.__iceReady; if (r) await Promise.race([r, new Promise(ok => setTimeout(ok, 4000))]); } catch (_) {}
   return window.Peer ? peerTransport() : null;
+}
+// PeerJS options: the town's TURN relay servers when it has them (players whose networks block a direct link play
+// through them), otherwise PeerJS's own defaults
+function peerOpts() {
+  try { const ice = window.parent !== window && window.parent.__ice; if (Array.isArray(ice) && ice.length) return { config: { iceServers: ice } }; } catch (_) {}
+  return {};
 }
 // on the game's own website: the two browsers connect directly (PeerJS / WebRTC); the host's peer id is the room
 function peerTransport() {
   return { join: (name, role) => new Promise((ok, no) => {
-    const peer = role === 'host' ? new Peer('skyclash-' + name) : new Peer();
+    const peer = role === 'host' ? new Peer('skyclash-' + name, peerOpts()) : new Peer(peerOpts());
     const conns = new Map(), subs = [];
     let mine = {}, done = false;
     const merge = (o, patch) => { const n = Object.assign({}, o, patch); for (const k in patch) if (patch[k] === null) delete n[k]; return n; };
@@ -4201,11 +4209,16 @@ async function netOpen(role, code) {
   catch (e) {
     const c = e && e.code;
     if (c === 'taken' && role === 'host') return netOpen('host', netCode());
+    if (role !== 'host' && c !== 'not_permitted' && (NET.tries || 0) < 2) { // a link that did not come up: try again by itself
+      NET.tries = (NET.tries || 0) + 1; netMsg(`กำลังลองต่อห้อง ${code} ใหม่ (${NET.tries}/2)...`);
+      setTimeout(() => netOpen(role, code), 1500); return;
+    }
     netMsg(c === 'not_permitted' ? 'บัญชีนี้เข้าห้องออนไลน์ไม่ได้ (ต้องได้รับแชร์เกมโดยตรงจากเจ้าของ)' : c === 'not_found' ? `ไม่พบห้อง ${code} ตรวจรหัสอีกครั้ง`
       : c === 'timeout' && role !== 'host' ? 'ต่อกับเครื่องเพื่อนไม่สำเร็จ เน็ตบางเจ้าบล็อกการต่อตรง ลองใช้เน็ตมือถือหรือ Wi-Fi อื่น' : 'เชื่อมต่อห้องไม่สำเร็จ ลองใหม่อีกครั้ง');
     return;
   }
   const me = room.peers().find(p => p.sameTab);
+  NET.tries = 0;
   Object.assign(NET, { on: true, room, role, code, me: role === 'host' ? 0 : 1, self: me ? me.peer : '', mate: null, gpres: null, hpres: null, seen: false, full: false,
     inMatch: false, ended: false, acts: [], actN: Date.now(), lastAct: 0, aa: 0, gm: 0, building: 0, eseq: 0, tick: 0, sn: 0 });
   vsBot = false;
@@ -4215,7 +4228,11 @@ async function netOpen(role, code) {
   if (role === 'host') setTimeout(() => { // someone already hosts this code: pick another
     if (NET.room === room && room.peers().some(p => !p.sameTab && p.presence && p.presence.r === 'h')) { netLeave(''); netOpen('host', netCode()); }
   }, 900);
-  else setTimeout(() => { if (NET.room === room && !NET.hpres) netLeave(`ไม่พบห้อง ${code} ตรวจรหัสอีกครั้ง`); }, 6000);
+  else setTimeout(() => {
+    if (NET.room !== room || NET.hpres) return;
+    if ((NET.joinTries || 0) < 2) { NET.joinTries = (NET.joinTries || 0) + 1; netLeave(`กำลังลองต่อห้อง ${code} ใหม่...`); setTimeout(() => netOpen('guest', code), 1000); return; }
+    NET.joinTries = 0; netLeave(`ไม่พบห้อง ${code} ตรวจรหัสอีกครั้ง`);
+  }, 6000);
 }
 function netLeave(msg) {
   const room = NET.room;
@@ -4228,6 +4245,7 @@ const netCode = () => String(1000 + Math.floor(Math.random() * 9000));
 const netGo = (role, code) => { if (NET.busy) return; NET.busy = true; netOpen(role, code).finally(() => { NET.busy = false; }); };
 document.getElementById('net-make').onclick = () => netGo('host', netCode());
 document.getElementById('net-join').onclick = () => {
+  NET.tries = 0; NET.joinTries = 0;
   const c = document.getElementById('net-code').value.replace(/\D/g, '');
   if (c.length !== 4) { netMsg('ใส่รหัสห้อง 4 หลัก'); return; }
   netGo('guest', c);
