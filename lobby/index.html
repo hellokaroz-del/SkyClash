@@ -610,7 +610,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .bg-slot:not([data-n])::before { display: none; }
 .bg-art { position: relative; display: flex; flex-direction: column; justify-content: center; border-radius: 14px; overflow: hidden;
   background: radial-gradient(circle at 50% 60%, rgba(255, 255, 255, .95), rgba(160, 210, 255, .5) 60%, transparent 75%); }
-.bg-art img, .bg-art canvas { width: 100%; max-height: 380px; object-fit: contain; }
+.bg-art img { display: block; height: 380px; width: auto; max-width: 100%; margin: 0 auto; object-fit: contain; }
 .bg-slot.has, .bg-grid .cell.has { cursor: pointer; }
 .bg-slot.has { place-items: center; padding: 0; color: transparent; }
 .bg-slot img, .bg-grid .cell img { width: 86%; height: 86%; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .35)); pointer-events: none; }
@@ -1500,43 +1500,21 @@ function bagSlots(id, names, numbered) {
   const box = $(id); if (box.childElementCount) return;
   names.forEach((n, i) => { const d = document.createElement('div'); d.className = 'bg-slot'; if (numbered) d.dataset.n = i + 1; d.textContent = n; if (n === 'อาวุธ') d.id = 'bg-weapon'; box.appendChild(d); });
 }
-// ---------- gear on the character (Karoz 2026-10-08): the job's art drawn empty-handed, the weapon laid into each hand ----------
-// A rig is the empty-handed art and, per hand, where the fist is (art px), whether the weapon is mirrored, its tilt, and the
-// outline of the forearm and fist, which is drawn again over the weapon: the grip disappears into the fist and only the
-// blade shows below it (Karoz 2026-10-08). Only the Assassin has one so far.
-const RIGS = {
-  thief: { base: 'img/cls-thief-base.webp', w: 942, h: 1269, pad: 210, hands: [
-    { x: 52, y: 785, flip: false, rot: -18, arm: [[60, 600], [160, 600], [150, 690], [108, 738], [100, 800], [82, 826], [12, 826], [0, 790], [4, 720], [40, 650]] },
-    { x: 540, y: 798, flip: true, rot: -18, arm: [[455, 600], [530, 600], [562, 680], [588, 732], [592, 800], [586, 838], [500, 842], [488, 800], [478, 722], [458, 660]] },
-  ] },
-};
-// items: grip is the point in the item art the hand holds; scale sizes the art to the character
+// ---------- gear on the character (Karoz 2026-10-08) ----------
+// Each job has its art drawn empty-handed, and each weapon has the job's art drawn holding it: wearing a weapon swaps
+// the picture. (Laying a weapon over the empty-handed art never looked held, so every weapon/job pair is drawn whole.)
+const BARE = { thief: 'img/cls-thief-base.webp' };
 const ITEMS = {
-  dagger_wood: { name: 'มีดไม้', slot: 'weapon', jobs: ['thief'], img: 'img/wpn-dagger-wood.webp', grip: [445, 205], scale: 0.5 },
+  dagger_wood: { name: 'มีดไม้', slot: 'weapon', jobs: ['thief'], img: 'img/wpn-dagger-wood.webp', art: { thief: 'img/cls-thief-dagger-wood.webp' } },
 };
 // until items are kept on the server, every character starts with these and what is worn is saved on this device
 const STARTER = ['dagger_wood'];
 const gearOf = () => (prof.gear && typeof prof.gear === 'object') ? prof.gear : (prof.gear = {});
-const imgCache = {};
-const loadImg = src => imgCache[src] || (imgCache[src] = new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = src; }));
-async function gearArt(job) {
-  const rig = RIGS[job]; if (!rig) return null;
-  const w = gearOf().weapon && ITEMS[gearOf().weapon];
-  const [base, wp] = await Promise.all([loadImg(rig.base), w ? loadImg(w.img) : null]);
-  const cv = document.createElement('canvas'); cv.width = rig.w + rig.pad * 2; cv.height = rig.h; cv.className = 'bg-im';
-  const g = cv.getContext('2d'); g.translate(rig.pad, 0); g.drawImage(base, 0, 0);
-  if (wp) for (const h of rig.hands) {
-    const ww = wp.width * w.scale, wh = wp.height * w.scale, gx = w.grip[0] * w.scale, gy = w.grip[1] * w.scale;
-    // only the part below the fist and on the blade's side shows (the pommel, its charms and ribbons would float beside the arm)
-    const cx = h.flip ? h.x - 40 : -rig.pad, cw = h.flip ? rig.w + rig.pad - cx : h.x + 40 + rig.pad;
-    g.save(); g.beginPath(); g.rect(cx, h.y - 8, cw, rig.h); g.clip(); g.translate(h.x, h.y);
-    if (h.flip) g.scale(-1, 1);
-    g.rotate((h.rot || 0) * Math.PI / 180);
-    g.drawImage(wp, -gx, -gy, ww, wh); g.restore();
-    g.save(); g.beginPath(); h.arm.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.clip();
-    g.drawImage(base, 0, 0); g.restore();
-  }
-  return cv;
+function gearArt(job) {
+  const w = ITEMS[gearOf().weapon], src = (w && w.art && w.art[job]) || BARE[job];
+  if (!src) return artImg(job, 'bg-im');
+  const im = document.createElement('img'); im.className = 'bg-im'; im.src = src; im.alt = (jobOf(job) || {}).name || '';
+  return im;
 }
 function itemImg(id) { const im = document.createElement('img'); im.src = ITEMS[id].img; im.alt = ITEMS[id].name; return im; }
 function equip(id) {
@@ -1545,15 +1523,12 @@ function equip(id) {
   gearOf()[it.slot] = id; saveProf(); renderBag();
 }
 function unequip(slot) { delete gearOf()[slot]; saveProf(); renderBag(); }
-let artSeq = 0;
 function renderBag() {
   bagSlots('bg-left', BAG_LEFT, true); bagSlots('bg-right', BAG_RIGHT, true);
   const grid = $('bg-grid'); if (!grid.childElementCount) for (let i = 0; i < BAG_CELLS; i++) { const c = document.createElement('div'); c.className = 'cell'; grid.appendChild(c); }
   const j = jobOf(prof.job), lv = Math.max(1, prof.level | 0 || 1), need = expNeed(lv), cur = Math.max(0, prof.exp | 0);
   $('bg-name').textContent = prof.name || 'ผู้เล่น'; $('bg-job').textContent = j ? `${j.th} · ${j.name}` : 'ยังไม่มีอาชีพ'; $('bg-lv').textContent = lv;
-  const art = $('bg-art'), seq = ++artSeq;
-  if (RIGS[prof.job]) gearArt(prof.job).then(cv => { if (seq === artSeq && cv) { art.textContent = ''; art.appendChild(cv); } }).catch(() => {});
-  else { art.textContent = ''; const im = artImg(prof.job, 'bg-im'); if (im) art.appendChild(im); }
+  const art = $('bg-art'); art.textContent = ''; const im = gearArt(prof.job); if (im) art.appendChild(im);
   // the weapon slot shows what is worn (click to take it off); the grid shows the rest (click to wear)
   const ws = $('bg-weapon'), worn = gearOf().weapon;
   ws.textContent = 'อาวุธ'; ws.classList.toggle('has', !!ITEMS[worn]); ws.onclick = null; ws.title = '';
@@ -2112,6 +2087,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.4</div>
+<div id="ver">v0.61.5</div>
 </body>
 </html>
