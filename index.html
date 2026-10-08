@@ -109,6 +109,9 @@ body.mk-open { overflow: hidden; }
 #simbox { position: fixed; inset: 0; z-index: 50; background: var(--bg); color: var(--fg); display: grid; grid-template-rows: auto 1fr; font-family: var(--body); }
 #simbox[hidden] { display: none; }
 .stage, .stage canvas, img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-user-drag: none; }
+/* nothing on the game page can be highlighted either, only the boxes players type into (Karoz 2026-10-08) */
+html, body { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+input, textarea { -webkit-user-select: text; user-select: text; }
 .sim-f { display: flex; align-items: center; gap: 6px; font-size: 14px; }
 .sim-f select, .sim-f input { font: inherit; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
 .sim-f input { width: 5.5em; }
