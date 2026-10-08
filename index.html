@@ -1037,6 +1037,7 @@ function newMatch(demo) {
   };
   if (mobMode && !demo) { // the slime stage: the hero always starts
     const hero = mk(0, picks[0], STAGE.spawn[0], false);
+    if (!demo && myInfo()) applyInfo(hero, myInfo(), 'คุณ'); // the town's player, under their own name
     S = { demo, players: [hero], mob: { total: tutMode ? TUT.slimes : SLIME.total, spawned: 0, corpses: [] }, turn: 0, state: 'aim', power: 0, timer: TURN_TIME, wind: 0, projs: [], settle: 0, zones: [],
       banner: 0, bot: null, frame: 0, turnCount: 0 };
     if (tutMode) S.tut = { step: 0, x0: hero.x, a0: hero.angle, shot: false, skill: false, spawned: false, flash: 0 };
@@ -1047,6 +1048,7 @@ function newMatch(demo) {
     return;
   }
   const pls = [mk(0, picks[0], STAGE.spawn[0], false), mk(1, picks[1], STAGE.spawn[1], vsBot)];
+  if (!demo && vsBot && myInfo()) applyInfo(pls[0], myInfo(), 'คุณ'); // against the bot: the town's player under their own name
   // the higher max Energy (from SPD) starts; a tie is a coin flip
   const e0 = pls[0].maxEn, e1 = pls[1].maxEn;
   S = {
@@ -3454,7 +3456,7 @@ function drawTip() {
   const i = S.players.findIndex((_, k) => { const r = portraitRect(k); return mouse.x >= r.x && mouse.x <= r.x + r.w && mouse.y >= r.y && mouse.y <= r.y + r.h + 12; });
   if (i < 0) return;
   const pl = S.players[i], r = portraitRect(i);
-  const lines = [[pl.name, '#ffd36a', 600], [`กิลด์: ${pl.guild}`, '#fff', 400], [`เลเวล ${pl.level} · ${pl.c.name}`, '#fff', 400], [`HP ${pl.hp}/${pl.maxHp}`, '#9fe0ff', 400], [`POW ${Math.floor(pl.rage)}/${POW_MAX}`, '#ffe066', 400]];
+  const lines = [[pl.name, '#ffd36a', 600], [`กิลด์: ${pl.guild || 'ไม่มีกิลด์'}`, '#fff', 400], [`เลเวล ${pl.level} · ${pl.c.name}`, '#fff', 400], [`HP ${pl.hp}/${pl.maxHp}`, '#9fe0ff', 400], [`POW ${Math.floor(pl.rage)}/${POW_MAX}`, '#ffe066', 400]];
   const w = 150, h = 16 + lines.length * 18, x = Math.min(VW - w - 6, r.x), y = r.y + r.h + 16;
   panel(x, y, w, h, 8);
   ctx.textAlign = 'left';
@@ -3985,8 +3987,20 @@ function netEv(e) { if (NET.role === 'host' && NET.inMatch && S && !S.demo && S.
 function boomParts(x, y, ice) {
   for (let i = 0; i < 18; i++) fx.parts.push({ x, y, vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 6 - 1, t: 50 + Math.random() * 30, col: ice ? (i % 2 ? '#e6f8ff' : '#8fd8ff') : i % 3 ? '#8a5a34' : '#ffd36a' });
 }
+// who is playing: the town hands its signed-in player's name, level and guild to the game (window.__me); each side sends
+// its own in the room presence (me), so both screens show the real players, not placeholders (Karoz 2026-10-09)
+function myInfo() {
+  let m = null; try { m = window.parent !== window && window.parent.__me; } catch (_) {}
+  return m ? { n: String(m.name || '').slice(0, 16), lv: Math.max(1, Math.min(100, m.level | 0 || 1)), g: String(m.guild || '').slice(0, 20) } : null;
+}
+function applyInfo(p, m, fallback) {
+  p.name = (m && m.n) || fallback;
+  if (m && m.lv) p.level = m.lv;
+  p.guild = (m && m.g) || '';
+}
 function netNames() {
-  for (const p of S.players) { p.remote = p.i !== NET.me; p.name = p.i === NET.me ? 'คุณ' : 'เพื่อน'; }
+  const mate = NET.role === 'host' ? NET.gpres : NET.hpres;
+  for (const p of S.players) { p.remote = p.i !== NET.me; applyInfo(p, p.i === NET.me ? myInfo() : mate && mate.me, p.i === NET.me ? 'คุณ' : 'เพื่อน'); }
   NET.inMatch = true; NET.ended = false; updatePad();
 }
 
@@ -4145,7 +4159,7 @@ function netTick() {
     hostReadGuest();
     if (NET.inMatch && S && !S.demo) captureFx();
     if (++NET.tick % 3) return;
-    const pr = { r: 'h', pk: picks[0], sg: stageKey, g: NET.mate || '' };
+    const pr = { r: 'h', pk: picks[0], sg: stageKey, g: NET.mate || '', me: myInfo() };
     if (NET.inMatch && S && !S.demo) pr.sn = hostSnap();
     NET.room.presence(pr).catch(() => {});
   } else {
@@ -4153,7 +4167,7 @@ function netTick() {
     if (NET.tick++ % 3) return;
     NET.acts = NET.acts.filter(a => a.n > (NET.aa || 0));
     const i = { l: input.left ? 1 : 0, r: input.right ? 1 : 0, u: input.up ? 1 : 0, d: input.down ? 1 : 0, f: NET.gc ? 1 : 0, pw: NET.gc ? Math.round(NET.gc.pw) : 0 };
-    NET.room.presence({ r: 'g', pk: picks[1], in: i, a: NET.acts.slice(-12), ea: [NET.gm || 0, NET.eseq || 0] }).catch(() => {});
+    NET.room.presence({ r: 'g', pk: picks[1], in: i, a: NET.acts.slice(-12), ea: [NET.gm || 0, NET.eseq || 0], me: myInfo() }).catch(() => {});
   }
 }
 function netPeers() {
@@ -4222,7 +4236,7 @@ async function netOpen(role, code) {
   Object.assign(NET, { on: true, room, role, code, me: role === 'host' ? 0 : 1, self: me ? me.peer : '', mate: null, gpres: null, hpres: null, seen: false, full: false,
     inMatch: false, ended: false, acts: [], actN: Date.now(), lastAct: 0, aa: 0, gm: 0, building: 0, eseq: 0, tick: 0, sn: 0 });
   vsBot = false;
-  await room.presence(role === 'host' ? { r: 'h', pk: picks[0], sg: stageKey } : { r: 'g', pk: picks[1] }).catch(() => {});
+  await room.presence(role === 'host' ? { r: 'h', pk: picks[0], sg: stageKey, me: myInfo() } : { r: 'g', pk: picks[1], me: myInfo() }).catch(() => {});
   NET.unsub = room.onPeers(() => { if (NET.room === room) netPeers(); }, e => { if (NET.room === room) netLeave('การเชื่อมต่อห้องหลุด (' + e.code + ')'); });
   netPeers();
   if (role === 'host') setTimeout(() => { // someone already hosts this code: pick another
