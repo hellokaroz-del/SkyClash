@@ -346,7 +346,9 @@ const HUD = {}; for (const [k, src] of Object.entries(HUD_SRC)) { const im = new
 const WARP_CD = 3;
 const ICE_TURNS = 2; // ice curse: a frozen player skips this many of their own turns
 // Karoz's sounds: skill sounds play the moment the charged shot is released (keys match p.armed); victory/defeat play with the result banner
-const SFX_SRC = {"victory": "assets/a054.mp3", "defeat": "assets/a055.mp3", "meteor": "assets/a056.mp3", "ice": "assets/a057.mp3", "bolt": "assets/a058.mp3"};
+const SFX_SRC = {"victory": "assets/a054.mp3", "defeat": "assets/a055.mp3", "meteor": "assets/a056.mp3", "ice": "assets/a057.mp3", "bolt": "assets/a058.mp3",
+  // Karoz's slime sounds (2026-10-08): a hop, the lunge, getting hit, dying
+  "slime_jump": "assets/slime-jump.mp3", "slime_attack": "assets/slime-attack.mp3", "slime_hurt": "assets/slime-hurt.mp3", "slime_die": "assets/slime-die.mp3"};
 const SFX = {}; for (const k in SFX_SRC) { SFX[k] = new Audio(SFX_SRC[k]); SFX[k].preload = 'auto'; }
 let MUTED = false; try { MUTED = localStorage.getItem('sky-muted') === '1'; } catch (_) {}
 // stage music: a separate file published next to the page, looped during a match; it starts from the
@@ -1937,8 +1939,8 @@ function mobTick(p) {
     if (!solid(p.x, p.y)) return; // a new slime still dropping in
     if (--mp.t > 0) return;
     p.face = tx > p.x ? 1 : -1;
-    if (near()) { mp.phase = 'atk'; mp.t = 0; p.anim = { k: 'atk', t: 0 }; say(p, 'พุ่งชน!', '#c8ff9a', 50, 70); }
-    else if (mp.hops < SLIME.hops && !(p.bindNow)) { mp.phase = 'hop'; mp.t = 0; mp.left = SLIME.hop; p.anim = { k: 'jump', t: 0 }; }
+    if (near()) { mp.phase = 'atk'; mp.t = 0; p.anim = { k: 'atk', t: 0 }; say(p, 'พุ่งชน!', '#c8ff9a', 50, 70); sfx('slime_attack'); }
+    else if (mp.hops < SLIME.hops && !(p.bindNow)) { mp.phase = 'hop'; mp.t = 0; mp.left = SLIME.hop; p.anim = { k: 'jump', t: 0 }; sfx('slime_jump'); }
     else { S.state = 'settle'; S.settle = 16; p.anim = { k: 'idle', t: 0 }; }
     return;
   }
@@ -2144,9 +2146,18 @@ function settlePlayers() {
   }
   return moving;
 }
+// a slime that lost HP since the last tick cries out, one that reached 0 bursts (whatever hurt it: a shot, poison, fire)
+function slimeSounds() {
+  for (const p of S.players) {
+    if (!p.mob) continue;
+    if (p.sndHp != null && p.hp < p.sndHp) sfx(p.hp <= 0 ? 'slime_die' : 'slime_hurt');
+    p.sndHp = p.hp;
+  }
+}
 function update() {
   if (!S) return;
   S.frame++;
+  if (S.mob) slimeSounds();
   for (const c of clouds) { c.x += 0.15 * c.s + S.wind * 0.02; if (c.x > WW + 300) c.x = -300; if (c.x < -300) c.x = WW + 300; }
   const p = cur(), pin = p.remote ? NET.rin : input;
   const settling = settlePlayers() | settleGolem();
