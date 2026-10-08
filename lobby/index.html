@@ -1042,7 +1042,10 @@ img { -webkit-user-drag: none; user-drag: none; }
 'use strict';
 const SB_URL = 'https://wslkvlysmdjxlxcihyqh.supabase.co';
 const SB_KEY = 'sb_publishable_dDNp9wKERhV3Ms9fUctNEw_hPIR0FDw'; // publishable key, safe in the browser
-const GAME_URL = '../index.html';
+// the version label doubles as a cache key: a browser that kept an older game page from before an update would mix an
+// old game with a new town (Karoz 2026-10-09: one side showed real names, the other placeholders), so each version
+// loads its own copy of the game
+const gameURL = () => '../index.html?v=' + encodeURIComponent(($('ver') && $('ver').textContent.trim()) || Date.now()); // read at launch: the label sits at the end of the page
 
 const $ = id => document.getElementById(id);
 const world = $('world');
@@ -1195,7 +1198,7 @@ function launch(setup, watchRoom) {
   gameBox.classList.toggle('tut', tut.on); $('tut-done').hidden = true;
   const fr = document.createElement('iframe');
   fr.title = 'Ages of Aether'; fr.allow = 'autoplay; fullscreen';
-  fr.src = GAME_URL;
+  fr.src = gameURL();
   // Karoz 2026-10-07: players never see the game's own menu page (modes, 2 players on one machine, class cards...), in any
   // mode: the town sets everything up. The style goes in as soon as the game's page exists, and a cover hides the game
   // until the match has really started. The game's Admin button is only for admins.
@@ -2550,6 +2553,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.27</div>
+<div id="ver">v0.61.28</div>
 </body>
 </html>
