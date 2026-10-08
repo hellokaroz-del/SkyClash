@@ -1783,6 +1783,27 @@ function slimeFrame(tint, row, f, sc, face) {
   ctx.drawImage(SLIME_IMG, Math.max(0, Math.min(13, f)) * 56, sy, 56, 64, -20 * sc, -64 * sc, 56 * sc, 64 * sc);
   ctx.restore();
 }
+// Karoz's water-drop slime (2026-10-08): 8 frames of a hop, in the same 7 tints as the old sheet, one tint per row.
+// Cells are 195 x 181 with the slime's feet centred at x 97.5 on the bottom edge. Frames: 0 rest, 1 dip, 2 crouch,
+// 3 launch (tall), 4 in the air, 5 coming down, 6 landing (flat), 7 settling back
+const HOP_IMG = new Image(); HOP_IMG.src = 'assets/slime-hop.webp';
+const HOP = { w: 195, h: 181, foot: 97.5, scale: 0.5 };
+function hopFrame(tint, f, face, sx = 1, sy = 1) {
+  ctx.save(); if (face < 0) ctx.scale(-1, 1); ctx.scale(sx, sy);
+  const w = HOP.w * HOP.scale, h = HOP.h * HOP.scale;
+  ctx.drawImage(HOP_IMG, (f | 0) * HOP.w, (tint || 0) * HOP.h, HOP.w, HOP.h, -HOP.foot * HOP.scale, -h, w, h);
+  ctx.restore();
+}
+// which frame, how high off the ground and how far forward, at tick t of a hop (42 ticks) or a lunge (42 ticks)
+function hopPose(t) {
+  const f = t < 2 ? 0 : t < 4 ? 1 : t < 6 ? 2 : t < 12 ? 3 : t < 21 ? 4 : t < 28 ? 5 : t < 34 ? 6 : t < 39 ? 7 : 0;
+  return { f, lift: t >= 6 && t < 28 ? Math.sin(Math.PI * (t - 6) / 22) * 46 : 0, push: 0 };
+}
+function lungePose(t) {
+  const f = t < 4 ? 1 : t < 8 ? 2 : t < 14 ? 3 : t < 22 ? 4 : t < 27 ? 5 : t < 33 ? 6 : t < 38 ? 7 : 0;
+  const k = t >= 8 && t < 27 ? Math.sin(Math.PI * (t - 8) / 19) : 0;
+  return { f, lift: k * 18, push: k * 26 };
+}
 const mobKilled = () => S.mob.spawned - S.players.filter(x => x.mob && x.alive).length;
 // where a new slime appears: at the spawn point SLIME.door (the spot Karoz marked), a few px either way so a stack
 // of slimes still reads as several; slimes may stand on top of each other (Karoz), so nobody queues up any more
@@ -1913,8 +1934,23 @@ function drawMob(p, active) {
   else if (moving) { row = p.anim.k; f = Math.floor(p.anim.t / 3); }
   else if (p.hurtT > 0) { row = 'hurt'; f = 6 + Math.floor(p.hurtT / 3); if (++p.hurtT > 24) p.hurtT = 0; }
   ctx.save(); ctx.translate(x, y);
-  if (p.alive) { ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(0, 0, 22, 4, 0, 0, 7); ctx.fill(); }
-  slimeFrame(p.tint, row, f, sc, p.face);
+  if (ready(HOP_IMG)) {
+    // the water-drop slime: its own frames for a hop and a lunge; breathing, hurt and death are drawn from them
+    let pose = { f: 0, lift: 0, push: 0 }, sx = 1, sy = 1, alpha = 1, shake = 0;
+    if (!p.alive) { const k = Math.min(1, p.dieT / 44); pose.f = p.dieT < 8 ? 2 : 6; sy = 1 - 0.55 * k; sx = 1 + 0.25 * k; alpha = 1 - k; }
+    else if (moving) pose = p.anim.k === 'atk' ? lungePose(p.anim.t) : hopPose(p.anim.t);
+    else if (p.hurtT > 0) { pose.f = p.hurtT < 10 ? 6 : p.hurtT < 18 ? 7 : 0; shake = p.hurtT < 12 ? (p.hurtT % 4 < 2 ? -3 : 3) : 0; }
+    else { const b = Math.sin((S.frame + p.i * 17) * 0.09); sy = 1 + 0.035 * b; sx = 1 - 0.03 * b; }
+    if (p.alive) { // the shadow shrinks as the slime leaves the ground
+      const g = 1 - Math.min(0.6, pose.lift / 80);
+      ctx.fillStyle = `rgba(0,0,0,${0.22 * g})`; ctx.beginPath(); ctx.ellipse(p.face * pose.push, 0, 24 * g, 4 * g, 0, 0, 7); ctx.fill();
+    }
+    ctx.save(); ctx.globalAlpha = alpha; ctx.translate(p.face * pose.push + shake, -pose.lift);
+    hopFrame(p.tint, pose.f, p.face, sx, sy); ctx.restore();
+  } else {
+    if (p.alive) { ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(0, 0, 22, 4, 0, 0, 7); ctx.fill(); }
+    slimeFrame(p.tint, row, f, sc, p.face);
+  }
   if (p.alive && p.frozen > 0 && p.cck === 'stun') {
     for (let k = 0; k < 3; k++) { const a = S.frame * 0.12 + k * 2.1; ctx.fillStyle = '#ffe14a'; ctx.beginPath(); ctx.arc(Math.cos(a) * 14, -40 + Math.sin(a) * 4, 3, 0, 7); ctx.fill(); }
   } else if (p.alive && p.frozen > 0) {
@@ -2317,7 +2353,10 @@ function drawMist() {
 function drawAvatar(p, pose) {
   if (p.mob) { // portraits: the slime's idle bounce, lifted into the frame
     if (!p.alive) ctx.globalAlpha = 0.35;
-    ctx.save(); ctx.translate(0, pose === 'stand' ? -6 : -19); slimeFrame(p.tint, 'idle', Math.floor((S ? S.frame : 0) / 3) % 14, pose === 'stand' ? 1.8 : 1.6, 1); ctx.restore();
+    ctx.save(); ctx.translate(0, pose === 'stand' ? -6 : -19);
+    if (ready(HOP_IMG)) { const b = Math.sin((S ? S.frame : 0) * 0.09), k = pose === 'stand' ? 0.75 : 0.66; ctx.scale(k, k); hopFrame(p.tint, 0, 1, 1 - 0.03 * b, 1 + 0.035 * b); }
+    else slimeFrame(p.tint, 'idle', Math.floor((S ? S.frame : 0) / 3) % 14, pose === 'stand' ? 1.8 : 1.6, 1);
+    ctx.restore();
     ctx.globalAlpha = 1; return;
   }
   const f = p.face, c = p.c, prone = pose === 'prone';
