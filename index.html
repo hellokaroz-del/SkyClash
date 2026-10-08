@@ -594,16 +594,19 @@ function skillShots(p, sk, power, mult) {
 }
 
 // ---------- stats by level (Karoz's stat formula draft 1, 2026-10-06) ----------
-// The class table (V9) is level 30. HP, ATK, MATK, DEF and MDEF scale by M(L) (straight lines between these points);
-// SPD and LUK grow 25% over the 100 levels; Energy stays 235 + SPD x 0.25. A player with no known level counts as 30.
+// Karoz 2026-10-09: the class table is the LEVEL 1 base. HP, ATK, MATK, DEF and MDEF grow by M(L) / M(1) (the draft's
+// curve, straight lines between these points, so level 1 = the table and each level adds on top); SPD and LUK grow 25%
+// over the 100 levels; Energy stays 235 + SPD x 0.25. A player with no known level counts as level 1.
 const LV_M = [[1, 0.33], [10, 0.5], [20, 0.7], [30, 1], [40, 1.65], [50, 2.2], [60, 2.75], [70, 3.35], [80, 4], [90, 4.85], [100, 5.75]];
 function levelM(L) {
-  L = Math.max(1, Math.min(100, +L || 30));
+  L = Math.max(1, Math.min(100, +L || 1));
   for (let i = 1; i < LV_M.length; i++) { const [a, ma] = LV_M[i - 1], [b, mb] = LV_M[i]; if (L <= b) return ma + (mb - ma) * (L - a) / (b - a); }
   return LV_M[LV_M.length - 1][1];
 }
+// how many times the level 1 base a stat is at level L (1 at level 1, about 3 at 30, 17.4 at 100)
+const levelGrow = L => levelM(L) / levelM(1);
 function scaleClass(c, L) {
-  const m = levelM(L), g = 1 + 0.25 * (Math.max(1, Math.min(100, +L || 30)) - 1) / 99, o = Object.assign({}, c);
+  const m = levelGrow(L), g = 1 + 0.25 * (Math.max(1, Math.min(100, +L || 1)) - 1) / 99, o = Object.assign({}, c);
   for (const k of ['hp', 'atk', 'matk', 'def', 'mdef']) o[k] = Math.round((+c[k] || 0) * m);
   for (const k of ['spd', 'luk']) o[k] = Math.round((+c[k] || 0) * g);
   o.maxEn = maxEnergy(o);
@@ -612,7 +615,7 @@ function scaleClass(c, L) {
 // give a player (or a monster) its level: stats from its level-30 base, full HP and Energy
 function setLevel(p, L) {
   p.level = L || null;
-  p.c = scaleClass(p.c0 || p.c, L || 30);
+  p.c = scaleClass(p.c0 || p.c, L || 1);
   p.hp = p.maxHp = p.c.hp; p.maxEn = p.c.maxEn; p.energy = p.maxEn;
 }
 
@@ -628,12 +631,12 @@ function statOf(p, k) {
   return Math.max(0, (p.c[k] || 0) * (1 + pct / 100));
 }
 // damage before crit: stat x % x DMG_K, cut by the target's DEF (physical) or MDEF (magic) as K / (K + defence), where
-// K = 100 x M(attacker's level) (stat formula draft 1); at level 30 K is 100, the old 100 / (100 + defence)
+// K = 100 x the attacker's level growth (stat formula draft 1, based at level 1): at level 1 K is 100, the old formula
 let HD_DEFR = 1; // auto battle test: raw damage before DEF/MDEF = final damage x this
 function hitDamage(o, t, base, pct, ign, up) {
   const magic = base === 'matk';
   let dmg = statOf(o, magic ? 'matk' : 'atk') * pct / 100 * DMG_K * (up || 1);
-  const K = 100 * levelM(o.level || 30), dv = statOf(t, magic ? 'mdef' : 'def') * (1 - (ign || 0) / 100);
+  const K = 100 * levelGrow(o.level || 1), dv = statOf(t, magic ? 'mdef' : 'def') * (1 - (ign || 0) / 100);
   dmg *= K / (K + dv);
   HD_DEFR = (K + dv) / K;
   for (const d of t.debs || []) if (d.taken && d.by === o.i) dmg *= 1 + d.taken / 100;
@@ -1873,7 +1876,7 @@ const mobKilled = () => S.mob.spawned - S.players.filter(x => x.mob && x.alive).
 // of slimes still reads as several; slimes may stand on top of each other (Karoz), so nobody queues up any more
 function slimeSpot() { return Math.round(SLIME.door + (Math.random() - 0.5) * 24); }
 // a slime's level: the tutorial's three are levels 1, 3 and 5; on the slime field they match the hero
-function slimeLevel(n) { return S.tut ? [1, 3, 5][Math.min(2, n - 1)] : (S.players[0] && S.players[0].level) || 30; }
+function slimeLevel(n) { return S.tut ? [1, 3, 5][Math.min(2, n - 1)] : (S.players[0] && S.players[0].level) || 1; }
 function makeSlime(i) {
   const n = S.mob.spawned + 1, tint = Math.floor(Math.random() * SLIME_COL.length), x = slimeSpot(), hero = S.players[0];
   const c = { name: 'สไลม์' + SLIME_NAME[tint], hp: SLIME.hp, atk: SLIME.atk, matk: 0, def: SLIME.def, mdef: SLIME.mdef, spd: 0, luk: SLIME.luk, pv: {}, sk: {}, ult: null,
@@ -1883,8 +1886,8 @@ function makeSlime(i) {
     walk: 0, armed: null, rage: 0, dmgAcc: 0, lossAcc: 0, iron: false, bot: true, alive: true, lastPower: null, items: 0, boost: false,
     name: 'สไลม์ ' + n, guild: 'ทุ่งสไลม์', level: 1, anim: { k: 'idle', t: 0 } };
 }
-// the slime template (SLIME) is level 30; stats scale like a player's (HP 400 x M, so level 1 has 132)
-const makeSlimeAt = i => { const sl = makeSlime(i), L = slimeLevel(S.mob.spawned + 1), m = levelM(L);
+// the slime template (SLIME) is its level 1 base; stats grow like a player's
+const makeSlimeAt = i => { const sl = makeSlime(i), L = slimeLevel(S.mob.spawned + 1), m = levelGrow(L);
   sl.c = Object.assign({}, sl.c); for (const k of ['hp', 'atk', 'def', 'mdef']) sl.c[k] = Math.round(SLIME[k] * m);
   sl.hp = sl.maxHp = sl.c.hp; sl.level = L; return sl; };
 // ---------- tutorial ----------
