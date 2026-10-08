@@ -1788,9 +1788,9 @@ function slimeFrame(tint, row, f, sc, face) {
 // round every cell, so drawing one never picks up the edge of the slime next to it (Karoz saw faint lines without it). Frames: 0 rest, 1 dip, 2 crouch,
 // 3 launch (tall), 4 in the air, 5 coming down, 6 landing (flat), 7 settling back
 const HOP_IMG = new Image(); HOP_IMG.src = 'assets/slime-hop.webp';
-// how big the slime is drawn on the field: about 37 px tall at rest, a little shorter than a hero on the field (the
-// crawl pictures are 41-47 px) (Karoz 2026-10-08)
-const SLIME_DRAW = 0.25;
+// how big the slime is drawn on the field: 40 px tall at rest (its rest frame is 147 px in the sheet), about a hero on
+// the field (the crawl pictures are 41-47 px) (Karoz 2026-10-08)
+const SLIME_DRAW = 40 / 147;
 const HOP = { w: 195, h: 181, sw: 207, sh: 193, gap: 6, foot: 97.5, scale: SLIME_DRAW };
 // Karoz's hurt faces (2026-10-08), laid out exactly like the hop sheet: 0 startled, 1 sad and squashed, 2 wailing
 // (a hard hit), 3 sad standing (low HP)
