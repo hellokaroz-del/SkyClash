@@ -4,7 +4,8 @@
 // gets ICE servers that stop working after a day. Setup: lobby/turn-setup.md
 //
 // Secrets (Supabase > Edge Functions > Secrets): CF_TURN_KEY_ID, CF_TURN_API_TOKEN
-// Keep "Verify JWT" on: only signed-in players can ask.
+// Turn "Verify JWT with legacy secret" OFF: the function checks the player itself below (that switch lets the public
+// anon key through anyway, and refuses players' sessions on projects using the newer signing keys).
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -15,6 +16,10 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  // only a signed-in player: Supabase Auth must recognise the session sent in the Authorization header
+  const auth = req.headers.get('Authorization') || '';
+  const who = await fetch(`${Deno.env.get('SUPABASE_URL')}/auth/v1/user`, { headers: { Authorization: auth, apikey: Deno.env.get('SUPABASE_ANON_KEY') || '' } });
+  if (!auth || !who.ok) return json({ error: 'not_signed_in' }, 401);
   const id = Deno.env.get('CF_TURN_KEY_ID'), token = Deno.env.get('CF_TURN_API_TOKEN');
   if (!id || !token) return json({ error: 'not_configured' }, 500);
   const r = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${id}/credentials/generate-ice-servers`, {
