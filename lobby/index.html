@@ -1173,7 +1173,21 @@ try { if (localStorage.getItem('aoa-scroll') === '1') rollScroll(true); } catch 
 // ---------- open the game inside the town ----------
 const gameBox = $('game');
 const tut = { on: false, done: false, timer: 0 };
+// TURN relay servers (Cloudflare), handed out by the Supabase function turn-credentials (lobby/turn-setup.md). Two players
+// whose home networks block a direct link play through them. The game in the frame waits for window.__iceReady before it
+// connects and reads window.__ice; without them (not set up yet, preview page) it connects the way it always did.
+const ice = { list: null, at: 0 };
+async function loadIce() {
+  if (!online.sb || !online.user || online.user.id === 'preview') return;
+  if (ice.list && Date.now() - ice.at < 6 * 3600e3) return; // the credentials last a day; fetch again after 6 hours
+  try {
+    const { data, error } = await online.sb.functions.invoke('turn-credentials');
+    if (!error && data && Array.isArray(data.iceServers) && data.iceServers.length) { ice.list = data.iceServers; ice.at = Date.now(); window.__ice = ice.list; }
+    else console.warn('turn-credentials', error || data);
+  } catch (e) { console.warn('turn-credentials', e); }
+}
 function launch(setup, watchRoom) {
+  window.__iceReady = loadIce();
   for (const m of document.querySelectorAll('.modal')) m.hidden = true;
   const old = gameBox.querySelector('iframe'); if (old) old.remove();
   gameBox.classList.toggle('tut', tut.on); $('tut-done').hidden = true;
@@ -1185,7 +1199,7 @@ function launch(setup, watchRoom) {
   // until the match has really started. The game's Admin button is only for admins.
   const css = '#setup { display: none !important; }' + (isAdmin() ? '' : '#admin-btn, #admin-pin, #admin-menu { display: none !important; }');
   const cover = $('g-cover'); cover.textContent = tut.on ? 'กำลังเข้าสู่ด่านฝึก...' : 'กำลังเชื่อมต่อ...'; cover.hidden = false;
-  let lastStart = 0;
+  let lastStart = 0, waitFrom = 0;
   const started = setInterval(() => {
     if (!fr.isConnected) { clearInterval(started); return; }
     try {
@@ -1193,7 +1207,13 @@ function launch(setup, watchRoom) {
       if (g && g.S && !g.S.demo) { clearInterval(started); cover.hidden = true; return; }
       // online: the host's game waits for its own start button once the other player is in; the town presses it
       if (g && g.NET && g.NET.on && g.NET.role === 'host' && g.NET.gpres && Date.now() - lastStart > 1500) { lastStart = Date.now(); press(fr.contentDocument, '#start'); }
-      if (!tut.on && msg && msg.textContent.trim()) cover.textContent = /^รหัสห้อง/.test(msg.textContent.trim()) ? 'กำลังรอคู่แข่งเข้าเกม...' : msg.textContent.trim(); // the game's online status (connection trouble shows as it is)
+      if (!tut.on && msg && msg.textContent.trim()) {
+        // the game's online status (connection trouble shows as it is); a host left waiting 40 s is told why
+        const waiting = /^รหัสห้อง/.test(msg.textContent.trim());
+        if (waiting && !waitFrom) waitFrom = Date.now(); else if (!waiting) waitFrom = 0;
+        cover.textContent = !waiting ? msg.textContent.trim() : Date.now() - waitFrom < 40000 ? 'กำลังรอคู่แข่งเข้าเกม...'
+          : 'คู่แข่งยังต่อเข้ามาไม่ได้ อาจเป็นเพราะเน็ตของอีกฝั่ง กด ← กลับเมือง แล้วกดลุยใหม่ได้เลย';
+      }
     } catch (e) {}
   }, 200);
   const early = setInterval(() => {
@@ -2221,7 +2241,7 @@ async function startChat() {
     const sb = online.sb;
     await loadProfile();
     if (online.me && online.me.tutorial_done === false) startTutorial();
-    loadAdmins(); refreshMail();
+    loadAdmins(); refreshMail(); loadIce();
     // no history: each visit (and each refresh) starts with an empty chat and shows only new messages
     if (!online.v2) sysLine('ตอนนี้ใช้ได้แค่ช่องโลก ต้องรัน SQL ช่องแชทใน Supabase ก่อน');
     else if (online.me.guild) sysLine(`คุณอยู่กิลด์ ${online.me.guild}`);
@@ -2517,6 +2537,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.21</div>
+<div id="ver">v0.61.22</div>
 </body>
 </html>
