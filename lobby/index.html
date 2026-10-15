@@ -1890,7 +1890,7 @@ async function rushReward() {
   if (error) {
     const em = error.message || '';
     showResult([['ทอง', 0], ['EXP', 0]], 0, 'ของรางวัล', 'EXP ที่ได้');
-    $('td-msg').textContent = /too_fast/.test(em) ? 'เกมจบเร็วเกินไป ไม่ได้รับของรางวัล' : /already_ended/.test(em) ? 'รับของรางวัลเกมนี้ไปแล้ว' : 'บันทึกของรางวัลไม่สำเร็จ: ' + why(error);
+    $('td-msg').textContent = /too_fast/.test(em) ? 'เกมจบเร็วผิดปกติ (ไม่ถึง 10 วิ) ไม่ได้รับของรางวัล' : /already_ended/.test(em) ? 'รับของรางวัลเกมนี้ไปแล้ว' : 'บันทึกของรางวัลไม่สำเร็จ: ' + why(error);
     go.textContent = 'กลับห้อง'; go.disabled = false; go.onclick = rushDone; go.focus(); return;
   }
   const me = data.me || {};
@@ -3613,6 +3613,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.57</div>
+<div id="ver">v0.61.58</div>
 </body>
 </html>
