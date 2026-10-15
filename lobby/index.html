@@ -1902,7 +1902,7 @@ const skillMul = L => 0.6 + 0.1 * (Math.max(1, Math.min(SKILL_MAX, L | 0 || 1)) 
 // the game's skill icons (index.html ICONS); skills without art show their slot number
 const SKILL_ICONS = { ice: 'a094.png', meteor: 'a093.png', sw_bash: 'a212.webp', sw_magnum: 'a213.webp', sw_armor: 'a214.webp', sw_provoke: 'a215.webp', sw_endure: 'a216.webp', sw_charge: 'a217.webp', pa_swordm: 'a218.webp', pa_ironbody: 'a219.webp' };
 let gameData = null;
-const loadGameData = () => gameData ? Promise.resolve(gameData) : fetch('../game-data.json').then(r => r.json()).then(d => { gameData = d; classStats = d.classes || {}; return d; });
+const loadGameData = () => gameData ? Promise.resolve(gameData) : fetch('../game-data.json', { cache: 'no-cache' }).then(r => r.json()).then(d => { gameData = d; classStats = d.classes || {}; return d; });
 loadGameData().catch(() => {});
 const jb = { pick: null, slot: 's1', pslot: 'p1' };
 const skillPoints = () => Math.max(0, (Math.max(1, prof.level | 0 || 1)) - 1);
