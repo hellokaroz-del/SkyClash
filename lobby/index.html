@@ -1912,7 +1912,6 @@ const startSkill = job => { const d = jobData(job), p = poolOf(job); return p ? 
 const isOpen = (o, id) => { const s = skillDef(id); return !s || !s.req || (o.lv[s.req] | 0) >= (s.reqLv || 3); };
 const known = (o, id) => !!id && (o.lv[id] | 0) > 0;
 const topLv = (job, id) => poolOf(job).pas.includes(id) ? 1 : SKILL_MAX;
-const minLv = (job, id) => id === startSkill(job) ? 1 : 0;
 // the job's saved levels and loadout, tidied: unknown, closed or unlearned skills out, no more points spent than the level gives
 function skillsOf(job) {
   const all = (prof.skills && typeof prof.skills === 'object') ? prof.skills : (prof.skills = {});
@@ -1922,11 +1921,11 @@ function skillsOf(job) {
   const pool = poolOf(job); if (!pool) return o;
   const ids = [...pool.act, ...pool.ult, ...pool.pas], first = startSkill(job);
   for (const id of Object.keys(o.lv)) if (!ids.includes(id)) delete o.lv[id];
-  for (const id of ids) { const L = Math.max(minLv(job, id), Math.min(topLv(job, id), o.lv[id] | 0)); if (L) o.lv[id] = L; else delete o.lv[id]; }
+  for (const id of ids) { const L = Math.min(topLv(job, id), Math.max(0, o.lv[id] | 0)); if (L) o.lv[id] = L; else delete o.lv[id]; }
   let over = pointsUsed(job, o) - skillPoints(); // a lower level (or an admin's change) takes points back, newest skills first
-  for (const id of [...ids].reverse()) { if (over <= 0) break; const dd = Math.min(over, (o.lv[id] | 0) - minLv(job, id)); if (dd > 0) { o.lv[id] -= dd; over -= dd; if (!o.lv[id]) delete o.lv[id]; } }
+  for (const id of [...ids].reverse()) { if (over <= 0) break; const dd = Math.min(over, o.lv[id] | 0); if (dd > 0) { o.lv[id] -= dd; over -= dd; if (!o.lv[id]) delete o.lv[id]; } }
   for (const id of pool.act) if (!isOpen(o, id)) delete o.lv[id]; // a tier 2 skill whose source drops under Lv 3 is forgotten (its points come back)
-  if (o.fresh) { delete o.fresh; o.load = { s1: first }; }
+  if (o.fresh) { delete o.fresh; if (first && skillPoints() >= 1) { o.lv[first] = 1; o.load = { s1: first }; } }
   const used = new Set();
   for (const x of LOAD_SLOTS) { const id = o.load[x]; o.load[x] = pool.act.includes(id) && known(o, id) && !used.has(id) ? id : ''; if (o.load[x]) used.add(o.load[x]); }
   if (!pool.ult.includes(o.load.b) || !known(o, o.load.b)) o.load.b = '';
@@ -1955,7 +1954,7 @@ const jBtn = (text, fn, label) => { const b = jEl('button', '', text); b.type = 
 // − pips + : learn, level up or give back a skill's points
 function lvBox(id, name, o) {
   const L = o.lv[id] | 0, top = topLv(prof.job, id), left = skillPoints() - pointsUsed(prof.job), box = jEl('div', 'jb-lv');
-  const minus = jBtn('−', () => setSkillLv(id, L - 1), L === 1 ? `ลืม ${name}` : `ลดเลเวล ${name}`); minus.disabled = L <= minLv(prof.job, id);
+  const minus = jBtn('−', () => setSkillLv(id, L - 1), L === 1 ? `ลืม ${name}` : `ลดเลเวล ${name}`); minus.disabled = L <= 0;
   const plus = jBtn('+', () => setSkillLv(id, L + 1), L ? `อัปเลเวล ${name}` : `เรียน ${name}`); plus.disabled = L >= top || left <= 0;
   const out = jEl('output', '', !L ? 'ยังไม่เรียน' : top === 1 ? 'เรียนแล้ว' : `Lv.${L}`);
   if (top > 1) { const pips = jEl('span'); for (let i = 1; i <= top; i++) pips.appendChild(jEl('i', i <= L ? 'on' : '')); box.append(minus, pips, out, plus); }
@@ -2007,7 +2006,7 @@ function renderJobs() {
   // another job's skills are only a preview: blurred under a note (Karoz 2026-10-15)
   $('jb-skills').classList.toggle('other', !mine);
   const pool = poolOf(j.k), o = mine && pool ? skillsOf(j.k) : null;
-  $('jb-pts').textContent = mine ? skillPoints() - pointsUsed(j.k) : '-'; $('jb-reset').disabled = !mine || pointsUsed(j.k) <= 1;
+  $('jb-pts').textContent = mine ? skillPoints() - pointsUsed(j.k) : '-'; $('jb-reset').disabled = !mine || !pointsUsed(j.k);
   $('jb-note').textContent = mine ? `ได้ 1 แต้มต่อเลเวล (สูงสุด ${SKILL_CAP} แต้ม รวมสกิลเริ่มต้นแล้ว) กด + เพื่อเรียนสกิลใหม่ (1 แต้ม เริ่ม Lv.1 แรง 60%) แล้วอัปได้ถึง Lv.${SKILL_MAX} (แรง 100%) พาสซีฟเรียนครั้งเดียว 1 แต้ม กดช่องด้านบนแล้วกด "ใส่" ที่สกิลเพื่อเปลี่ยนสกิลในช่องนั้น`
     : 'ดูสกิลของอาชีพนี้ได้ อัปสกิลและจัดสกิลได้เฉพาะอาชีพปัจจุบัน';
   const ul = $('jb-sk'), ult = $('jb-ult'), pl = $('jb-pas'), load = $('jb-load');
@@ -2073,7 +2072,7 @@ function equipSkill(id) {
 // learn (0 -> 1), level up or down, or forget (1 -> 0) a skill; a newly learned skill goes into the first empty slot
 function setSkillLv(id, L) {
   const o = skillsOf(prof.job), pool = poolOf(prof.job), was = o.lv[id] | 0;
-  L = Math.max(minLv(prof.job, id), Math.min(topLv(prof.job, id), L));
+  L = Math.max(0, Math.min(topLv(prof.job, id), L));
   if (L > was && pointsUsed(prof.job) + (L - was) > skillPoints()) return;
   if (pool.act.includes(id) && !isOpen(o, id)) return;
   const before = pool.act.filter(k => isOpen(o, k));
@@ -2089,7 +2088,8 @@ function setSkillLv(id, L) {
   for (const k of opened) toast(`ปลดล็อก ${skillDef(k).name} ให้เรียนได้แล้ว`);
   saveSkills();
 }
-$('jb-reset').onclick = () => { const o = skillsOf(prof.job), first = startSkill(prof.job); o.lv = { [first]: 1 }; o.load = { s1: first }; skillsOf(prof.job); saveSkills(); toast('รีเซ็ตแต้มสกิลแล้ว'); };
+// reset gives every point back, the starting skill's too (Karoz 2026-10-15)
+$('jb-reset').onclick = () => { const o = skillsOf(prof.job); o.lv = {}; o.load = {}; skillsOf(prof.job); saveSkills(); toast('รีเซ็ตแต้มสกิลแล้ว คืนแต้มทั้งหมด'); };
 // levels and loadout go to the server a moment after the last click (one write for a burst of clicks)
 const serverLive = () => !!(online.sb && online.user && online.user.id !== 'preview' && online.me);
 function saveSkills() {
@@ -2857,6 +2857,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.35</div>
+<div id="ver">v0.61.36</div>
 </body>
 </html>
