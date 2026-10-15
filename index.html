@@ -589,16 +589,25 @@ function classFrom(d) {
   c.maxEn = maxEnergy(c);
   return c;
 }
-// a player's loadout from the town: which 6 skills, which ultimate, which 2 passives (only ones in the job's pool)
+// a player's loadout from the town: which 6 skills, which ultimate, which 2 passives (only ones in the job's pool).
+// Karoz 2026-10-15: skills are learned with points, so a slot the town sends empty ('' or missing) stays empty
 function setLoadout(p, ld) {
   const d = CLASSES_GD[p.k]; if (!d || !ld || typeof ld !== 'object') return;
   const pool = d.pool || SLOT_IDS.map(x => d[x]), ults = d.ults || [d.b], pas = d.pasPool || [d.p1, d.p2], o = Object.assign({}, d), seen = new Set();
-  for (const x of SLOT_IDS) if (pool.includes(ld[x]) && SKILLS[ld[x]] && !seen.has(ld[x])) { o[x] = ld[x]; seen.add(ld[x]); }
-  if (ults.includes(ld.b) && SKILLS[ld.b]) o.b = ld.b;
-  const pp = [ld.p1, ld.p2].filter(x => pas.includes(x) && PASSIVES[x]); if (pp.length === 2 && pp[0] !== pp[1]) { o.p1 = pp[0]; o.p2 = pp[1]; }
+  for (const x of SLOT_IDS) { o[x] = ''; if (pool.includes(ld[x]) && SKILLS[ld[x]] && !seen.has(ld[x])) { o[x] = ld[x]; seen.add(ld[x]); } }
+  o.b = ults.includes(ld.b) && SKILLS[ld.b] ? ld.b : '';
+  const pp = [...new Set([ld.p1, ld.p2].filter(x => pas.includes(x) && PASSIVES[x]))]; o.p1 = pp[0] || ''; o.p2 = pp[1] || '';
   const c = classFrom(o); c.show = p.c0 && p.c0.show;
   p.c0 = p.c = c; p.ld = ld;
   p.maxEn = c.maxEn; p.energy = Math.min(p.energy, p.maxEn);
+}
+// the bot gets as many skills as the player has: its job's first ones, the ultimate only if the player has one, as many passives
+function botLoadout(b, ld) {
+  const d = CLASSES_GD[b.k]; if (!d || !ld) return;
+  const n = SLOT_IDS.filter(x => SKILLS[ld[x]]).length, np = ['p1', 'p2'].filter(x => PASSIVES[ld[x]]).length, o = {};
+  SLOT_IDS.forEach((x, i) => { o[x] = i < n ? d[x] : ''; });
+  o.b = SKILLS[ld.b] ? d.b : ''; o.p1 = np > 0 ? d.p1 : ''; o.p2 = np > 1 ? d.p2 : '';
+  setLoadout(b, o);
 }
 // the shots one press of fire makes for a skill: count spread across the angle/power fan, each delay frames apart
 function skillShots(p, sk, power, mult) {
@@ -1174,7 +1183,7 @@ function newMatch(demo) {
     return;
   }
   const pls = [mk(0, picks[0], STAGE.spawn[0], false), mk(1, picks[1], STAGE.spawn[1], vsBot)];
-  if (!demo && vsBot && myInfo()) { applyInfo(pls[0], myInfo(), 'คุณ'); if (myInfo().sl) setSkills(pls[1], botLevels(pls[1], myInfo().sl)); setLevel(pls[1], myInfo().lv); } // against the bot: the town's player under their own name, the bot at the same level and skill levels
+  if (!demo && vsBot && myInfo()) { applyInfo(pls[0], myInfo(), 'คุณ'); if (myInfo().ld) botLoadout(pls[1], myInfo().ld); if (myInfo().sl) setSkills(pls[1], botLevels(pls[1], myInfo().sl)); setLevel(pls[1], myInfo().lv); } // against the bot: the town's player under their own name, the bot at the same level and skill levels
   // the higher max Energy (from SPD) starts; a tie is a coin flip
   const e0 = pls[0].maxEn, e1 = pls[1].maxEn;
   S = {
@@ -5008,7 +5017,7 @@ loadSavedData();
 cam.x = 0;
 fitCanvas(); drawStripResize();
 requestAnimationFrame(loop);
-window.__game = { NET, get S() { return S; }, get cam() { return cam; }, input, fire, useSkill, botPlan, useUlt, useSlot, runSim, simPairs, simSummary, simCSV, statOf, hitDamage, critChance, get SKILLS() { return SKILLS; }, explode, selfSkill, foeSkill, turnStartEffects };
+window.__game = { NET, get S() { return S; }, get cam() { return cam; }, input, fire, useSkill, botPlan, useUlt, useSlot, runSim, simPairs, simSummary, simCSV, statOf, hitDamage, critChance, get SKILLS() { return SKILLS; }, explode, selfSkill, foeSkill, turnStartEffects, setLoadout, botLoadout, get CLASSES() { return CLASSES; } };
 })();
 </script>
 

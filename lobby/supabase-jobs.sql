@@ -6,7 +6,9 @@
 alter table public.profiles add column if not exists skills jsonb not null default '{}'::jsonb;
 grant update (skills) on public.profiles to authenticated;
 
--- skill points: 1 per level after level 1, for each job. Every skill is Lv 1 to 5; a player can never spend more than they have.
+-- skill points (Karoz 2026-10-15): 1 per character level, 40 at most, for each job. Learning a skill costs 1 (Lv 1) and each
+-- level after that 1 more, so a job's spent points are its skill levels added up (a passive is 0 or 1). Levels are 0 to 5;
+-- a player can never spend more than they have.
 create or replace function public.profiles_skills_check() returns trigger language plpgsql set search_path = public as $$
 declare
   job text; body jsonb; sk text; lv jsonb; spent int;
@@ -19,11 +21,11 @@ begin
     if body ? 'lv' then
       if jsonb_typeof(body->'lv') <> 'object' then raise exception 'bad_skills'; end if;
       for sk, lv in select * from jsonb_each(body->'lv') loop
-        if jsonb_typeof(lv) <> 'number' or (lv::text)::numeric not between 1 and 5 then raise exception 'bad_skill_level'; end if;
-        spent := spent + (lv::text)::int - 1;
+        if jsonb_typeof(lv) <> 'number' or (lv::text)::numeric not between 0 and 5 or (lv::text)::numeric <> trunc((lv::text)::numeric) then raise exception 'bad_skill_level'; end if;
+        spent := spent + (lv::text)::int;
       end loop;
     end if;
-    if spent > greatest(coalesce(new.level, 1), 1) - 1 then raise exception 'not_enough_skill_points'; end if;
+    if spent > least(greatest(coalesce(new.level, 1), 1), 40) then raise exception 'not_enough_skill_points'; end if;
   end loop;
   return new;
 end $$;
