@@ -662,6 +662,14 @@ const SKILL_MAX = 5, SKILL_SCALE = ['dmg', 'vsDot', 'dotPct', 'zone', 'heal', 'h
   'debDeal', 'debDef', 'debMdef', 'debTaken', 'gHp', 'gStat', 'debAtk', 'debMatk', 'debSpd', 'debHealCut', 'deathMark', 'vsPoison', 'vsHidden', 'vsMark', 'counter', 'takenOnce',
   'critNext', 'hotMatk', 'zoneHeal', 'teamShieldPct'];
 const skillMul = L => 0.6 + 0.1 * (Math.max(1, Math.min(SKILL_MAX, L | 0 || 1)) - 1);
+// the % numbers of a skill's text at a level: each number that is one of its scaled values (or a multi-shot total) becomes that value
+// times m, so the description matches what the skill really does; other numbers (a self penalty, a duration) stay
+function lvText(s, txt, m) {
+  const map = {};
+  for (const k of SKILL_SCALE) if (+s[k]) map[+s[k]] = Math.round(+s[k] * m);
+  if (+s.dmg && (s.count | 0) > 1) map[+s.dmg * s.count] = Math.round(+s.dmg * m) * s.count;
+  return String(txt).replace(/(\d+(?:\.\d+)?)%/g, (w, n) => (+n in map ? map[+n] + '%' : w));
+}
 function setSkills(p, sl) {
   if (!sl || typeof sl !== 'object') return;
   const sk = {};
@@ -669,6 +677,7 @@ function setSkills(p, sl) {
     if (!s) { sk[slot] = s; continue; }
     const L = sl[s.id], m = skillMul(L), o = Object.assign({}, s);
     for (const k of SKILL_SCALE) if (+o[k]) o[k] = Math.round(+o[k] * m);
+    if (o.short) o.short = lvText(s, o.short, m); if (o.tip) o.tip = lvText(s, o.tip, m);
     o.lv = Math.max(1, Math.min(SKILL_MAX, L | 0 || 1)); sk[slot] = o;
   }
   p.c = Object.assign({}, p.c, { sk }); p.sl = sl;
