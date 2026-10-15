@@ -727,6 +727,65 @@ img { -webkit-user-drag: none; user-drag: none; }
 .drag-ghost.out { filter: drop-shadow(0 0 8px #ff3b2a) drop-shadow(0 0 2px #ff3b2a); }
 .bg-slot.fit, .bg-grid.fit .cell { box-shadow: 0 0 0 3px #2a7fe0, 0 0 12px rgba(42, 127, 224, .7); }
 .bg-slot.has, .bg-grid .cell.has { touch-action: none; }
+/* Jobs tab: pick a job, level its skills with skill points */
+.jb-body { display: grid; grid-template-columns: 220px minmax(0, 1fr) minmax(0, 1.3fr); gap: 12px; height: min(690px, calc(100vh - 170px)); min-height: 420px; }
+.jb-body[hidden], .bg-body[hidden] { display: none; }
+.jb-body > .bg-pane { overflow-y: auto; overscroll-behavior: contain; }
+.jb-list { display: flex; flex-direction: column; gap: 6px; }
+.jb-job { display: flex; align-items: center; gap: 8px; border: 2px solid #8fbff0; border-radius: 12px; background: linear-gradient(#2f62a8, #1d3f73); color: #fff; padding: 6px 8px; cursor: pointer; text-align: left; font: inherit; }
+.jb-job:hover { filter: brightness(1.15); }
+.jb-job[aria-checked="true"] { background: linear-gradient(#58b6ff, #2a7fe0); border-color: #fff; box-shadow: 0 0 12px rgba(120, 200, 255, .9); }
+.jb-job i { width: 40px; height: 40px; flex: none; background: center / contain no-repeat; }
+.jb-job span { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.jb-job b { font-size: 16px; } .jb-job small { font-size: 12px; color: #cfe6ff; }
+.jb-job em { margin-left: auto; font-style: normal; font-size: 11px; font-weight: 700; color: #1d3f73; background: #ffe08a; border-radius: 8px; padding: 2px 6px; white-space: nowrap; }
+.jb-card { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; }
+.jb-art { position: relative; flex: none; height: 250px; border-radius: 14px; background: radial-gradient(circle at 50% 70%, #fff8, transparent 70%), linear-gradient(#9fd0ff, #5a9be0); overflow: hidden; }
+.jb-art img { position: absolute; left: 50%; bottom: 4px; height: 94%; width: auto; max-width: none; transform: translateX(var(--fx, -50%)); filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .4)); }
+.jb-card h3 { margin: 4px 0 0; font-size: 24px; color: #1d3f73; } .jb-card h3 small { font-size: 15px; color: #3f6fb0; margin-left: 8px; }
+.jb-card p { margin: 0; color: #1d3f73; font-size: 15px; }
+.jb-diff { color: #3f6fb0; font-size: 14px; font-weight: 700; } .jb-diff i { font-style: normal; color: #b9c9de; } .jb-diff i.on { color: #f5b82a; }
+.jb-stats { margin-top: 2px; }
+.jb-go { margin-top: 4px; border: 2px solid #f2d27a; border-radius: 12px; background: linear-gradient(#ffd45a, #e09a1a); color: #4a2a00; font: inherit; font-weight: 800; font-size: 17px; padding: 10px; cursor: pointer; }
+.jb-go:hover:not(:disabled) { filter: brightness(1.08); }
+.jb-go:disabled { background: #cfdcec; border-color: #9fb6d6; color: #3f6fb0; cursor: default; }
+.jb-go.sure { background: linear-gradient(#ff8a6a, #d9442a); color: #fff; }
+.jb-skills { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.jb-pts { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #1d3f73; color: #fff; border-radius: 10px; padding: 6px 10px; font-weight: 700; }
+.jb-pts b { color: #ffe08a; font-size: 20px; }
+.jb-pts button, .jb-lv button { border: 2px solid #8fbff0; border-radius: 10px; background: linear-gradient(#2f62a8, #1d3f73); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.jb-pts button { padding: 4px 12px; } .jb-pts button:disabled, .jb-lv button:disabled { opacity: .4; cursor: default; }
+.jb-note { margin: 0; font-size: 13px; color: #3f6fb0; }
+.jb-skills h4 { margin: 4px 0 0; color: #1d3f73; font-size: 16px; }
+.jb-sk { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.jb-sk li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 8px; background: rgba(255, 255, 255, .75); border: 2px solid #cfe2f7; border-radius: 12px; padding: 5px 8px; }
+.jb-sk li.ult { border-color: #f2d27a; background: linear-gradient(90deg, #fff7e0, #ffffffc0); }
+.jb-ico { width: 44px; height: 44px; border-radius: 10px; background: #1d3f73 center / cover no-repeat; color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 14px; }
+.jb-txt { min-width: 0; } .jb-txt b { color: #1d3f73; font-size: 15px; } .jb-txt b small { color: #3f6fb0; font-weight: 600; margin-left: 6px; }
+.jb-txt div { font-size: 13px; color: #33557f; line-height: 1.3; }
+.jb-lv { display: flex; align-items: center; gap: 4px; } .jb-lv button { width: 30px; height: 30px; padding: 0; font-size: 18px; line-height: 1; }
+.jb-lv span { display: flex; gap: 2px; } .jb-lv span i { width: 9px; height: 14px; border-radius: 3px; background: #cfdcec; } .jb-lv span i.on { background: linear-gradient(#ffd84a, #ffb020); }
+.jb-lv output { min-width: 40px; text-align: center; font-weight: 800; color: #1d3f73; font-size: 14px; }
+.jb-sk li.pas:not(:has(.jb-side)) { grid-template-columns: 44px minmax(0, 1fr); }
+.jb-sk li.tier2 { margin-left: 22px; border-style: dashed; }
+.jb-sk li.tier2::before { content: '↳'; position: absolute; margin-left: -22px; color: #3f6fb0; font-weight: 800; }
+.jb-sk li { position: relative; }
+.jb-req { font-size: 12px; color: #2a7f4a; font-weight: 700; } .jb-req.lock { color: #b0503a; }
+.jb-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.jb-put { border: 2px solid #f2d27a; border-radius: 10px; background: linear-gradient(#ffd45a, #e09a1a); color: #4a2a00; font: inherit; font-weight: 800; font-size: 13px; padding: 3px 10px; cursor: pointer; }
+.jb-put.in, .jb-put:disabled { background: #cfdcec; border-color: #9fb6d6; color: #3f6fb0; cursor: default; }
+.jb-skills h4 small { font-weight: 600; color: #3f6fb0; font-size: 13px; }
+.jb-load { display: flex; flex-direction: column; gap: 6px; background: #1d3f73; border-radius: 12px; padding: 8px; }
+.jb-load[hidden] { display: none; }
+.jb-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.jb-row + .jb-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.jb-slot { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; border: 2px solid #4f7fc0; border-radius: 10px; background: #2a5596; color: #fff; padding: 4px 2px; font: inherit; cursor: pointer; }
+.jb-slot span { font-size: 11px; line-height: 1.15; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jb-slot .jb-ico { width: 36px; height: 36px; background-color: #0d2142; }
+.jb-slot.on { border-color: #ffe08a; box-shadow: 0 0 10px rgba(255, 224, 138, .9); }
+.jb-slot:disabled { cursor: default; opacity: 1; }
+@media (max-width: 900px) { .jb-body { grid-template-columns: minmax(0, 1fr); height: auto; } .jb-body > .bg-pane { overflow: visible; } .jb-list { flex-direction: row; flex-wrap: wrap; } .jb-job { flex: 1 1 140px; } .jb-art { height: 180px; } }
+@media (max-width: 480px) { .jb-sk li { grid-template-columns: 38px minmax(0, 1fr); } .jb-side { grid-column: 1 / -1; flex-direction: row; justify-content: flex-end; } .jb-ico { width: 38px; height: 38px; } .jb-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .dragging { opacity: .35; }
 
 #rotate { position: fixed; inset: 0; z-index: 15; display: none; place-items: center; text-align: center; padding: 24px;
@@ -899,10 +958,10 @@ img { -webkit-user-drag: none; user-drag: none; }
     <button class="x" type="button" data-close aria-label="ปิด">✕</button>
     <h2 id="t-bag">กระเป๋า</h2>
     <div class="bg-tabs" id="bg-tabs">
-      <button type="button" class="on">อุปกรณ์สวมใส่</button><button type="button">Jobs</button>
+      <button type="button" class="on" data-view="gear">อุปกรณ์สวมใส่</button><button type="button" data-view="jobs">Jobs</button>
       <button type="button">Ruin</button><button type="button">Card</button><button type="button">ช่องเก็บของ</button>
     </div>
-    <div class="bg-body">
+    <div class="bg-body" id="bg-gear">
       <div class="bg-pane">
         <div class="bg-head"><span id="bg-name"></span><span id="bg-job"></span><span>Lv. <b id="bg-lv"></b></span></div>
         <div class="bg-eq">
@@ -922,6 +981,28 @@ img { -webkit-user-drag: none; user-drag: none; }
         <div class="bg-cash"><span>ทอง <i id="bg-gold">0</i></span><span>เพชร <i id="bg-gem">0</i></span><span>คูปอง <i id="bg-coupon">0</i></span></div>
       </div>
       <div class="bg-side" id="bg-side"><button type="button" class="on" data-tab="gear">อุปกรณ์</button><button type="button" data-tab="use">ของใช้</button><button type="button" data-tab="mat">วัตถุดิบ</button><button type="button" data-tab="fashion">แฟชั่น</button></div>
+    </div>
+    <div class="jb-body" id="bg-jobs" hidden>
+      <div class="bg-pane jb-list" id="jb-list" role="radiogroup" aria-label="อาชีพ"></div>
+      <div class="bg-pane jb-card">
+        <div class="jb-art"><img id="jb-img" alt=""></div>
+        <h3 id="jb-name"></h3>
+        <p id="jb-desc"></p>
+        <div class="jb-diff" id="jb-diff"></div>
+        <div class="bg-stats jb-stats" id="jb-stats"></div>
+        <button type="button" class="jb-go" id="jb-go"></button>
+      </div>
+      <div class="bg-pane jb-skills">
+        <div class="jb-pts"><span>แต้มสกิล <b id="jb-pts">0</b></span><button type="button" id="jb-reset">รีเซ็ต</button></div>
+        <p class="jb-note" id="jb-note"></p>
+        <div class="jb-load" id="jb-load" aria-label="สกิลที่ใช้ในสนาม"></div>
+        <h4>สกิล <small>(ใส่ลงสนามได้ 6)</small></h4>
+        <ul class="jb-sk" id="jb-sk"></ul>
+        <h4>ท่าไม้ตาย <small>(เลือก 1)</small></h4>
+        <ul class="jb-sk" id="jb-ult"></ul>
+        <h4>พาสซีฟ <small>(เลือก 2)</small></h4>
+        <ul class="jb-sk" id="jb-pas"></ul>
+      </div>
     </div>
   </div>
 </div>
@@ -1192,7 +1273,8 @@ async function loadIce() {
 function launch(setup, watchRoom) {
   window.__iceReady = loadIce();
   // the game reads who is playing from here (name, level, guild) and shows it to both sides online
-  window.__me = { name: prof.name || 'ผู้เล่น', level: prof.level || 1, guild: (online.me && online.me.guild) || '' };
+  // skills: the levels picked in the bag's Jobs tab for the current job (the game scales each skill's strength by them)
+  window.__me = { name: prof.name || 'ผู้เล่น', level: prof.level || 1, guild: (online.me && online.me.guild) || '', ...battleSkills() };
   for (const m of document.querySelectorAll('.modal')) m.hidden = true;
   const old = gameBox.querySelector('iframe'); if (old) old.remove();
   gameBox.classList.toggle('tut', tut.on); $('tut-done').hidden = true;
@@ -1795,10 +1877,214 @@ function renderBag() {
 function openBag() {
   renderBag(); openModal('m-bag');
   loadInv().then(renderBag);
-  if (!classStats) fetch('../game-data.json').then(r => r.json()).then(d => { classStats = d.classes || {}; renderBag(); }).catch(() => {});
+  if (!gameData) loadGameData().then(() => { renderBag(); if (bagView === 'jobs') renderJobs(); }).catch(() => {});
+  showBagView(bagView);
 }
-// tabs and buttons that come later
-for (const b of $('bg-tabs').querySelectorAll('button')) if (!b.classList.contains('on')) b.onclick = () => toast(`${b.textContent} ${SOON}`);
+// the top tabs: อุปกรณ์สวมใส่ and Jobs work, the rest come later
+let bagView = 'gear';
+function showBagView(v) {
+  bagView = v;
+  for (const b of $('bg-tabs').children) b.classList.toggle('on', b.dataset.view === v);
+  $('bg-gear').hidden = v !== 'gear'; $('bg-jobs').hidden = v !== 'jobs';
+  if (v === 'jobs') { if (!jb.pick || (JOB[jb.pick].admin && !isAdmin())) jb.pick = prof.job || 'blade'; renderJobs(); }
+}
+for (const b of $('bg-tabs').querySelectorAll('button')) b.onclick = b.dataset.view ? () => showBagView(b.dataset.view) : () => toast(`${b.textContent} ${SOON}`);
+
+// ---------- Jobs tab (Karoz 2026-10-15): look through the jobs, level skills, pick what goes into battle ----------
+// Karoz's new skill set: each job has 12 actives (6 go into the battle slots), 2 ultimates (pick 1) and 6 passives (pick 2).
+// A tier 2 skill (req in the data) opens when its source skill reaches Lv 3; the rest are open from the start.
+// Skill points (Karoz's roadmap): 1 point per level after level 1. Every open skill starts at Lv 1 and goes up to SKILL_MAX;
+// the numbers in the data are the top level, Lv 1 is 60% of them and each level adds 10% (the game's setSkills does the same).
+// Each job keeps its own levels and loadout in prof.skills[job] = { lv: { id: level }, load: { s1..s6, b, p1, p2 } }
+// (and profiles.skills once supabase-jobs.sql is run). Changing job is shown but locked for now (Karoz 2026-10-15).
+const SKILL_MAX = 5, LOAD_SLOTS = ['s1', 's2', 's3', 's4', 's5', 's6'];
+const skillMul = L => 0.6 + 0.1 * (Math.max(1, Math.min(SKILL_MAX, L | 0 || 1)) - 1);
+// the game's skill icons (index.html ICONS); skills without art show their slot number
+const SKILL_ICONS = { ice: 'a094.png', meteor: 'a093.png', sw_bash: 'a212.webp', sw_magnum: 'a213.webp', sw_armor: 'a214.webp', sw_provoke: 'a215.webp', sw_endure: 'a216.webp', sw_charge: 'a217.webp', pa_swordm: 'a218.webp', pa_ironbody: 'a219.webp' };
+let gameData = null;
+const loadGameData = () => gameData ? Promise.resolve(gameData) : fetch('../game-data.json').then(r => r.json()).then(d => { gameData = d; classStats = d.classes || {}; return d; });
+loadGameData().catch(() => {});
+const jb = { pick: null, slot: 's1', pslot: 'p1' };
+const skillPoints = () => Math.max(0, (Math.max(1, prof.level | 0 || 1)) - 1);
+const jobData = job => gameData && gameData.classes && gameData.classes[job];
+const poolOf = job => { const d = jobData(job); return d ? { act: d.pool || LOAD_SLOTS.map(x => d[x]), ult: d.ults || [d.b], pas: d.pasPool || [d.p1, d.p2] } : null; };
+const skillDef = id => (gameData && gameData.skills && gameData.skills[id]) || null;
+const isOpen = (o, id) => { const s = skillDef(id); return !s || !s.req || (o.lv[s.req] || 1) >= (s.reqLv || 3); };
+// the job's saved levels and loadout, tidied: unknown or locked skills out, levels 1-SKILL_MAX, no more points spent than the level gives
+function skillsOf(job) {
+  const all = (prof.skills && typeof prof.skills === 'object') ? prof.skills : (prof.skills = {});
+  const o = all[job] && typeof all[job] === 'object' ? all[job] : (all[job] = {});
+  if (!o.lv || typeof o.lv !== 'object') o.lv = {};
+  if (!o.load || typeof o.load !== 'object') o.load = {};
+  const pool = poolOf(job); if (!pool) return o;
+  for (const id of [...pool.act, ...pool.ult]) o.lv[id] = Math.max(1, Math.min(SKILL_MAX, o.lv[id] | 0 || 1));
+  for (const id of Object.keys(o.lv)) if (![...pool.act, ...pool.ult].includes(id)) delete o.lv[id];
+  let over = pointsUsed(job, o) - skillPoints(); // a lower level (or an admin's change) takes points back, newest skills first
+  for (const id of [...pool.ult, ...pool.act].reverse()) { if (over <= 0) break; const dd = Math.min(over, o.lv[id] - 1); o.lv[id] -= dd; over -= dd; }
+  for (const id of pool.act) if (!isOpen(o, id)) o.lv[id] = 1; // a closed tier 2 skill keeps no levels
+  const d = jobData(job), used = new Set();
+  for (const x of LOAD_SLOTS) { const id = o.load[x]; o.load[x] = pool.act.includes(id) && isOpen(o, id) && !used.has(id) ? id : null; if (o.load[x]) used.add(o.load[x]); }
+  for (const x of LOAD_SLOTS) if (!o.load[x]) { const id = [d[x], ...pool.act].find(k => k && pool.act.includes(k) && isOpen(o, k) && !used.has(k)); o.load[x] = id; used.add(id); }
+  if (!pool.ult.includes(o.load.b)) o.load.b = d.b;
+  if (!pool.pas.includes(o.load.p1)) o.load.p1 = d.p1;
+  if (!pool.pas.includes(o.load.p2) || o.load.p2 === o.load.p1) o.load.p2 = [d.p2, ...pool.pas].find(k => k !== o.load.p1);
+  return o;
+}
+function pointsUsed(job, o) {
+  const pool = poolOf(job); o = o || prof.skills[job]; if (!pool || !o || !o.lv) return 0;
+  return [...pool.act, ...pool.ult].reduce((n, id) => n + Math.max(0, (o.lv[id] | 0 || 1) - 1), 0);
+}
+// what the game gets: levels of the skills in the loadout, and the loadout itself
+function battleSkills() {
+  if (!prof.job || !poolOf(prof.job)) return { skills: null, load: null };
+  const o = skillsOf(prof.job), lv = {};
+  for (const x of [...LOAD_SLOTS, 'b']) if (o.load[x]) lv[o.load[x]] = o.lv[o.load[x]] || 1;
+  return { skills: lv, load: Object.assign({}, o.load) };
+}
+function skillIcon(key, label) {
+  const i = document.createElement('i'); i.className = 'jb-ico';
+  if (key && SKILL_ICONS[key]) i.style.backgroundImage = `url(../assets/${SKILL_ICONS[key]})`; else i.textContent = label;
+  return i;
+}
+const jEl = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const jBtn = (text, fn, label) => { const b = jEl('button', '', text); b.type = 'button'; b.onclick = fn; if (label) b.setAttribute('aria-label', label); return b; };
+// one skill row: icon, name and what it does, its level (own job) and how to put it into battle
+function skillRow(id, mine, o, opts) {
+  const s = skillDef(id); if (!s) return null;
+  const li = jEl('li', opts.cls || ''), txt = jEl('div', 'jb-txt'), name = jEl('b', '', s.name), info = jEl('div', '', s.short || '');
+  if (s.tip) li.title = s.tip;
+  const tags = [];
+  if (opts.tier2) tags.push('ขั้น 2');
+  if (s.cd) tags.push(`CD ${s.cd}`);
+  if (tags.length) name.appendChild(jEl('small', '', tags.join(' · ')));
+  txt.append(name, info);
+  const open = !mine || isOpen(o, id);
+  if (opts.tier2) { const src = skillDef(s.req); const need = jEl('div', 'jb-req' + (mine && !open ? ' lock' : ''), `${mine && !open ? '🔒 ' : ''}ปลดล็อกเมื่อ ${src ? src.name : s.req} Lv.${s.reqLv || 3}`); txt.appendChild(need); }
+  li.append(skillIcon(s.icon, opts.label), txt);
+  if (!mine) return li;
+  const side = jEl('div', 'jb-side');
+  if (opts.levels && open) {
+    const L = o.lv[id] || 1, left = skillPoints() - pointsUsed(prof.job), box = jEl('div', 'jb-lv');
+    const minus = jBtn('−', () => setSkillLv(id, L - 1), `ลดเลเวล ${s.name}`); minus.disabled = L <= 1;
+    const plus = jBtn('+', () => setSkillLv(id, L + 1), `อัปเลเวล ${s.name}`); plus.disabled = L >= SKILL_MAX || left <= 0;
+    const pips = jEl('span'); for (let i = 1; i <= SKILL_MAX; i++) pips.appendChild(jEl('i', i <= L ? 'on' : ''));
+    const out = jEl('output', '', `Lv.${L}`); out.title = `แรง ${Math.round(skillMul(L) * 100)}% ของค่าในคำอธิบาย`;
+    box.append(minus, pips, out, plus); side.appendChild(box);
+    if (L < SKILL_MAX && (s.dmg || s.heal || s.healMatk || s.shieldMatk || s.shieldPct || s.hotMatk || s.zoneHeal || s.deathMark || s.bAtk || s.bDef || s.bTaken || s.takenOnce || s.critNext || s.bNextMagic || s.debDeal || s.debDef || s.debSpd || s.debHealCut)) info.textContent += ` (ตอนนี้แรง ${Math.round(skillMul(L) * 100)}%)`;
+  }
+  if (opts.equip) side.appendChild(opts.equip(open));
+  li.appendChild(side);
+  return li;
+}
+function renderJobs() {
+  const list = $('jb-list');
+  if (!list.childElementCount) for (const j of JOBS) {
+    const b = jEl('button', 'jb-job'); b.type = 'button'; b.dataset.k = j.k; b.setAttribute('role', 'radio');
+    const face = jEl('i'); face.style.backgroundImage = `url(img/${j.admin ? 'cls' : 'emb'}-${j.k}.webp?v=${ART_V})`;
+    const t = jEl('span'); t.append(jEl('b', '', j.th), jEl('small', '', j.name));
+    b.append(face, t, jEl('em', '', 'ปัจจุบัน'));
+    b.onclick = () => { jb.pick = j.k; renderJobs(); $('jb-sk').closest('.bg-pane').scrollTop = 0; };
+    list.appendChild(b);
+  }
+  for (const b of list.children) {
+    const k = b.dataset.k; b.hidden = !!JOB[k].admin && !isAdmin();
+    b.setAttribute('aria-checked', String(k === jb.pick));
+    b.querySelector('em').hidden = k !== prof.job;
+  }
+  const j = JOB[jb.pick]; if (!j) return;
+  const mine = jb.pick === prof.job;
+  const img = $('jb-img'); img.style.setProperty('--fx', `-${j.foot * 100}%`); img.src = `img/cls-${j.k}.webp?v=${ART_V}`; img.alt = j.name;
+  $('jb-name').textContent = j.th; $('jb-name').appendChild(jEl('small', '', j.name));
+  $('jb-desc').textContent = j.desc;
+  $('jb-diff').innerHTML = 'ความยาก ' + [1, 2, 3, 4, 5].map(n => `<i class="${n <= j.diff ? 'on' : ''}">★</i>`).join('');
+  // the job's stats at the player's level, before items
+  const st = $('jb-stats'); st.textContent = '';
+  const c = classStats && classStats[j.k] && statsAt(classStats[j.k], prof.level || 1);
+  for (const [k, label] of Object.entries(STAT_NAMES)) { const d = jEl('div'); d.append(jEl('span', '', label), jEl('b', '', c ? c[k] : '-')); st.appendChild(d); }
+  // changing job: on screen, locked for now (Karoz 2026-10-15)
+  const go = $('jb-go'); go.disabled = true; go.textContent = mine ? 'อาชีพปัจจุบันของคุณ' : `🔒 เปลี่ยนเป็น ${j.th} (ยังไม่เปิด)`;
+  const pool = poolOf(j.k), o = mine && pool ? skillsOf(j.k) : null;
+  $('jb-pts').textContent = mine ? skillPoints() - pointsUsed(j.k) : '-'; $('jb-reset').disabled = !mine || !pointsUsed(j.k);
+  $('jb-note').textContent = mine ? `ได้ 1 แต้มทุกครั้งที่เลเวลอัป สกิลเริ่มที่ Lv.1 (แรง 60%) อัปได้ถึง Lv.${SKILL_MAX} (แรง 100%) กดช่องด้านล่างแล้วกด "ใส่" ที่สกิลเพื่อเปลี่ยนสกิลในช่องนั้น`
+    : 'ดูสกิลของอาชีพนี้ได้ อัปสกิลและจัดสกิลได้เฉพาะอาชีพปัจจุบัน';
+  const ul = $('jb-sk'), ult = $('jb-ult'), pl = $('jb-pas'), load = $('jb-load');
+  for (const e of [ul, ult, pl, load]) e.textContent = '';
+  load.hidden = !mine;
+  if (!pool) { ul.appendChild(jEl('li', '', 'กำลังโหลดข้อมูลสกิล...')); loadGameData().then(() => { if (bagView === 'jobs') renderJobs(); }).catch(() => {}); return; }
+  // the battle row: 6 skill slots, the ultimate, 2 passives; the picked slot is where "ใส่" puts a skill
+  if (mine) {
+    const slotBox = (x, id, label, active, onPick) => {
+      const s = skillDef(id) || (gameData.passives || {})[id], b = jEl('button', 'jb-slot' + (active ? ' on' : '')); b.type = 'button';
+      b.append(skillIcon(s && s.icon, label), jEl('span', '', s ? s.name : '-'));
+      b.title = s ? `${label}: ${s.name}` : label; if (onPick) b.onclick = onPick; else b.disabled = true;
+      return b;
+    };
+    const row1 = jEl('div', 'jb-row');
+    LOAD_SLOTS.forEach((x, n) => row1.appendChild(slotBox(x, o.load[x], String(n + 1), jb.slot === x, () => { jb.slot = x; renderJobs(); })));
+    const row2 = jEl('div', 'jb-row');
+    row2.appendChild(slotBox('b', o.load.b, 'B', false, null));
+    for (const x of ['p1', 'p2']) row2.appendChild(slotBox(x, o.load[x], 'P', jb.pslot === x, () => { jb.pslot = x; renderJobs(); }));
+    load.append(row1, row2);
+  }
+  // actives: the six first skills, each followed by the tier 2 skill it opens, then the new free skills
+  const d = jobData(j.k), first = LOAD_SLOTS.map(x => d[x]).filter(id => pool.act.includes(id));
+  const order = [];
+  for (const id of first) { order.push([id, false]); for (const t of pool.act) { const s = skillDef(t); if (s && s.req === id) order.push([t, true]); } }
+  for (const id of pool.act) if (!order.some(x => x[0] === id)) order.push([id, !!(skillDef(id) || {}).req]);
+  for (const [id, tier2] of order) {
+    const at = o && LOAD_SLOTS.find(x => o.load[x] === id);
+    const row = skillRow(id, mine, o, { tier2, cls: tier2 ? 'tier2' : '', levels: true, label: at ? String(LOAD_SLOTS.indexOf(at) + 1) : '–',
+      equip: open => { const b = jBtn(at ? `ช่อง ${LOAD_SLOTS.indexOf(at) + 1}` : 'ใส่', () => equipSkill(id), `ใส่ ${(skillDef(id) || {}).name} ลงช่องที่เลือก`); b.className = 'jb-put' + (at ? ' in' : ''); b.disabled = !open || !!at; return b; } });
+    if (row) ul.appendChild(row);
+  }
+  for (const id of pool.ult) {
+    const row = skillRow(id, mine, o, { cls: 'ult', levels: true, label: 'B',
+      equip: () => { const on = o.load.b === id, b = jBtn(on ? 'ใช้อยู่' : 'เลือก', () => { o.load.b = id; saveSkills(); }, `เลือกท่าไม้ตาย ${(skillDef(id) || {}).name}`); b.className = 'jb-put' + (on ? ' in' : ''); b.disabled = on; return b; } });
+    if (row) ult.appendChild(row);
+  }
+  for (const id of pool.pas) {
+    const s = (gameData.passives || {})[id]; if (!s) continue;
+    const li = jEl('li', 'pas'), txt = jEl('div', 'jb-txt'); txt.append(jEl('b', '', s.name), jEl('div', '', s.tip || ''));
+    li.append(skillIcon(s.icon, 'P'), txt);
+    if (mine) {
+      const on = o.load.p1 === id || o.load.p2 === id, side = jEl('div', 'jb-side');
+      const b = jBtn(on ? 'ใช้อยู่' : 'ใส่', () => { const other = jb.pslot === 'p1' ? 'p2' : 'p1'; if (o.load[other] === id) return; o.load[jb.pslot] = id; jb.pslot = other; saveSkills(); }, `ใส่พาสซีฟ ${s.name}`);
+      b.className = 'jb-put' + (on ? ' in' : ''); b.disabled = on; side.appendChild(b); li.appendChild(side);
+    }
+    pl.appendChild(li);
+  }
+}
+// put a skill into the picked battle slot (a skill already in another slot swaps places), then move on to the next slot
+function equipSkill(id) {
+  const o = skillsOf(prof.job); if (!isOpen(o, id)) return;
+  const was = LOAD_SLOTS.find(x => o.load[x] === id);
+  if (was) o.load[was] = o.load[jb.slot];
+  o.load[jb.slot] = id;
+  jb.slot = LOAD_SLOTS[(LOAD_SLOTS.indexOf(jb.slot) + 1) % LOAD_SLOTS.length];
+  saveSkills();
+}
+function setSkillLv(id, L) {
+  const o = skillsOf(prof.job); L = Math.max(1, Math.min(SKILL_MAX, L));
+  if (L > o.lv[id] && pointsUsed(prof.job) + (L - o.lv[id]) > skillPoints()) return;
+  const before = poolOf(prof.job).act.filter(k => isOpen(o, k));
+  o.lv[id] = L; skillsOf(prof.job); // a tier 2 skill closes again if its source drops under Lv 3 (and leaves its slot)
+  const opened = poolOf(prof.job).act.filter(k => isOpen(o, k) && !before.includes(k));
+  for (const k of opened) toast(`ปลดล็อก ${skillDef(k).name} แล้ว`);
+  saveSkills();
+}
+$('jb-reset').onclick = () => { const o = skillsOf(prof.job); for (const k in o.lv) o.lv[k] = 1; skillsOf(prof.job); saveSkills(); toast('รีเซ็ตแต้มสกิลแล้ว'); };
+// levels and loadout go to the server a moment after the last click (one write for a burst of clicks)
+const serverLive = () => !!(online.sb && online.user && online.user.id !== 'preview' && online.me);
+function saveSkills() {
+  saveProf(); renderJobs();
+  clearTimeout(jb.saveT);
+  jb.saveT = setTimeout(async () => {
+    if (!serverLive()) return;
+    const { error } = await online.sb.from('profiles').update({ skills: prof.skills }).eq('id', online.user.id);
+    if (error) { console.warn('skills', error); toast(/skills/.test(error.message) ? 'ต้องรัน supabase-jobs.sql ใน Supabase ก่อน สกิลถึงจะบันทึกถาวร' : why(error)); }
+    else online.me.skills = prof.skills;
+  }, 600);
+}
 for (const b of $('bg-side').querySelectorAll('button')) b.onclick = () => { bagTab = b.dataset.tab; for (const o of $('bg-side').children) o.classList.toggle('on', o === b); renderBag(); };
 for (const b of $('bg-acts').querySelectorAll('button')) b.onclick = () => toast(`${b.textContent} ${SOON}`);
 
@@ -2218,6 +2504,7 @@ async function loadProfile() {
     if (await setProfile({ job: c.job })) online.me.job = c.job;
   }
   Object.assign(prof, { uid: id, name: online.me.name, job: online.me.job || prof.job || '', level: online.me.level || 1, exp: online.me.exp || 0 });
+  if (online.me.skills && typeof online.me.skills === 'object') prof.skills = online.me.skills; // the server copy of the skill levels wins
   saveProf(); renderProf();
   online.v2 = 'guild' in online.me;
 }
@@ -2553,6 +2840,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.31</div>
+<div id="ver">v0.61.32</div>
 </body>
 </html>

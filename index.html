@@ -516,7 +516,10 @@ const DEFAULT_DATA = {
 const SK_DEF = { type: 'shot', cd: 3, base: 'atk', dmg: 100, count: 1, spread: 0, powSpread: 0, delay: 0, size: 100, dig: 100, weight: 100, proj: '',
   ignoreDef: 0, vsDot: 0, dotKind: '', dotPct: 0, dotTurns: 2, debDef: 0, debMdef: 0, debTaken: 0, debDeal: 0, debTurns: 2, knock: 0, mark: '', burst: false, shift: false,
   zone: 0, zoneTurns: 2, heal: 0, healMatk: 0, shieldPct: 0, shieldMatk: 0, bAtk: 0, bMatk: 0, bDef: 0, bMdef: 0, bTaken: 0, bNext: 0, bNextMagic: 0, bTurns: 2,
-  purge: false, hide: 0, team: false, consumable: false, freeze: 0, steal: 0, guard: 0, homing: false, warp: false, icon: '', sound: '', short: '', tip: '' };
+  purge: false, hide: 0, team: false, consumable: false, freeze: 0, steal: 0, guard: 0, homing: false, warp: false, icon: '', sound: '', short: '', tip: '',
+  // the new skill set (Karoz 2026-10-15): debuffs on the target, extras on a hit, and self effects
+  debAtk: 0, debMatk: 0, debSpd: 0, debWalk: 0, debHealCut: 0, deathMark: 0, bindHit: 0, vsPoison: 0, vsHidden: 0, vsMark: 0, chain: 0, missEn: 0, selfDebDef: 0,
+  counter: 0, takenOnce: 0, critNext: 0, critUses: 0, hotMatk: 0, hotTurns: 3, zoneHeal: 0, teamShieldPct: 0, cdCut: 0, endTurn: false, el: '', req: '', reqLv: 0 };
 const CLASS_DEF = { name: 'อาชีพใหม่', hp: 1000, atk: 50, matk: 50, def: 40, mdef: 40, spd: 50, luk: 50, nBase: 'atk', nPct: 100,
   color: '#5a8fd8', r: 34, wf: 1, gf: 1, vel: 1, shot: 'orb', desc: '', face: 1 };
 const PASSIVE_DEF = { name: 'พาสซีฟใหม่', kind: 'none', v: 0, hp: 30, tip: '', icon: '' };
@@ -554,25 +557,48 @@ function applyData(gd) {
   for (const [k, s] of Object.entries(gd.passives || {})) PASSIVES[k] = Object.assign({}, PASSIVE_DEF, s, { id: k });
   CLASSES = {};
   for (const [k, d] of Object.entries(gd.classes || {})) {
-    const c = Object.assign({}, CLASS_DEF, d);
-    c.sk = { b: SKILLS[d.b] || null };
-    for (const sl of SLOT_IDS) { c.sk[sl] = SKILLS[d[sl]] || null; if (c.sk[sl]) iconKey(c.sk[sl]); }
-    const sb = c.sk.b;
-    c.ult = sb ? { name: sb.name, tip: sb.tip || sb.short } : null;
-    // passives: shown in the two windows; their numbers summed by kind for the combat rules
-    const pas = ['p1', 'p2'].map(x => PASSIVES[d[x]]).filter(Boolean);
-    c.passives = pas.map(pa => ({ name: pa.name, desc: pa.tip, icon: pa.icon }));
-    c.pv = {};
-    for (const pa of pas) if (pa.kind && pa.kind !== 'none') { c.pv[pa.kind] = (c.pv[pa.kind] || 0) + (+pa.v || 0); c.pv[pa.kind + 'Hp'] = +pa.hp || 30; }
-    c.maxEn = maxEnergy(c);
+    const c = classFrom(d);
     if (d.show) { SHOW_SRC[k] = assetURL(d.show); SHOW[k] = assetImage(d.show); }
     else if (BUILTIN_SHOW[k]) { SHOW_SRC[k] = BUILTIN_SHOW[k]; SHOW[k] = new Image(); SHOW[k].src = BUILTIN_SHOW[k]; }
     else { delete SHOW_SRC[k]; delete SHOW[k]; }
     SHOW_FACE[k] = d.face != null ? d.face : (BUILTIN_FACE[k] != null ? BUILTIN_FACE[k] : 1);
     CLASSES[k] = c;
   }
+  CLASSES_GD = gd.classes || {};
   STAGES = {};
   for (const [k, s] of Object.entries(gd.stages || {})) STAGES[k] = Object.assign({}, STAGE_DEF, s, { key: k });
+}
+// a class from its data: s1-s6 skill row, b ultimate, p1-p2 passives (a loadout from the town's Jobs tab overrides these)
+let CLASSES_GD = {};
+function classFrom(d) {
+  const c = Object.assign({}, CLASS_DEF, d);
+  c.sk = { b: SKILLS[d.b] || null };
+  for (const sl of SLOT_IDS) { c.sk[sl] = SKILLS[d[sl]] || null; if (c.sk[sl]) iconKey(c.sk[sl]); }
+  if (c.sk.b) iconKey(c.sk.b);
+  const sb = c.sk.b;
+  c.ult = sb ? { name: sb.name, tip: sb.tip || sb.short } : null;
+  // passives: shown in the two windows; their numbers summed by kind for the combat rules
+  const pas = ['p1', 'p2'].map(x => PASSIVES[d[x]]).filter(Boolean);
+  c.passives = pas.map(pa => ({ name: pa.name, desc: pa.tip, icon: pa.icon }));
+  c.pv = {}; c.pskill = [];
+  for (const pa of pas) {
+    if (pa.kind === 'skillDmg') { c.pskill.push({ ids: pa.ids || [], v: +pa.v || 0 }); continue; } // named skills hit harder
+    if (pa.kind && pa.kind !== 'none') { c.pv[pa.kind] = (c.pv[pa.kind] || 0) + (+pa.v || 0); c.pv[pa.kind + 'Hp'] = +pa.hp || 30; if (pa.n) c.pv[pa.kind + 'N'] = +pa.n; }
+    for (const [k, v] of Object.entries(pa.add || {})) c.pv[k] = (c.pv[k] || 0) + (+v || 0); // a second stat (Arcane Knowledge)
+  }
+  c.maxEn = maxEnergy(c);
+  return c;
+}
+// a player's loadout from the town: which 6 skills, which ultimate, which 2 passives (only ones in the job's pool)
+function setLoadout(p, ld) {
+  const d = CLASSES_GD[p.k]; if (!d || !ld || typeof ld !== 'object') return;
+  const pool = d.pool || SLOT_IDS.map(x => d[x]), ults = d.ults || [d.b], pas = d.pasPool || [d.p1, d.p2], o = Object.assign({}, d), seen = new Set();
+  for (const x of SLOT_IDS) if (pool.includes(ld[x]) && SKILLS[ld[x]] && !seen.has(ld[x])) { o[x] = ld[x]; seen.add(ld[x]); }
+  if (ults.includes(ld.b) && SKILLS[ld.b]) o.b = ld.b;
+  const pp = [ld.p1, ld.p2].filter(x => pas.includes(x) && PASSIVES[x]); if (pp.length === 2 && pp[0] !== pp[1]) { o.p1 = pp[0]; o.p2 = pp[1]; }
+  const c = classFrom(o); c.show = p.c0 && p.c0.show;
+  p.c0 = p.c = c; p.ld = ld;
+  p.maxEn = c.maxEn; p.energy = Math.min(p.energy, p.maxEn);
 }
 // the shots one press of fire makes for a skill: count spread across the angle/power fan, each delay frames apart
 function skillShots(p, sk, power, mult) {
@@ -616,15 +642,42 @@ function scaleClass(c, L) {
 function setLevel(p, L) {
   p.level = L || null;
   p.c = scaleClass(p.c0 || p.c, L || 1);
+  if (p.sl) setSkills(p, p.sl);
   p.hp = p.maxHp = p.c.hp; p.maxEn = p.c.maxEn; p.energy = p.maxEn;
 }
+
+// skill levels (Karoz's roadmap: skills level up with skill points): the numbers in the data are the skill at its top level,
+// Lv 1 is 60% of them and each level adds 10% (Lv 5 = 100%). Only strengths scale (damage, heal, shield, buffs, debuffs, DoT);
+// cooldowns, turns and counts stay. A player with no levels from the town (old town page, standalone game) keeps 100%.
+const SKILL_MAX = 5, SKILL_SCALE = ['dmg', 'vsDot', 'dotPct', 'zone', 'heal', 'healMatk', 'shieldMatk', 'shieldPct', 'bAtk', 'bDef', 'bMatk', 'bMdef', 'bNext', 'bNextMagic', 'bTaken',
+  'debDeal', 'debDef', 'debMdef', 'debTaken', 'gHp', 'gStat', 'debAtk', 'debMatk', 'debSpd', 'debHealCut', 'deathMark', 'vsPoison', 'vsHidden', 'vsMark', 'counter', 'takenOnce',
+  'critNext', 'hotMatk', 'zoneHeal', 'teamShieldPct'];
+const skillMul = L => 0.6 + 0.1 * (Math.max(1, Math.min(SKILL_MAX, L | 0 || 1)) - 1);
+function setSkills(p, sl) {
+  if (!sl || typeof sl !== 'object') return;
+  const sk = {};
+  for (const [slot, s] of Object.entries((p.c0 || p.c).sk || {})) { // always from the unscaled skills
+    if (!s) { sk[slot] = s; continue; }
+    const L = sl[s.id], m = skillMul(L), o = Object.assign({}, s);
+    for (const k of SKILL_SCALE) if (+o[k]) o[k] = Math.round(+o[k] * m);
+    o.lv = Math.max(1, Math.min(SKILL_MAX, L | 0 || 1)); sk[slot] = o;
+  }
+  p.c = Object.assign({}, p.c, { sk }); p.sl = sl;
+}
+// the bot's skills at the player's average skill level
+function botLevels(b, sl) {
+  const v = Object.values(sl), avg = v.length ? Math.round(v.reduce((a, x) => a + x, 0) / v.length) : 1, o = {};
+  for (const s of Object.values((b.c0 || b.c).sk || {})) if (s) o[s.id] = avg;
+  return o;
+}
+// the skill a shot came from, at its owner's level
+const ownSkill = (p, id) => (p && p.c && p.c.sk && Object.values(p.c.sk).find(s => s && s.id === id)) || SKILLS[id];
 
 // ---------- combat rules (Karoz's balance spec V1) ----------
 // a stat after passives, buffs and debuffs
 function statOf(p, k) {
   const pv = p.c.pv || {}; let pct = 0;
-  if (k === 'atk') pct += pv.atk || 0;
-  if (k === 'matk') pct += pv.matk || 0;
+  pct += pv[k] || 0; // Sword/Magic Mastery, Shield Mastery, Meditation, Ranger Training ...
   if ((k === 'def' || k === 'mdef') && pv.ironBody && p.hp <= p.maxHp * pv.ironBodyHp / 100) pct += pv.ironBody;
   for (const b of p.buffs || []) pct += b[k] || 0;
   for (const d of p.debs || []) pct -= d[k] || 0;
@@ -644,9 +697,12 @@ function hitDamage(o, t, base, pct, ign, up) {
   for (const b of t.buffs || []) if (b.taken) dmg *= 1 - b.taken / 100;
   const pv = o.c.pv || {};
   if (pv.execute && t.hp <= t.maxHp * pv.executeHp / 100) dmg *= 1 + pv.execute / 100;
+  if (pv.weak && t.hp < t.maxHp * pv.weakHp / 100) dmg *= 1 + pv.weak / 100; // Weak Point
+  if (pv.lowDmg && o.hp < o.maxHp * pv.lowDmgHp / 100) dmg *= 1 + pv.lowDmg / 100; // Berserker
+  if (pv.vsBleed && t.dots && t.dots.some(d => d.kind === 'bleed')) dmg *= 1 + pv.vsBleed / 100; // Blood Hunter
   return dmg;
 }
-const critChance = o => (CRIT_BASE + statOf(o, 'luk') * CRIT_PER_LUK * (1 + (o.c.pv.luckMul || 0) / 100) + (o.c.pv.crit || 0)) / 100;
+const critChance = o => (CRIT_BASE + statOf(o, 'luk') * CRIT_PER_LUK * (1 + (o.c.pv.luckMul || 0) / 100) + (o.c.pv.crit || 0) + (o.buffs || []).reduce((a, b) => a + (b.live ? b.crit || 0 : 0), 0)) / 100;
 const critMul = o => CRIT_MUL + (o.c.pv.critDmg || 0) / 100;
 const hasDot = t => t.dots.some(d => d.kind === 'poison' || d.kind === 'bleed');
 function say(pl, s, col, t, dy) { fx.texts.push({ x: pl.x, y: pl.y - (dy || 74), s, col, t: t || 80 }); }
@@ -658,15 +714,18 @@ function addDot(t, kind, amt, turns, o) {
   stAdd(o.i, kind + 'Ap', 1);
   say(t, DOT_NAME[kind] + '!', DOT_COL[kind], 80, 88);
 }
+const hasDeb = sk => !!(sk.debDef || sk.debMdef || sk.debTaken || sk.debDeal || sk.debAtk || sk.debMatk || sk.debSpd || sk.debWalk || sk.debHealCut || sk.deathMark);
 function addDeb(t, sk, o) {
   t.debs = t.debs.filter(d => d.id !== sk.id);
-  t.debs.push({ id: sk.id, name: sk.name, t: sk.debTurns || 2, def: sk.debDef || 0, mdef: sk.debMdef || 0, taken: sk.debTaken || 0, deal: sk.debDeal || 0, by: o.i });
+  t.debs.push({ id: sk.id, name: sk.name, t: sk.debTurns || 2, def: sk.debDef || 0, mdef: sk.debMdef || 0, taken: sk.debTaken || 0, deal: sk.debDeal || 0, by: o.i,
+    atk: sk.debAtk || 0, matk: sk.debMatk || 0, spd: sk.debSpd || 0, walk: sk.debWalk || 0, healCut: sk.debHealCut || 0, dmark: sk.deathMark || 0 });
   say(t, sk.name, '#c98cff', 80, 100);
 }
 function addBuff(t, sk) {
   t.buffs = t.buffs.filter(b => b.id !== sk.id);
   t.buffs.push({ id: sk.id, name: sk.name, t: sk.bTurns || 1, atk: sk.bAtk || 0, matk: sk.bMatk || 0, def: sk.bDef || 0, mdef: sk.bMdef || 0,
-    taken: sk.bTaken || 0, next: sk.bNext || 0, nextMagic: sk.bNextMagic || 0 });
+    taken: sk.bTaken || sk.takenOnce || 0, next: sk.bNext || 0, nextMagic: sk.bNextMagic || 0,
+    once: !!sk.takenOnce, counter: sk.counter || 0, crit: sk.critNext || 0, uses: sk.critUses || 0, cdCut: sk.cdCut || 0 });
 }
 // freeze / stun never refresh while they last; after a 2-turn one the target resists for a while (new ones last 1 turn at most)
 function applyCC(t, kind, turns, o) {
@@ -694,7 +753,7 @@ function applyReaction(o, t, rx) {
   say(t, rx.name + '!', '#ffe9a8', 90, 104);
   if (rx.stun) applyCC(t, 'stun', rx.stun, o);
   if (rx.bind) { t.bind = Math.max(t.bind, rx.bind); stAdd(o.i, 'cc', 1); say(t, 'ตรึง!', '#7fd98a', 80, 88); }
-  if (rx.burn) addDot(t, 'burn', hitDamage(o, t, 'matk', rx.burn) * botSoft(o), rx.burnTurns || 2, o);
+  if (rx.burn) addDot(t, 'burn', hitDamage(o, t, 'matk', rx.burn) * botSoft(o) * (1 + (o.c.pv.reactDmg || 0) / 100), rx.burnTurns || 2, o);
   if (o.c.pv.spiritBond) addBuff(o, { id: 'bond', name: 'Spirit Bond', bTurns: 2, bMatk: o.c.pv.spiritBond });
 }
 // knockback: slide along the ground (climbing small steps like walking) until a wall stops it; gravity does the rest
@@ -737,6 +796,12 @@ function hurtRaw(pl, amt, label, col, by) {
   if (d > 0 || amt > 0) unhide(pl, S.turn === pl.i); // taking damage breaks Hiding
   if (pl.hp <= 0) pl.alive = false; else lowHp(pl);
 }
+// HP back outside a skill cast (Regeneration, Sacred Ground)
+function healRaw(pl, amt, label, by) {
+  const got = Math.max(0, Math.min(pl.maxHp - pl.hp, amt)); pl.hp += got;
+  if (by != null) stAdd(by, 'heal', got); stAdd(pl.i, 'healRecv', got);
+  say(pl, `${label} +${got}`, '#7dff9a', 70, 50);
+}
 // leaving Hiding starts its cooldown (one more when it is left during your own turn, since that turn's tick is already past)
 function unhide(p, early) {
   if (!(p.hidden > 0)) return;
@@ -744,12 +809,19 @@ function unhide(p, early) {
   const i = SLOT_IDS.findIndex(s => p.c.sk[s] && p.c.sk[s].hide);
   if (i >= 0) p.cds[i] = Math.max(2, p.c.sk[SLOT_IDS[i]].cd) + (early ? 1 : 0);
   say(p, 'หลุดล่องหน', '#d9c8ff', 70, 60);
+  if (p.c.pv.shadowGuard) addBuff(p, { id: 'shadowm', name: 'Shadow Mastery', bTaken: p.c.pv.shadowGuard, bTurns: 1 });
 }
 // start of a player's own turn: their poisons and burns tick, fire walls burn them, and every timer they own counts down
 function turnStartEffects(q) {
-  for (const d of q.dots) { hurtRaw(q, d.amt, DOT_NAME[d.kind], DOT_COL[d.kind], d.by); d.t--; }
+  const pvq = q.c.pv || {};
+  for (const d of q.dots) { // Steadfast cuts every DoT, Purity poison and burn
+    const res = (pvq.dotRes || 0) + (d.kind !== 'bleed' ? pvq.dotResPB || 0 : 0);
+    hurtRaw(q, d.amt * Math.max(0, 1 - res / 100), DOT_NAME[d.kind], DOT_COL[d.kind], d.by); d.t--;
+  }
   q.dots = q.dots.filter(d => d.t > 0);
-  for (const z of S.zones) if (z.owner !== q.i && q.alive && boxDist(q, z.x, z.y) <= z.r) {
+  if (q.alive) for (const b of q.buffs) if (b.hot > 0) healRaw(q, Math.round(b.hot * healTaken(q)), b.name, b.by);
+  for (const z of S.zones) if (z.heal > 0 && q.alive && teamOf(z.owner) === teamOf(q.i) && boxDist(q, z.x, z.y) <= z.r) healRaw(q, Math.round(z.heal * healTaken(q)), 'Sacred Ground', z.owner);
+  for (const z of S.zones) if (!(z.heal > 0) && z.owner !== q.i && q.alive && boxDist(q, z.x, z.y) <= z.r) {
     const o = S.players[z.owner]; hurtRaw(q, hitDamage(o, q, z.base, z.pct) * botSoft(o), 'กำแพงไฟ', '#ff9a3a', z.owner);
   }
   for (const z of S.zones) if (z.owner === q.i) z.t--;
@@ -768,6 +840,11 @@ function purge(t) {
   if (t.debs.length) { const d = t.debs.pop(); say(t, 'ล้าง ' + d.name, '#fff3a8'); return; }
   if (t.dots.length) { const d = t.dots.pop(); say(t, 'ล้าง' + DOT_NAME[d.kind], '#fff3a8'); }
 }
+// how much of a heal a target takes in: Divine Seal / Fatal Wound cut it, Healing Wisdom lifts heals on a low target
+function healTaken(t, by) {
+  const cut = Math.max(0, ...(t.debs || []).map(d => d.healCut || 0)), pv = (by && by.c.pv) || {};
+  return (1 - cut / 100) * (pv.healLow && t.hp < t.maxHp * pv.healLowHp / 100 ? 1 + pv.healLow / 100 : 1);
+}
 // self skills: heals, shields and buffs on yourself (or the whole team), Hiding, Purge
 function selfSkill(p, sk) {
   const wasCC = p.frozen > 0;
@@ -776,7 +853,7 @@ function selfSkill(p, sk) {
   fx.texts.push({ x: p.x, y: p.y - 80, s: sk.name + '!', col: '#ffd36a', t: 70 });
   for (const t of team) {
     if (sk.purge) purge(t);
-    const h = Math.round((t.maxHp * (sk.heal || 0) / 100 + statOf(p, 'matk') * (sk.healMatk || 0) / 100 * HEAL_K) * more * (1 + (pv.healBonus || 0) / 100));
+    const h = Math.round((t.maxHp * (sk.heal || 0) / 100 + statOf(p, 'matk') * (sk.healMatk || 0) / 100 * HEAL_K) * more * (1 + (pv.healBonus || 0) / 100) * healTaken(t, p));
     if (h > 0) {
       // Healing Fatigue (Priest Nerf V6): while it lasts, healing a class with 'fatigue' gives itself is cut by that %
       // (heals on allies are not). Heal (a 'fatigues' skill) on yourself starts it or refreshes it; it never stacks.
@@ -790,14 +867,26 @@ function selfSkill(p, sk) {
       else if (t === p) stAdd(p.i, 'healSelf', got);
       if (self && sk.fatigues) { if (!(p.fatigue > 0)) stAdd(p.i, 'fatTurns', 1); p.fatigue = p.c.fatigueTurns || 3; say(p, 'Healing Fatigue ' + p.fatigue + ' เทิร์น', '#c8d0e0', 80, 84); }
     }
-    const s = Math.round((t.maxHp * (sk.shieldPct || 0) / 100 + statOf(p, 'matk') * (sk.shieldMatk || 0) / 100 * HEAL_K) * more);
+    const s = Math.round((t.maxHp * ((sk.shieldPct || 0) + (t !== p ? sk.teamShieldPct || 0 : 0)) / 100 + statOf(p, 'matk') * (sk.shieldMatk || 0) / 100 * HEAL_K) * more * (1 + (pv.shieldBonus || 0) / 100));
     if (s > 0) { const got = addShield(t, s, p.i); stAdd(p.i, sk === p.c.sk.b ? 'shUlt' : 'shSkill', got); say(t, got < s ? 'โล่ +' + got + ' (เต็ม)' : 'โล่ +' + got, '#7fd8ff', 70, 64); }
-    if (sk.bAtk || sk.bMatk || sk.bDef || sk.bMdef || sk.bTaken || sk.bNext || sk.bNextMagic) addBuff(t, sk);
+    if (sk.bAtk || sk.bMatk || sk.bDef || sk.bMdef || sk.bTaken || sk.bNext || sk.bNextMagic || sk.takenOnce || sk.counter || sk.critNext) addBuff(t, sk);
+    // Regeneration: heals at the start of each of its owner's turns (its strength is fixed when cast)
+    if (sk.hotMatk > 0) { t.buffs = t.buffs.filter(b => b.id !== sk.id); t.buffs.push({ id: sk.id, name: sk.name, t: sk.hotTurns || 3, hot: Math.round(statOf(p, 'matk') * sk.hotMatk / 100 * HEAL_K * (1 + (pv.healBonus || 0) / 100)), by: p.i }); }
+  }
+  // Golden Fortress: teammates get their own share of the shield
+  if (sk.teamShieldPct > 0 && !sk.team) for (const t of S.players.filter(x => x.alive && x !== p && teamOf(x.i) === teamOf(p.i))) {
+    const got = addShield(t, Math.round(t.maxHp * sk.teamShieldPct / 100 * more * (1 + (pv.shieldBonus || 0) / 100)), p.i); say(t, 'โล่ +' + got, '#7fd8ff', 70, 64);
+  }
+  // Sacred Ground: a healing circle under the caster; the caster's team standing in it heal as each of their turns starts
+  if (sk.zoneHeal > 0) {
+    const amt = Math.round(statOf(p, 'matk') * sk.zoneHeal / 100 * HEAL_K * (1 + (pv.healBonus || 0) / 100));
+    S.zones.push({ x: p.x, y: p.y, r: 90, heal: amt, owner: p.i, t: sk.zoneTurns || 2 });
   }
   if (sk.guard > 0) { p.iron = true; p.guard = sk.guard; }
   if (sk.hide > 0) { p.hidden = sk.hide; p.seenX = p.x; say(p, 'ล่องหน!', '#d9c8ff', 70, 60); }
   sfx(sk.sound);
   if (sk.purge && wasCC && !(p.frozen > 0) && p === cur()) { say(p, 'ใช้ Purge แล้ว จบเทิร์น', '#fff3a8', 80, 96); S.bot = null; S.state = 'settle'; S.settle = SIM ? 1 : 40; }
+  else if (sk.endTurn && p === cur()) { say(p, sk.name + ' จบเทิร์น', '#fff3a8', 80, 96); S.bot = null; S.state = 'settle'; S.settle = SIM ? 1 : 40; } // Emergency Potion
 }
 // foe skills land at once on the nearest enemy, no shot needed (Provoke, Hunter's Mark, Spirit Shift)
 function foeSkill(p, sk) {
@@ -805,7 +894,7 @@ function foeSkill(p, sk) {
   if (p.hidden > 0) unhide(p, true);
   fx.texts.push({ x: p.x, y: p.y - 50, s: sk.name + '!', col: '#c98cff', t: 70 });
   if (t) {
-    if (sk.debDef || sk.debMdef || sk.debTaken || sk.debDeal) addDeb(t, sk, p);
+    if (hasDeb(sk)) addDeb(t, sk, p);
     if (sk.shift) {
       const ms = t.marks.filter(m => m.by === p.i), m = ms[ms.length - 1];
       if (m) { const ne = ELEM_ORDER[(ELEM_ORDER.indexOf(m.e) + 1) % ELEM_ORDER.length]; t.marks = t.marks.filter(x => x === m || x.e !== ne); m.e = ne; m.ttl = 2; say(t, 'มาร์ค' + ELEM[ne].n, ELEM[ne].col, 80, 88); }
@@ -819,6 +908,14 @@ function drawZones() {
   for (const z of S.zones || []) {
     const cx = z.x - cam.x, cy = z.y - cam.y;
     if (cx < -z.r - 20 || cx > VW + z.r + 20) continue;
+    if (z.heal) { // Sacred Ground: a soft golden-green circle with rising motes
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const hg = ctx.createRadialGradient(cx, cy, 2, cx, cy, z.r);
+      hg.addColorStop(0, 'rgba(180,255,170,.35)'); hg.addColorStop(1, 'rgba(255,230,120,0)');
+      ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(cx, cy, z.r, z.r * 0.35, 0, 0, 7); ctx.fill();
+      for (let k = 0; k < 8; k++) { const ph = (S.frame * 0.6 + k * 37) % 60; ctx.fillStyle = `rgba(220,255,180,${0.7 * (1 - ph / 60)})`; ctx.fillRect(cx - z.r * 0.8 + k * z.r * 0.23, cy - ph, 3, 3); }
+      ctx.restore(); continue;
+    }
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, z.r);
     g.addColorStop(0, 'rgba(255,140,40,.35)'); g.addColorStop(1, 'rgba(255,60,0,0)');
@@ -1077,7 +1174,7 @@ function newMatch(demo) {
     return;
   }
   const pls = [mk(0, picks[0], STAGE.spawn[0], false), mk(1, picks[1], STAGE.spawn[1], vsBot)];
-  if (!demo && vsBot && myInfo()) { applyInfo(pls[0], myInfo(), 'คุณ'); setLevel(pls[1], myInfo().lv); } // against the bot: the town's player under their own name, the bot at the same level
+  if (!demo && vsBot && myInfo()) { applyInfo(pls[0], myInfo(), 'คุณ'); if (myInfo().sl) setSkills(pls[1], botLevels(pls[1], myInfo().sl)); setLevel(pls[1], myInfo().lv); } // against the bot: the town's player under their own name, the bot at the same level and skill levels
   // the higher max Energy (from SPD) starts; a tie is a coin flip
   const e0 = pls[0].maxEn, e1 = pls[1].maxEn;
   S = {
@@ -1115,7 +1212,8 @@ function startTurn(first) {
   const p = cur();
   if (!p.alive) { S.turn = nextTurn(S.turn); }
   const q = cur();
-  q.iron = false; q.energy = q.maxEn; q.armed = null; q.boost = false; q.ccTurn = false;
+  q.maxEn = Math.round(235 + statOf(q, 'spd') * 0.25); // SPD after passives (Ranger Training, Cat Reflex) and debuffs (Ice Lance, Blizzard)
+  q.iron = false; q.energy = Math.max(0, q.maxEn - (q.debs || []).reduce((a, d) => a + (d.enPen || 0), 0)); q.armed = null; q.boost = false; q.ccTurn = false;
   for (let i = 0; i < q.cds.length; i++) if (q.cds[i] > 0) q.cds[i]--;
   if (q.warpCd > 0) q.warpCd--;
   // strength: anywhere in 0.0 ... 6.0 on the first turn, then at most 1.5 away from last turn's strength;
@@ -1214,11 +1312,33 @@ function fire() {
   p.lastPower = power; p.lastAng = worldAng(p.angle, p.face); // the dial keeps a mark of the last shot's angle
   let up = p.boost ? 1.3 : 1;
   const list = [];
-  const sk = p.armed && p.armed !== 'z' ? p.c.sk[p.armed] : null;
+  let sk = p.armed && p.armed !== 'z' ? p.c.sk[p.armed] : null;
+  const wasHidden = p.hidden > 0;
   if (p.armed !== 'z') {
+    const pv = p.c.pv || {}, atkSkill = sk && sk.dmg > 0;
+    if (sk && sk.vsHidden && wasHidden) sk = Object.assign({}, sk, { dmg: sk.vsHidden }); // Shadow Strike from Hiding
+    if (atkSkill) {
+      for (const ps of p.c.pskill || []) if (ps.ids.includes(sk.id)) up *= 1 + ps.v / 100; // Battle Cleric, Cart Mastery, Spirit Mastery
+      if (sk.el === 'ice' && pv.elIce) up *= 1 + pv.elIce / 100; // Frost Affinity
+      if (sk.el === 'fire' && pv.elFire) up *= 1 + pv.elFire / 100; // Pyromancer
+      if (p.qd && pv.quickDraw) up *= 1 + pv.quickDraw / 100; // Quick Draw: a normal shot readies the next attack skill
+      p.qd = false;
+      // Battle Veteran / Spell Echo: every n attack skills, the next one hits harder (Spell Echo: magic only)
+      const ck = pv.combo ? 'combo' : pv.comboMagic ? 'comboMagic' : '';
+      if (ck) {
+        if (p.comboReady && (ck === 'combo' || sk.base === 'matk')) { up *= 1 + pv[ck] / 100; p.comboReady = false; say(p, ck === 'combo' ? 'Battle Veteran!' : 'Spell Echo!', '#ffd36a', 70, 96); }
+        else if (!p.comboReady && ++p.comboN >= (pv[ck + 'N'] || 2)) { p.comboN = 0; p.comboReady = true; }
+      }
+    } else if (!sk) p.qd = true;
+    // Eagle Eye: its crit bonus lasts a number of attacks
+    for (const b of p.buffs) if (b.crit > 0) { b.live = b.uses > 0; if (b.live) b.uses--; }
+    p.buffs = p.buffs.filter(b => !(b.crit > 0) || b.live);
+    if (sk && sk.selfDebDef) { p.debs = p.debs.filter(d => d.id !== sk.id + '_self'); p.debs.push({ id: sk.id + '_self', name: sk.name, t: 1, def: sk.selfDebDef, by: p.i }); } // Crushing Blow
+
     // Focus (any shot) and Magic Amplification (a magic skill) are spent on this shot; attacking ends Hiding
     const nb = p.buffs.find(b => b.next > 0); if (nb) { up *= 1 + nb.next / 100; p.buffs = p.buffs.filter(b => b !== nb); }
-    if (sk && sk.base === 'matk' && sk.dmg > 0) { const mb = p.buffs.find(b => b.nextMagic > 0); if (mb) { up *= 1 + mb.nextMagic / 100; p.buffs = p.buffs.filter(b => b !== mb); } }
+    if (sk && sk.base === 'matk' && sk.dmg > 0) { const mb = p.buffs.find(b => b.nextMagic > 0); if (mb) { up *= 1 + mb.nextMagic / 100; p.buffs = p.buffs.filter(b => b !== mb);
+      if (mb.cdCut > 0) { const i = SLOT_IDS.indexOf(p.armed); if (i >= 0) p.cds[i] = Math.max(3, p.cds[i] - mb.cdCut); } } } // Mana Surge: that skill's cooldown -1 (2 at least)
     if (p.hidden > 0) unhide(p, true);
   }
   if (p.armed === 'z') list.push(makeProj(p, p.angle, power, { kind: 'warp', warp: true, gf: 1, wf: 1 }));
@@ -1263,19 +1383,23 @@ function useWarp() {
 }
 function explode(q) {
   if (q.golem) { golemExplode(q); return; }
-  const owner = S.players[q.owner], c = owner.c, sk = q.skill ? SKILLS[q.skill] : null;
+  const owner = S.players[q.owner], c = owner.c, sk = q.skill ? ownSkill(owner, q.skill) : null;
   const r = c.r * (q.scale || 1);
   carve(q.x, q.y, r * ((sk && sk.dig) || 100) / 100);
   fx.booms.push({ x: q.x, y: q.y, r, t: 0, col: c.color, ice: q.ice });
   boomParts(q.x, q.y, q.ice);
   if (sk && sk.zone > 0) { S.zones.push({ x: q.x, y: q.y, r: Math.max(36, r), pct: sk.zone, base: sk.base, owner: owner.i, t: sk.zoneTurns || 2 }); fx.texts.push({ x: q.x, y: q.y - 40, s: sk.name + '!', col: '#ff9a3a', t: 80 }); }
-  const pct = q.pct != null ? q.pct : 100, base = q.base || c.nBase || 'atk';
+  const pct = q.pct != null ? q.pct : 100, base = q.base || c.nBase || 'atk', hitFoes = [];
   for (const pl of S.players) {
     if (!pl.alive || boxDist(pl, q.x, q.y) > r) continue;
     const foe = teamOf(pl.i) !== teamOf(owner.i);
     if (pct <= 0 && !foe) continue;
     let dmg = pct > 0 ? hitDamage(owner, pl, base, sk && sk.vsDot && hasDot(pl) ? sk.vsDot : pct, sk ? sk.ignoreDef : 0, q.up) : 0, rx = null; const defR = HD_DEFR;
-    if (foe && sk && sk.burst) { rx = reactionOf(pl, owner); if (rx && rx.bonus) dmg += hitDamage(owner, pl, 'matk', rx.bonus, 0, q.up); }
+    if (foe && sk && sk.burst) { rx = reactionOf(pl, owner); if (rx && rx.bonus) dmg += hitDamage(owner, pl, 'matk', rx.bonus, 0, q.up) * (1 + (owner.c.pv.reactDmg || 0) / 100); }
+    if (foe && sk && sk.vsPoison && pl.dots.some(d => d.kind === 'poison')) { dmg += hitDamage(owner, pl, base, sk.vsPoison, 0, q.up); pl.dots = pl.dots.filter(d => d.kind !== 'poison'); say(pl, 'พิษระเบิด!', '#8de05a', 80, 104); } // Poison Explosion
+    if (foe && sk && sk.vsMark && pl.marks.some(m => m.by === owner.i)) dmg *= 1 + sk.vsMark / 100; // Spirit Overload
+    const dm = foe && pl.debs.find(d => d.dmark > 0 && d.by === owner.i); // Death Mark: the owner's next hit adds its damage, then it is gone
+    if (dm && pct > 0) { dmg += hitDamage(owner, pl, 'atk', dm.dmark, 0, q.up); pl.debs = pl.debs.filter(d => d !== dm); say(pl, 'Death Mark!', '#ff4a5a', 90, 110); }
     const crit = foe && dmg > 0 && Math.random() < critChance(owner);
     if (crit) dmg *= critMul(owner);
     dmg *= botSoft(owner);
@@ -1283,6 +1407,10 @@ function explode(q) {
     if (pl.nineNext && dmg > 0) { dmg *= 1 - (pl.c.pv.nineLives || 30) / 100; pl.nineNext = false; }
     if (ADMIN.god && !NET.on && !pl.bot) { fx.texts.push({ x: pl.x, y: pl.y - 50, s: 'อมตะ', col: '#9fe0ff', t: 60 }); continue; }
     dmg = Math.round(dmg);
+    if (foe && dmg > 0) {
+      const ob = pl.buffs.find(b => b.once); if (ob) pl.buffs = pl.buffs.filter(b => b !== ob); // Smoke Bomb soaks one hit
+      if (crit && owner.c.pv.critShield && owner.gtTurn !== S.turnCount) { owner.gtTurn = S.turnCount; const g = addShield(owner, Math.round(owner.maxHp * owner.c.pv.critShield / 100), owner.i); say(owner, 'Golden Touch โล่ +' + g, '#ffe066', 80, 104); }
+    }
     let soak = 0;
     if (pl.shield > 0 && dmg > 0) { soak = Math.min(pl.shield, dmg); pl.shield -= soak; dmg -= soak; stAdd(pl.i, 'shieldAbs', soak); }
     // your own shots (on yourself or a teammate) hurt but never kill: they leave at least 1 HP
@@ -1311,10 +1439,15 @@ function explode(q) {
         fx.texts.push({ x: pl.x, y: pl.y - 74, s: 'ถูกขโมย POW -' + n, col: '#ff9ad0', t: 80 });
       }
     }
+    // Counter Stance: the first hit taken while it lasts is answered at once
+    const cb = foe && dmg + soak > 0 && pl.alive && pl.buffs.find(b => b.counter > 0);
+    if (cb && owner.alive && owner !== pl) { const v = cb.counter; cb.counter = 0; say(pl, 'Counter!', '#ffd36a', 80, 104); hurtRaw(owner, hitDamage(pl, owner, 'atk', v) * botSoft(pl), 'สวนกลับ', '#ffb070', pl.i); }
+    if (foe) hitFoes.push(pl);
     if (pl.hp <= 0) { pl.alive = false; continue; }
     if (foe && sk) { // what the skill leaves on the target
-      if (sk.dotKind && sk.dotPct > 0) addDot(pl, sk.dotKind, hitDamage(owner, pl, base, sk.dotPct) * botSoft(owner), sk.dotTurns || 2, owner);
-      if (sk.debDef || sk.debMdef || sk.debTaken || sk.debDeal) addDeb(pl, sk, owner);
+      if (sk.dotKind && sk.dotPct > 0) addDot(pl, sk.dotKind, hitDamage(owner, pl, base, sk.dotPct) * botSoft(owner) * (sk.dotKind === 'poison' ? 1 + (owner.c.pv.poisonDmg || 0) / 100 : 1), sk.dotTurns || 2, owner);
+      if (hasDeb(sk)) addDeb(pl, sk, owner);
+      if (sk.bindHit > 0) { pl.bind = Math.max(pl.bind, sk.bindHit); stAdd(owner.i, 'cc', 1); say(pl, 'ตรึง!', '#7fd98a', 80, 88); } // Binding Arrow
       if (sk.freeze > 0) applyCC(pl, 'freeze', sk.freeze, owner);
       if (sk.knock > 0) pushPlayer(pl, (Math.sign(pl.x - q.x) || owner.face) * sk.knock);
       if (sk.mark && ELEM[sk.mark]) addMark(pl, sk.mark, owner);
@@ -1322,6 +1455,20 @@ function explode(q) {
     } else if (foe && q.ice) applyCC(pl, 'freeze', q.freeze || ICE_TURNS, owner);
     lowHp(pl);
   }
+  // Thunder Chain: from each enemy hit, lightning jumps to the nearest other enemies (within 4 slots), same damage and mark
+  if (sk && sk.chain > 0 && hitFoes.length) {
+    const done = new Set(hitFoes.map(x => x.i));
+    for (const from of hitFoes.slice()) {
+      const near = S.players.filter(x => x.alive && !done.has(x.i) && teamOf(x.i) !== teamOf(owner.i) && Math.abs(x.x - from.x) <= SLOT_PX * 4).sort((a, b) => Math.abs(a.x - from.x) - Math.abs(b.x - from.x)).slice(0, sk.chain);
+      for (const t of near) {
+        done.add(t.i); fx.bolts.push({ x: t.x, y: t.y - 14, gy: t.y, t: 6 });
+        hurtRaw(t, hitDamage(owner, t, base, pct, 0, q.up) * botSoft(owner), 'ชิ่ง', '#ffe14a', owner.i);
+        if (t.alive && sk.mark && ELEM[sk.mark]) addMark(t, sk.mark, owner);
+      }
+    }
+  }
+  // Sniper Shot: a miss costs Energy on the next turn
+  if (sk && sk.missEn > 0 && !hitFoes.length) { owner.debs = owner.debs.filter(d => d.id !== 'miss'); owner.debs.push({ id: 'miss', name: 'ยิงพลาด', t: 2, enPen: sk.missEn, by: owner.i }); say(owner, 'พลาด! ตาถัดไป Energy -' + sk.missEn, '#c8d0e0', 80, 96); }
   // an enemy blast that reaches the Golem
   const gm = S.golem;
   if (gm && gm.alive && pct > 0 && teamOf(gm.owner) !== teamOf(owner.i) && golemDist(gm, q.x, q.y) <= r) {
@@ -1381,10 +1528,11 @@ function walkStep(p, dir) {
   let ny = p.y, k = 0;
   while (solid(nx, ny - 1) && k < 6) { ny--; k++; }
   if (solid(nx, ny - 1) || nx < 0 || nx > WW - 1) return false;
-  p.y = ny; { const c = Math.min(p.energy, Math.abs(nx - p.x) * WALK_COST); p.energy -= c; stAdd(p.i, 'enMove', c); } p.x = nx;
+  p.y = ny; { const c = Math.min(p.energy, Math.abs(nx - p.x) * WALK_COST * walkMul(p)); p.energy -= c; stAdd(p.i, 'enMove', c); } p.x = nx;
   return true;
 }
 
+const walkMul = p => 1 + (p.debs || []).reduce((a, d) => a + (d.walk || 0), 0) / 100;
 // ---------- bot ----------
 // where a bot thinks a hidden enemy is: it can't see them, so it guesses around the spot they vanished at
 // (one guess per turn, 1 to 3.5 slots off, either side)
@@ -1500,11 +1648,11 @@ function botSmart(p) {
 // It keeps the Energy an armed skill still needs, and never walks more than about 2 slots.
 function botWalkTarget(p) {
   const e = other(p), ex = botSeeX(e), dist = Math.abs(ex - p.x), away = p.x < ex ? -1 : 1;
-  const maxPx = Math.min(SLOT_PX * 2, p.energy / WALK_COST - 5);
+  const maxPx = Math.min(SLOT_PX * 2, p.energy / (WALK_COST * walkMul(p)) - 5);
   if (maxPx < 15) return null;
   let dir = 0, len = 0;
-  const inZone = (S.zones || []).some(z => z.owner !== p.i && Math.abs(z.x - p.x) <= z.r + 20);
-  if (inZone) { const z = S.zones.find(z => z.owner !== p.i && Math.abs(z.x - p.x) <= z.r + 20); dir = p.x < z.x ? -1 : 1; len = z.r + 40 - Math.abs(z.x - p.x); }
+  const inZone = (S.zones || []).some(z => !(z.heal > 0) && z.owner !== p.i && Math.abs(z.x - p.x) <= z.r + 20);
+  if (inZone) { const z = S.zones.find(z => !(z.heal > 0) && z.owner !== p.i && Math.abs(z.x - p.x) <= z.r + 20); dir = p.x < z.x ? -1 : 1; len = z.r + 40 - Math.abs(z.x - p.x); }
   else if (p.hidden > 0) { dir = Math.random() < 0.5 ? -1 : 1; len = SLOT_PX * (0.8 + Math.random()); }
   else if (dist < SLOT_PX * 2.5) { dir = away; len = SLOT_PX * (0.8 + Math.random() * 0.8); }
   else if (dist > SLOT_PX * 8) { dir = -away; len = SLOT_PX * (0.8 + Math.random() * 1.2); }
@@ -1759,7 +1907,7 @@ function golemMelee(g, e) {
   golemHit(g, e, dmg, crit, 'gMelee');
 }
 function golemGuard(g) {
-  const s = Math.round(g.maxHp * g.guardPct / 100), own = S.players[g.owner], os = Math.round(s * g.share / 100);
+  const s = Math.round(g.maxHp * g.guardPct / 100), own = S.players[g.owner], os = Math.round(s * g.share / 100 * (1 + ((own && own.c.pv.golemShield) || 0) / 100)); // Golem Bond
   g.shield += s; stAdd(g.owner, 'gShield', s); say(g, 'โล่ +' + s, '#ffe9a8', 80, 96);
   if (own.alive) { const og = addShield(own, os, null); stAdd(g.owner, 'gOwnerShield', og); stAdd(g.owner, 'shield', og); say(own, 'โล่จาก Golem +' + os, '#ffe9a8', 80, 64); gfx({ k: 'link', x: g.x, y: g.y, x2: own.x, y2: own.y, dur: 40 }); }
   g.guardCd = 3;
@@ -4026,10 +4174,17 @@ function boomParts(x, y, ice) {
 // its own in the room presence (me), so both screens show the real players, not placeholders (Karoz 2026-10-09)
 function myInfo() {
   let m = null; try { m = window.parent !== window && window.parent.__me; } catch (_) {}
-  return m ? { n: String(m.name || '').slice(0, 16), lv: Math.max(1, Math.min(100, m.level | 0 || 1)), g: String(m.guild || '').slice(0, 20) } : null;
+  if (!m) return null;
+  const o = { n: String(m.name || '').slice(0, 16), lv: Math.max(1, Math.min(100, m.level | 0 || 1)), g: String(m.guild || '').slice(0, 20) };
+  // skill levels by skill id and the loadout (6 skills, ultimate, 2 passives), both from the town's Jobs tab
+  if (m.skills && typeof m.skills === 'object') { o.sl = {}; for (const [k, v] of Object.entries(m.skills)) if (SKILLS[k]) o.sl[k] = Math.max(1, Math.min(SKILL_MAX, v | 0 || 1)); }
+  if (m.load && typeof m.load === 'object') { o.ld = {}; for (const k of [...SLOT_IDS, 'b', 'p1', 'p2']) if (typeof m.load[k] === 'string') o.ld[k] = m.load[k].slice(0, 32); }
+  return o;
 }
 function applyInfo(p, m, fallback) {
   p.name = (m && m.n) || fallback;
+  if (m && m.ld && !tutMode) setLoadout(p, m.ld); // the skills picked in the town's Jobs tab (the tutorial keeps its one starting skill)
+  if (m && m.sl) setSkills(p, m.sl); // skill strength follows the levels picked in the town's Jobs tab
   if (m && m.lv) setLevel(p, m.lv); // stats follow the player's level
   p.guild = (m && m.g) || '';
 }
@@ -4080,7 +4235,7 @@ function hostSnap() {
   const ea = NET.gpres && NET.gpres.ea, ack = Array.isArray(ea) && ea[0] === NET.m ? +ea[1] || 0 : 0;
   NET.ev = NET.ev.filter(e => e[0] > ack);
   const sn = { n: ++NET.sn, m: NET.m, mt: NET.mt, f: S.frame, st: S.state, t: S.turn, tc: S.turnCount, pw: nr(S.power), tm: nr(S.timer), w: S.wind,
-    bn: S.banner, cs: Math.round(cam.shake || 0), wn: S.state === 'over' ? S.winIdx : -1, aa: NET.lastAct, zn: (S.zones || []).map(z => [nr(z.x), nr(z.y), nr(z.r), z.t]),
+    bn: S.banner, cs: Math.round(cam.shake || 0), wn: S.state === 'over' ? S.winIdx : -1, aa: NET.lastAct, zn: (S.zones || []).map(z => [nr(z.x), nr(z.y), nr(z.r), z.t, z.heal ? 1 : 0]),
     gm: S.golem ? [S.golem.owner, nr(S.golem.x), nr(S.golem.y), S.golem.face, Math.round(S.golem.hp), S.golem.maxHp, Math.round(S.golem.shield), S.golem.turns, S.golem.anim.k, Math.round(S.golem.anim.t), S.golem.hitT || 0] : 0,
     pl: S.players.map(p => PK.map(k => nr(p[k]))),
     pj: S.projs.filter(q => !q.done).map(q => PJK.map(k => nr(k === 'kind' ? q.src || q.kind : q[k]))), ev: [] };
@@ -4126,7 +4281,7 @@ function applySnap(sn) {
   NET.lastSn = sn.n;
   for (const e of Array.isArray(sn.ev) ? sn.ev : []) if (Array.isArray(e) && e[0] > NET.eseq) { applyEv(e); NET.eseq = e[0]; }
   NET.aa = sn.aa;
-  Object.assign(S, { turn: sn.t, turnCount: sn.tc, power: sn.pw, timer: sn.tm, wind: sn.w, banner: sn.bn, zones: (sn.zn || []).map(z => ({ x: z[0], y: z[1], r: z[2], t: z[3] })) });
+  Object.assign(S, { turn: sn.t, turnCount: sn.tc, power: sn.pw, timer: sn.tm, wind: sn.w, banner: sn.bn, zones: (sn.zn || []).map(z => ({ x: z[0], y: z[1], r: z[2], t: z[3], heal: z[4] || 0 })) });
   if (!NET.ended) S.state = sn.st;
   if (Array.isArray(sn.gm)) { const r = sn.gm, g = S.golem && S.golem.guest ? S.golem : (S.golem = { guest: true, golem: true, born: 0, alive: true, anim: { k: 'spawn', t: 0 } });
     Object.assign(g, { owner: r[0], i: r[0], x: r[1], y: r[2], face: r[3], hp: r[4], maxHp: r[5], shield: r[6], turns: r[7], anim: { k: r[8], t: r[9] }, hitT: r[10] }); }
@@ -4853,7 +5008,7 @@ loadSavedData();
 cam.x = 0;
 fitCanvas(); drawStripResize();
 requestAnimationFrame(loop);
-window.__game = { NET, get S() { return S; }, get cam() { return cam; }, input, fire, useSkill, botPlan, useUlt, useSlot, runSim, simPairs, simSummary, simCSV, statOf, hitDamage, critChance, get SKILLS() { return SKILLS; } };
+window.__game = { NET, get S() { return S; }, get cam() { return cam; }, input, fire, useSkill, botPlan, useUlt, useSlot, runSim, simPairs, simSummary, simCSV, statOf, hitDamage, critChance, get SKILLS() { return SKILLS; }, explode, selfSkill, foeSkill, turnStartEffects };
 })();
 </script>
 
