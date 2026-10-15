@@ -716,6 +716,47 @@ img { -webkit-user-drag: none; user-drag: none; }
 .gm .seg button { border: 0; background: #2f2742; color: #fff; padding: 8px 14px; font-weight: 700; cursor: pointer; }
 .gm .seg button.on { background: var(--gold); color: #2b1d00; }
 #m-mail, #m-gm { z-index: 22; }
+/* admin panel (Karoz 2026-10-15): overview, players, money, job win rates, the admin log, settings */
+#m-ap { z-index: 21; }
+.ap { width: min(980px, 100%); }
+.ap .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+.ap .tabs button { border: 2px solid var(--line); background: #2f2742; color: #fff; border-radius: 10px; padding: 8px 14px; font-weight: 700; cursor: pointer; font-size: 15px; }
+.ap .tabs button[aria-selected="true"] { background: var(--gold); color: #2b1d00; border-color: var(--gold); }
+.ap h3 { margin: 14px 0 6px; font-size: 15px; color: var(--gold); }
+.ap select, .ap input[type=number], .ap input[type=text], .ap input[type=search] { height: 40px; border-radius: 10px; border: 2px solid var(--line); background: #15111f; padding: 0 10px; font-size: 15px; color: #fff; }
+.ap input[type=number] { width: 110px; }
+.ap .btn { height: 40px; font-size: 15px; padding: 0 14px; }
+.ap-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 8px; }
+.ap-row label { display: inline-flex; gap: 6px; align-items: center; font-size: 15px; color: #fff; margin: 0; cursor: pointer; }
+.ap-row .grow { flex: 1; min-width: 160px; }
+.ap-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.ap-kpi { background: #15111f; border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.ap-kpi b { display: block; font-size: 26px; color: #fff; }
+.ap-kpi span { font-size: 13px; color: var(--muted); }
+.ap-split { display: grid; grid-template-columns: minmax(200px, 280px) minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 760px) { .ap-split { grid-template-columns: minmax(0, 1fr); } }
+.ap-list { display: flex; flex-direction: column; gap: 4px; max-height: 60vh; overflow: auto; }
+.ap-list button { text-align: left; border: 2px solid var(--line); background: #15111f; color: #fff; border-radius: 10px; padding: 6px 10px; cursor: pointer; font: inherit; font-size: 15px; }
+.ap-list button.on { border-color: var(--gold); }
+.ap-list small { display: block; color: var(--muted); font-size: 12px; }
+.ap-tag { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 1px 6px; margin-left: 4px; vertical-align: 1px; background: #555; color: #fff; }
+.ap-tag.ban { background: #c0392b; } .ap-tag.mute { background: #b9861b; } .ap-tag.gm { background: #2a7fe0; }
+.ap-info { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 12px; font-size: 15px; color: #fff; }
+.ap-info span { color: var(--muted); }
+.ap table { width: 100%; border-collapse: collapse; font-size: 14px; color: #fff; }
+.ap th, .ap td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.ap th { color: var(--gold); font-weight: 700; }
+.ap .scroll { max-height: 55vh; overflow: auto; }
+.ap .ap-chat p { margin: 0; padding: 4px 0; border-bottom: 1px solid var(--line); color: #fff; font-size: 14px; display: flex; gap: 8px; align-items: baseline; }
+.ap .ap-chat p span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ap .ap-chat time { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.ap .mini { height: 28px; padding: 0 8px; font-size: 13px; border-radius: 8px; }
+.ap .err, .ap .ok { min-height: 1.3em; }
+#log .del { border: 0; background: none; color: #ff8a80; cursor: pointer; font-size: 14px; padding: 0 4px; margin-left: 6px; opacity: .7; }
+#log .del:hover { opacity: 1; }
+/* banned, or the game is closed for maintenance: a screen in front of the town */
+#m-block { z-index: 45; }
+#m-block .card { text-align: center; }
 #m-ask { z-index: 26; }
 .ask { text-align: center; }
 .ask-item { width: 84px; height: 84px; margin: 6px auto 10px; border-radius: 12px; border: 2px solid #e6c27a; background: linear-gradient(#fff7e6, #f5dfb3); display: grid; place-items: center; position: relative; }
@@ -1038,7 +1079,7 @@ img { -webkit-user-drag: none; user-drag: none; }
     <div class="gm-row"><select id="gm-cat" aria-label="หมวดหมู่"></select></div>
     <div class="gm-items" id="gm-items" style="margin-top:8px"></div>
     <h3>2. ผู้รับ</h3>
-    <div class="gm-row"><input type="text" id="gm-to" placeholder="ชื่อผู้เล่น คั่นด้วย , ได้หลายคน" aria-label="ชื่อผู้รับ"><label><input type="checkbox" id="gm-online"> ทุกคนที่ออนไลน์ (<span id="gm-n">0</span>)</label></div>
+    <div class="gm-row"><input type="text" id="gm-to" placeholder="ชื่อผู้เล่น คั่นด้วย , ได้หลายคน" aria-label="ชื่อผู้รับ"><label><input type="checkbox" id="gm-online"> ทุกคนที่ออนไลน์ (<span id="gm-n">0</span>)</label><label><input type="checkbox" id="gm-all"> ผู้เล่นทุกคนในเกม</label></div>
     <h3>3. จำนวน</h3>
     <div class="gm-row"><input type="number" id="gm-qty" min="1" max="9999" value="1" aria-label="จำนวน"></div>
     <h3>4. สถานะ</h3>
@@ -1061,6 +1102,76 @@ img { -webkit-user-drag: none; user-drag: none; }
   </form>
 </div>
 
+<div class="modal" id="m-ap" hidden role="dialog" aria-modal="true" aria-labelledby="t-ap">
+  <div class="card ap">
+    <button class="x" type="button" data-close aria-label="ปิด">✕</button>
+    <h2 id="t-ap">แผงแอดมิน</h2>
+    <div class="tabs" role="tablist" id="ap-tabs">
+      <button type="button" role="tab" data-v="home" aria-selected="true">ภาพรวม</button>
+      <button type="button" role="tab" data-v="players">ผู้เล่น</button>
+      <button type="button" role="tab" data-v="money">ส่งเงิน</button>
+      <button type="button" role="tab" data-v="item">เสกไอเทม</button>
+      <button type="button" role="tab" data-v="stats">สถิติอาชีพ</button>
+      <button type="button" role="tab" data-v="log">ประวัติแอดมิน</button>
+      <button type="button" role="tab" data-v="set">ตั้งค่าเกม</button>
+    </div>
+    <p class="err" id="ap-err" role="alert"></p>
+
+    <section data-p="home">
+      <div class="ap-row"><button type="button" class="btn" id="ap-home-re">รีเฟรช</button></div>
+      <div class="ap-kpis" id="ap-kpis"></div>
+      <h3>ห้องที่เปิดอยู่ตอนนี้</h3>
+      <div id="ap-rooms"></div>
+    </section>
+
+    <section data-p="players" hidden>
+      <div class="ap-row"><input type="search" class="grow" id="ap-q" placeholder="พิมพ์ชื่อผู้เล่น (เว้นว่าง = ผู้เล่นที่เข้าล่าสุด)" aria-label="ค้นหาผู้เล่น"><button type="button" class="btn go" id="ap-find">ค้นหา</button>
+        <label><input type="checkbox" id="ap-only-ban"> เฉพาะคนที่ถูกแบนหรือปิดแชท</label></div>
+      <div class="ap-split">
+        <div class="ap-list" id="ap-list"></div>
+        <div id="ap-detail"><p>เลือกผู้เล่นทางซ้าย</p></div>
+      </div>
+    </section>
+
+    <section data-p="money" hidden>
+      <p>ใส่จำนวนติดลบเพื่อหักออกได้ (หักแล้วไม่ต่ำกว่า 0)</p>
+      <div class="ap-row"><input type="text" class="grow" id="ap-m-to" placeholder="ชื่อผู้เล่น คั่นด้วย , ได้หลายคน" aria-label="ชื่อผู้รับ"><label><input type="checkbox" id="ap-m-all"> ผู้เล่นทุกคนในเกม</label></div>
+      <div class="ap-row"><label>ทอง <input type="number" id="ap-m-gold" value="0"></label><label>เพชร <input type="number" id="ap-m-gem" value="0"></label><label>คูปอง <input type="number" id="ap-m-coupon" value="0"></label></div>
+      <div class="ap-row"><input type="text" class="grow" id="ap-m-why" maxlength="200" placeholder="เหตุผล (บันทึกในประวัติแอดมิน)" aria-label="เหตุผล"></div>
+      <p class="ok" id="ap-m-ok" role="status"></p>
+      <button type="button" class="btn go" id="ap-m-send">ส่ง</button>
+    </section>
+
+    <section data-p="stats" hidden>
+      <div class="ap-row"><select id="ap-days" aria-label="ช่วงเวลา"><option value="1">วันนี้ 24 ชม.</option><option value="7" selected>7 วันล่าสุด</option><option value="30">30 วันล่าสุด</option><option value="3650">ทั้งหมด</option></select><button type="button" class="btn" id="ap-stats-re">รีเฟรช</button></div>
+      <p>นับจากผลแมตช์ที่เครื่องผู้เล่นส่งมาตอนจบเกม เริ่มนับตั้งแต่อัปเดตนี้ (ไม่รวมบทสอนและด่านสไลม์)</p>
+      <div class="scroll" id="ap-stats"></div>
+    </section>
+
+    <section data-p="log" hidden>
+      <div class="ap-row"><button type="button" class="btn" id="ap-log-re">รีเฟรช</button></div>
+      <div class="scroll" id="ap-log"></div>
+    </section>
+
+    <section data-p="set" hidden>
+      <h3>ปิดปรับปรุง</h3>
+      <div class="ap-row"><label><input type="checkbox" id="ap-mt-on"> ปิดเกมปรับปรุง (เข้าได้เฉพาะแอดมิน)</label></div>
+      <div class="ap-row"><input type="text" class="grow" id="ap-mt-msg" maxlength="200" placeholder="ข้อความที่ผู้เล่นจะเห็น" aria-label="ข้อความปิดปรับปรุง"><button type="button" class="btn go" id="ap-mt-save">บันทึก</button></div>
+      <h3>อาชีพที่ยังเปิดเฉพาะแอดมิน</h3>
+      <div id="ap-jobs"></div>
+      <p class="ok" id="ap-set-ok" role="status"></p>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="m-block" hidden role="alertdialog" aria-modal="true" aria-labelledby="t-block" data-xonly>
+  <div class="card">
+    <h2 id="t-block"></h2>
+    <p id="block-text"></p>
+    <button type="button" class="btn wide" id="block-out">ออกจากระบบ</button>
+  </div>
+</div>
+
 <div class="modal" id="m-acct" hidden role="dialog" aria-modal="true" aria-labelledby="t-acct">
   <div class="card">
     <button class="x" type="button" data-close aria-label="ปิด">✕</button>
@@ -1074,7 +1185,7 @@ img { -webkit-user-drag: none; user-drag: none; }
     </form>
     <p class="err" id="ac-err" role="alert"></p>
     <p class="ok" id="ac-ok" role="status"></p>
-    <button type="button" class="btn wide go" id="ac-gm" hidden style="margin-top:10px">เสกไอเทม (แอดมิน)</button>
+    <button type="button" class="btn wide go" id="ac-gm" hidden style="margin-top:10px">แผงแอดมิน</button>
     <hr>
     <button type="button" class="btn wide" id="ac-out">ออกจากระบบ</button>
   </div>
@@ -1340,6 +1451,13 @@ function startTutorial() {
   }, 500);
 }
 addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'aoa-tutorial-done') finishTutorial(); });
+// every finished match (against a bot or a player) is counted for the admin panel's job win rates
+addEventListener('message', e => {
+  const d = e.data;
+  if (e.origin !== location.origin || !d || d.type !== 'aoa-match-end' || !serverOn()) return;
+  if (!['bot', 'pvp'].includes(d.vs) || !['win', 'loss', 'draw'].includes(d.result)) return;
+  online.sb.rpc('record_match', { p_vs: d.vs, p_result: d.result }).then(() => {}, () => {});
+});
 function endTutorial() {
   tut.on = false; clearInterval(tut.timer); gameBox.classList.remove('tut'); $('tut-done').hidden = true; $('back').click();
 }
@@ -1627,7 +1745,12 @@ async function seekMatch() {
   if (!online.sb || !online.user || online.user.id === 'preview') { msg.textContent = 'ต้องล็อกอินก่อนถึงจะจับคู่ได้'; return; }
   msg.textContent = ''; Object.assign(co, { seek: Date.now(), vs: null, game: null }); sharePresence(); renderRoom();
   const { data, error } = await online.sb.rpc('match_join', { p_room: co.room, p_size: n });
-  if (error) { stopMatch(); msg.textContent = /match_join|schema cache|function/.test(error.message || '') ? 'ต้องรัน supabase-match.sql ใน Supabase ก่อน' : why(error); return; }
+  if (error) {
+    stopMatch(); const em = error.message || '';
+    msg.textContent = /banned/.test(em) ? 'บัญชีนี้ถูกระงับ จับคู่ไม่ได้' : /maintenance/.test(em) ? 'เกมกำลังปิดปรับปรุง จับคู่ไม่ได้ตอนนี้'
+      : /match_join|schema cache|function/.test(em) ? 'ต้องรัน supabase-match.sql ใน Supabase ก่อน' : why(error);
+    return;
+  }
   mm.on = true; onMatch(data);
 }
 function stopMatch() {
@@ -1838,6 +1961,7 @@ function renderBag() {
   bagSlots('bg-left', BAG_LEFT, true); bagSlots('bg-right', BAG_RIGHT, true);
   const grid = $('bg-grid'); if (!grid.childElementCount) for (let i = 0; i < BAG_CELLS; i++) { const c = document.createElement('div'); c.className = 'cell'; grid.appendChild(c); }
   const j = jobOf(prof.job), lv = Math.max(1, prof.level | 0 || 1), need = expNeed(lv), cur = Math.max(0, prof.exp | 0);
+  for (const k of ['gold', 'gem', 'coupon']) $('bg-' + k).textContent = (+(online.me && online.me[k]) || 0).toLocaleString('th-TH');
   $('bg-name').textContent = prof.name || 'ผู้เล่น'; $('bg-job').textContent = j ? `${j.th} · ${j.name}` : 'ยังไม่มีอาชีพ'; $('bg-lv').textContent = lv;
   const art = $('bg-art'); art.textContent = ''; const im = gearArt(prof.job); if (im) art.appendChild(im);
   // the weapon slot shows what is worn (click to take it off); the grid shows the rest (click to wear)
@@ -1882,7 +2006,7 @@ function showBagView(v) {
   bagView = v;
   for (const b of $('bg-tabs').children) b.classList.toggle('on', b.dataset.view === v);
   $('bg-gear').hidden = v !== 'gear'; $('bg-jobs').hidden = v !== 'jobs';
-  if (v === 'jobs') { if (!jb.pick || (JOB[jb.pick].admin && !isAdmin())) jb.pick = prof.job || 'blade'; renderJobs(); }
+  if (v === 'jobs') { if (!jb.pick || jobLocked(jb.pick)) jb.pick = prof.job || 'blade'; renderJobs(); }
 }
 for (const b of $('bg-tabs').querySelectorAll('button')) b.onclick = b.dataset.view ? () => showBagView(b.dataset.view) : () => toast(`${b.textContent} ${SOON}`);
 
@@ -1922,7 +2046,7 @@ const loadGameData = () => gameData ? Promise.resolve(gameData) : fetch('../game
 loadGameData().catch(() => {});
 const jb = { pick: null, slot: 's1', pslot: 'p1' };
 const SKILL_CAP = 40;
-const skillPoints = () => Math.min(SKILL_CAP, Math.max(1, prof.level | 0 || 1));
+const skillPoints = () => Math.min(SKILL_CAP, Math.max(1, prof.level | 0 || 1)) + Math.max(0, (online.me && online.me.skill_bonus) | 0); // + bonus points an admin gives
 const jobData = job => gameData && gameData.classes && gameData.classes[job];
 const poolOf = job => { const d = jobData(job); return d ? { act: d.pool || LOAD_SLOTS.map(x => d[x]), ult: d.ults || [d.b], pas: d.pasPool || [d.p1, d.p2] } : null; };
 const skillDef = id => (gameData && gameData.skills && gameData.skills[id]) || null;
@@ -2022,7 +2146,7 @@ function renderJobs() {
     list.appendChild(b);
   }
   for (const b of list.children) {
-    const k = b.dataset.k; b.hidden = !!JOB[k].admin && !isAdmin();
+    const k = b.dataset.k; b.hidden = jobLocked(k);
     b.setAttribute('aria-checked', String(k === jb.pick));
     b.querySelector('em').hidden = k !== prof.job;
   }
@@ -2149,22 +2273,23 @@ function saveSkills() {
     if (!serverLive()) return;
     const { error } = await online.sb.from('profiles').update({ skills: savedSkills() }).eq('id', online.user.id);
     if (error) { console.warn('skills', error); toast(/skills/.test(error.message) ? 'ต้องรัน supabase-jobs.sql ใน Supabase ก่อน สกิลถึงจะบันทึกถาวร' : why(error)); }
-    else online.me.skills = savedSkills();
+    else { online.me.skills = savedSkills(); online.skillsSeen = canon(online.me.skills); }
   }, 600);
 }
 for (const b of $('bg-side').querySelectorAll('button')) b.onclick = () => { bagTab = b.dataset.tab; for (const o of $('bg-side').children) o.classList.toggle('on', o === b); renderBag(); };
 for (const b of $('bg-acts').querySelectorAll('button')) b.onclick = () => toast(`${b.textContent} ${SOON}`);
 
 // a yes/no question in the game's own window (the browser's confirm box looks out of place)
-function askDestroy(r) {
+function askYes(title, text, yes, r) {
   return new Promise(done => {
-    const box = $('ask-item'); box.textContent = ''; fillItem(box, r);
-    $('ask-text').textContent = `ทำลาย ${ITEMS[r.item_id].name}${r.qty > 1 ? ` x${r.qty}` : ''} ใช่ไหม? ทำลายแล้วกู้คืนไม่ได้`;
+    const box = $('ask-item'); box.textContent = ''; box.hidden = !r; if (r) fillItem(box, r);
+    $('t-ask').textContent = title; $('ask-text').textContent = text; $('ask-yes').textContent = yes;
     const end = v => { $('m-ask').hidden = true; done(v); };
     $('ask-yes').onclick = () => end(true); $('ask-no').onclick = () => end(false);
     $('m-ask').hidden = false; $('ask-no').focus();
   });
 }
+const askDestroy = r => askYes('ทำลายไอเทม', `ทำลาย ${ITEMS[r.item_id].name}${r.qty > 1 ? ` x${r.qty}` : ''} ใช่ไหม? ทำลายแล้วกู้คืนไม่ได้`, 'ทำลาย', r);
 async function destroyItem(r) {
   if (!await askDestroy(r)) return;
   if (inv.live) {
@@ -2336,6 +2461,7 @@ function openGm() {
 $('gm-cat').onchange = () => { gm.item = Object.keys(ITEMS).find(id => ITEMS[id].cat === $('gm-cat').value) || null; gmItems(); gmStats(); };
 $('gm-online').onchange = () => { $('gm-n').textContent = gmOnline().length; };
 $('gm-forever').onchange = () => { $('gm-days').disabled = $('gm-forever').checked; };
+$('gm-all').onchange = () => { $('gm-to').disabled = $('gm-online').disabled = $('gm-all').checked; };
 for (const [id, key] of [['gm-bound', 'bound'], ['gm-via', 'via']]) for (const b of $(id).children) b.onclick = () => {
   for (const o of $(id).children) o.classList.toggle('on', o === b);
   gm[key] = key === 'bound' ? b.dataset.v === '1' : b.dataset.v;
@@ -2344,30 +2470,349 @@ for (const [id, key] of [['gm-bound', 'bound'], ['gm-via', 'via']]) for (const b
 $('gm-form').onsubmit = async e => {
   e.preventDefault(); const err = $('gm-err'); err.textContent = ''; $('gm-ok').textContent = '';
   const it = ITEMS[gm.item]; if (!it) { err.textContent = 'เลือกไอเทมก่อน'; return; }
-  const names = $('gm-to').value.split(',').map(x => x.trim()).filter(Boolean), ids = $('gm-online').checked ? gmOnline() : [];
-  if (!names.length && !ids.length) { err.textContent = 'ใส่ชื่อผู้รับ หรือติ๊กทุกคนที่ออนไลน์'; return; }
+  const all = $('gm-all').checked, names = all ? [] : $('gm-to').value.split(',').map(x => x.trim()).filter(Boolean), ids = !all && $('gm-online').checked ? gmOnline() : [];
+  if (!all && !names.length && !ids.length) { err.textContent = 'ใส่ชื่อผู้รับ หรือติ๊กทุกคนที่ออนไลน์ หรือผู้เล่นทุกคนในเกม'; return; }
   const qty = $('gm-qty').value | 0; if (qty < 1 || qty > 9999) { err.textContent = 'จำนวนต้องอยู่ระหว่าง 1 ถึง 9999'; return; }
   const minLv = $('gm-lv').value | 0; if (minLv < 1 || minLv > 100) { err.textContent = 'เลเวลขั้นต่ำต้องอยู่ระหว่าง 1 ถึง 100'; return; }
   const forever = $('gm-forever').checked, days = $('gm-days').value | 0;
   if (!forever && (days < 1 || days > 3650)) { err.textContent = 'วันหมดอายุต้องอยู่ระหว่าง 1 ถึง 3650 วัน หรือติ๊กถาวร'; return; }
   const stats = {}; for (const inp of $('gm-stats').querySelectorAll('input')) stats[inp.dataset.k] = +inp.value || 0;
   if (!serverOn()) { err.textContent = 'ต้องล็อกอินก่อน'; return; }
+  if (all && !await askYes('ส่งให้ทุกคน', `ส่ง ${it.name} x${qty} ให้ผู้เล่นทุกคนในเกมใช่ไหม?`, 'ส่ง')) return;
   const btn = $('gm-send'); btn.disabled = true; btn.textContent = 'กำลังส่ง...';
-  const { data, error } = await online.sb.rpc('admin_give_item', {
-    p_names: names, p_ids: ids, p_item: gm.item, p_slot: it.slot || null, p_qty: qty, p_bound: gm.bound, p_stats: stats,
-    p_days: forever ? null : days, p_via: gm.via, p_subject: $('gm-subj').value, p_body: $('gm-body').value, p_min_level: minLv,
-  });
+  const args = { p_item: gm.item, p_slot: it.slot || null, p_qty: qty, p_bound: gm.bound, p_stats: stats,
+    p_days: forever ? null : days, p_via: gm.via, p_subject: $('gm-subj').value, p_body: $('gm-body').value, p_min_level: minLv };
+  // everyone in the game goes through supabase-admin.sql; names and the online list through supabase-items.sql
+  const { data, error } = await online.sb.rpc(all ? 'admin_give_item_all' : 'admin_give_item', all ? args : Object.assign({ p_names: names, p_ids: ids }, args));
   btn.disabled = false; btn.textContent = 'ส่ง';
   if (error) {
     const msg = String(error.message || '');
     console.warn('admin_give_item', error);
-    err.textContent = (/not_admin/.test(msg) ? 'บัญชีนี้ไม่ใช่แอดมินในฐานข้อมูล (profiles.is_admin)' : /no_target/.test(msg) ? `ไม่พบผู้เล่นชื่อ ${names.join(', ') || '(ไม่มีคนออนไลน์)'}` : /admin_give_item|schema cache|function/.test(msg) ? 'ต้องรัน supabase-items.sql ใน Supabase อีกครั้งก่อน (มีเลเวลขั้นต่ำเพิ่ม)' : 'ส่งไม่สำเร็จ') + ` [${msg}]`;
+    err.textContent = (/not_admin/.test(msg) ? 'บัญชีนี้ไม่ใช่แอดมินในฐานข้อมูล (profiles.is_admin)' : /no_target/.test(msg) ? `ไม่พบผู้เล่นชื่อ ${names.join(', ') || '(ไม่มีคนออนไลน์)'}` : all && /admin_give_item_all|schema cache|function/.test(msg) ? 'ต้องรัน supabase-admin.sql ใน Supabase ก่อน' : /admin_give_item|schema cache|function/.test(msg) ? 'ต้องรัน supabase-items.sql ใน Supabase อีกครั้งก่อน (มีเลเวลขั้นต่ำเพิ่ม)' : 'ส่งไม่สำเร็จ') + ` [${msg}]`;
     return;
   }
   const done = `ส่ง ${it.name} x${qty} ให้ ${data} คน ${gm.via === 'mail' ? 'ทางจดหมาย' : 'เข้ากระเป๋า'}แล้ว (${new Date().toLocaleTimeString('th-TH')})`;
   $('gm-ok').textContent = done; toast(done);
   loadInv().then(() => { if (!$('m-bag').hidden) renderBag(); });
 };
+
+// ---------- admin panel (Karoz 2026-10-15) ----------
+// Every button here calls a function in lobby/supabase-admin.sql; the server checks profiles.is_admin on each call, so
+// hiding the panel from players is only for looks. Every change is written to the admin log.
+const ap = { tab: 'home', list: [], pick: null };
+const apEl = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const apTime = v => !v ? '-' : v === 'infinity' ? 'ถาวร' : new Date(v).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+const apOn = v => v === 'infinity' || (!!v && new Date(v).getTime() > Date.now()); // a ban or mute still running
+const apNum = v => (+v || 0).toLocaleString('th-TH');
+const AP_ERR = {
+  not_admin: 'บัญชีนี้ไม่ใช่แอดมินในฐานข้อมูล (profiles.is_admin)', no_target: 'ไม่พบผู้เล่น', not_self: 'ทำกับบัญชีตัวเองไม่ได้',
+  target_admin: 'แบนหรือปิดแชทแอดมินด้วยกันไม่ได้', bad_amount: 'จำนวนไม่ถูกต้อง', bad_level: 'เลเวลต้องอยู่ระหว่าง 1 ถึง 100',
+};
+function apErr(e) {
+  const s = String((e && (e.message || e.code)) || e || '');
+  for (const k in AP_ERR) if (s.includes(k)) return AP_ERR[k];
+  if (/admin_|game_settings|match_results|skill_bonus|gold|last_seen|schema cache|does not exist|function/.test(s)) return 'ต้องรัน supabase-admin.sql ใน Supabase ก่อน';
+  return why(e);
+}
+const apSay = t => { $('ap-err').textContent = t || ''; };
+async function apRpc(fn, args) {
+  apSay('');
+  const { data, error } = await online.sb.rpc(fn, args);
+  if (error) { console.warn(fn, error); apSay(apErr(error)); return { error }; }
+  return { data };
+}
+function openAp() {
+  if (!isAdmin()) return;
+  openModal('m-ap'); apTab(ap.tab);
+  if (!serverOn()) apSay('หน้าตัวอย่างต่อฐานข้อมูลไม่ได้ ต้องเปิดบนเว็บจริงและล็อกอินด้วยบัญชีแอดมิน');
+}
+function apTab(v) {
+  if (v === 'item') { openGm(); return; } // the item tool keeps its own window
+  ap.tab = v;
+  for (const b of $('ap-tabs').children) b.setAttribute('aria-selected', String(b.dataset.v === v));
+  for (const p of document.querySelectorAll('#m-ap section')) p.hidden = p.dataset.p !== v;
+  apSay('');
+  if (v === 'home') apHome(); else if (v === 'players' && !ap.list.length) apFind(); else if (v === 'stats') apStats(); else if (v === 'log') apLog(); else if (v === 'set') apSettings();
+}
+for (const b of $('ap-tabs').children) b.onclick = () => apTab(b.dataset.v);
+
+// overview: who is online and the open rooms come from the town's live presence; the rest from the server
+async function apHome() {
+  const box = $('ap-kpis'); box.textContent = '';
+  const kpi = (n, t) => { const d = apEl('div', 'ap-kpi'); d.append(apEl('b', '', n), apEl('span', '', t)); box.appendChild(d); };
+  kpi(co.live ? townPeople().length : '-', 'ออนไลน์ในเมืองตอนนี้');
+  kpi(co.live ? townRooms().length : '-', 'ห้องที่เปิดอยู่');
+  const rooms = $('ap-rooms'); rooms.textContent = '';
+  const rs = co.live ? townRooms() : [];
+  if (!rs.length) rooms.appendChild(apEl('p', '', co.live ? 'ยังไม่มีห้องเปิด' : 'ยังไม่ได้เชื่อมต่อเมือง'));
+  else {
+    const t = apEl('table'), h = t.insertRow(); for (const x of ['ห้อง', 'เจ้าของห้อง', 'โหมด', 'คน', 'สถานะ']) h.appendChild(apEl('th', '', x));
+    for (const r of rs) { const tr = t.insertRow(); for (const x of [r.code, r.host, MODES[r.mode] || r.mode, `${r.n}/${r.max}`, r.game ? 'กำลังเล่น' : r.seek ? 'กำลังหาคู่' : 'รอ']) tr.insertCell().textContent = x; }
+    rooms.appendChild(t);
+  }
+  if (!serverOn()) return;
+  const { data } = await apRpc('admin_overview');
+  if (!data) return;
+  kpi(apNum(data.players), 'ผู้เล่นทั้งหมด'); kpi(apNum(data.new_today), 'ผู้เล่นใหม่วันนี้'); kpi(apNum(data.seen_today), 'เข้าเล่นวันนี้');
+  kpi(apNum(data.matches_today), 'แมตช์ที่จบวันนี้'); kpi(apNum(data.banned), 'ถูกแบนอยู่'); kpi(apNum(data.muted), 'ถูกปิดแชทอยู่');
+}
+$('ap-home-re').onclick = apHome;
+
+// players: search by name; empty = the most recently seen
+const AP_COLS = 'id, name, job, level, exp, gold, gem, coupon, skill_bonus, is_admin, guild, created_at, last_seen, banned_until, ban_reason, muted_until, mute_reason';
+async function apFind() {
+  if (!serverOn()) return;
+  const q = $('ap-q').value.trim(), list = $('ap-list');
+  let req = online.sb.from('profiles').select(AP_COLS).limit(40);
+  if (q) req = req.ilike('name', `%${q.replace(/[\\%_]/g, '\\$&')}%`).order('name');
+  else req = req.order('last_seen', { ascending: false, nullsFirst: false });
+  if ($('ap-only-ban').checked) { const now = new Date().toISOString(); req = req.or(`banned_until.gt."${now}",muted_until.gt."${now}"`); }
+  apSay(''); list.textContent = '';
+  const { data, error } = await req;
+  if (error) { apSay(apErr(error)); return; }
+  ap.list = data || [];
+  if (!ap.list.length) list.appendChild(apEl('p', '', 'ไม่พบผู้เล่น'));
+  for (const p of ap.list) {
+    const b = apEl('button'); b.type = 'button'; b.classList.toggle('on', ap.pick === p.id);
+    b.append(p.name);
+    if (p.is_admin) b.appendChild(apEl('span', 'ap-tag gm', 'GM'));
+    if (apOn(p.banned_until)) b.appendChild(apEl('span', 'ap-tag ban', 'แบน'));
+    if (apOn(p.muted_until)) b.appendChild(apEl('span', 'ap-tag mute', 'ปิดแชท'));
+    const j = jobOf(p.job); b.appendChild(apEl('small', '', `Lv.${p.level || 1} · ${j ? j.th : 'ยังไม่มีอาชีพ'} · เข้าล่าสุด ${apTime(p.last_seen)}`));
+    b.onclick = () => { ap.pick = p.id; for (const x of list.children) x.classList.toggle('on', x === b); apDetail(p); };
+    list.appendChild(b);
+  }
+}
+$('ap-find').onclick = apFind;
+$('ap-q').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); apFind(); } };
+$('ap-only-ban').onchange = apFind;
+
+const AP_BAN_TIMES = [[60, '1 ชั่วโมง'], [1440, '1 วัน'], [4320, '3 วัน'], [10080, '7 วัน'], [43200, '30 วัน'], ['', 'ถาวร']];
+async function apDetail(p) {
+  const box = $('ap-detail'); box.textContent = '';
+  const j = jobOf(p.job), lv = p.level || 1, need = expNeed(lv);
+  box.appendChild(apEl('h3', '', p.name));
+  const info = apEl('div', 'ap-info');
+  const fact = (k, v) => { const d = apEl('div'); d.append(apEl('span', '', k + ' '), String(v)); info.appendChild(d); };
+  fact('อาชีพ', j ? `${j.th} (${j.name})` : '-'); fact('เลเวล', lv); fact('EXP', `${apNum(p.exp)} / ${apNum(need)}`);
+  fact('ทอง', apNum(p.gold)); fact('เพชร', apNum(p.gem)); fact('คูปอง', apNum(p.coupon));
+  fact('แต้มสกิลโบนัส', p.skill_bonus | 0); fact('กิลด์', p.guild || '-'); fact('สมัครเมื่อ', apTime(p.created_at)); fact('เข้าเล่นล่าสุด', apTime(p.last_seen));
+  fact('แบน', apOn(p.banned_until) ? `ถึง ${apTime(p.banned_until)}${p.ban_reason ? ` (${p.ban_reason})` : ''}` : 'ไม่');
+  fact('ปิดแชท', apOn(p.muted_until) ? `ถึง ${apTime(p.muted_until)}${p.mute_reason ? ` (${p.mute_reason})` : ''}` : 'ไม่');
+  box.appendChild(info);
+  const reason = apEl('input'); reason.type = 'text'; reason.maxLength = 200; reason.className = 'grow'; reason.placeholder = 'เหตุผล (บันทึกในประวัติแอดมิน)'; reason.setAttribute('aria-label', 'เหตุผล');
+  const row = (...kids) => { const r = apEl('div', 'ap-row'); r.append(...kids); box.appendChild(r); return r; };
+  const btn = (t, cls, fn) => { const b = apEl('button', 'btn' + (cls ? ' ' + cls : ''), t); b.type = 'button'; b.onclick = fn; return b; };
+  const num = (v, label) => { const i = apEl('input'); i.type = 'number'; i.value = v; i.setAttribute('aria-label', label); return i; };
+  const lab = (t, inp) => { const l = apEl('label'); l.append(t + ' ', inp); return l; };
+  const done = async (t, res) => { if (!res || res.error) return; toast(t); await apFind(); const np = ap.list.find(x => x.id === p.id); if (np) apDetail(np); };
+  row(reason);
+
+  box.appendChild(apEl('h3', '', 'เพิ่ม / ลด EXP'));
+  const ex = num(1000, 'จำนวน EXP'); ex.min = 1;
+  const addExp = sign => async () => {
+    const n = Math.abs(ex.value | 0); if (!n) { apSay('ใส่จำนวน EXP ก่อน'); return; }
+    const r = await apRpc('admin_add_exp', { p_id: p.id, p_delta: sign * n, p_reason: reason.value });
+    if (r.data) done(`${sign > 0 ? 'เพิ่ม' : 'ลด'} ${apNum(n)} EXP แล้ว ตอนนี้ Lv.${r.data.level}`, r);
+  };
+  row(ex, btn('เพิ่ม EXP', 'go', addExp(1)), btn('ลด EXP', '', addExp(-1)));
+  box.appendChild(apEl('p', 'gm-note', 'EXP เกินหลอดจะขึ้นเลเวล ลดจนติดลบจะลดเลเวลลง (ต่ำสุด Lv.1 EXP 0)'));
+
+  box.appendChild(apEl('h3', '', 'แก้ค่าโดยตรง'));
+  const f = { level: num(lv, 'เลเวล'), exp: num(p.exp | 0, 'EXP'), gold: num(p.gold || 0, 'ทอง'), gem: num(p.gem || 0, 'เพชร'), coupon: num(p.coupon || 0, 'คูปอง'), skill_bonus: num(p.skill_bonus | 0, 'แต้มสกิลโบนัส') };
+  f.level.min = 1; f.level.max = 100; for (const k of ['exp', 'gold', 'gem', 'coupon', 'skill_bonus']) f[k].min = 0;
+  row(lab('เลเวล', f.level), lab('EXP', f.exp), lab('แต้มสกิลโบนัส', f.skill_bonus));
+  row(lab('ทอง', f.gold), lab('เพชร', f.gem), lab('คูปอง', f.coupon));
+  row(btn('บันทึกค่า', 'go', async () => {
+    const r = await apRpc('admin_set_player', { p_id: p.id, p_level: f.level.value | 0, p_exp: f.exp.value | 0, p_gold: +f.gold.value || 0, p_gem: +f.gem.value || 0,
+      p_coupon: +f.coupon.value || 0, p_skill_bonus: f.skill_bonus.value | 0, p_reason: reason.value });
+    done('บันทึกค่าผู้เล่นแล้ว', r);
+  }));
+
+  box.appendChild(apEl('h3', '', 'รีเซ็ตสกิลฟรี'));
+  const rj = apEl('select'); rj.setAttribute('aria-label', 'อาชีพที่จะรีเซ็ต');
+  for (const [v, t] of [['', 'ทุกอาชีพ'], ...JOBS.map(x => [x.k, `${x.th} (${x.name})`])]) { const o = apEl('option', '', t); o.value = v; rj.appendChild(o); }
+  if (p.job) rj.value = p.job;
+  row(rj, btn('รีเซ็ตสกิล', 'bad', async () => {
+    if (!await askYes('รีเซ็ตสกิล', `รีเซ็ตสกิล${rj.value ? 'อาชีพ ' + jobOf(rj.value).th : 'ทุกอาชีพ'}ของ ${p.name} ใช่ไหม? ได้แต้มคืนทั้งหมดโดยไม่เสียเงิน`, 'รีเซ็ต')) return;
+    done('รีเซ็ตสกิลแล้ว', await apRpc('admin_reset_skills', { p_id: p.id, p_job: rj.value || null, p_reason: reason.value }));
+  }));
+
+  box.appendChild(apEl('h3', '', 'แบน / ปิดแชท'));
+  const dur = apEl('select'); dur.setAttribute('aria-label', 'ระยะเวลา');
+  for (const [v, t] of AP_BAN_TIMES) { const o = apEl('option', '', t); o.value = v; dur.appendChild(o); }
+  dur.value = '1440';
+  const ban = kind => async () => {
+    const mins = dur.value === '' ? null : +dur.value, what = kind === 'ban' ? 'แบน' : 'ปิดแชท';
+    if (!await askYes(what, `${what} ${p.name} ${dur.selectedOptions[0].textContent} ใช่ไหม?${reason.value ? '' : ' (ยังไม่ได้ใส่เหตุผล)'}`, what)) return;
+    done(`${what} ${p.name} แล้ว`, await apRpc('admin_ban', { p_id: p.id, p_kind: kind, p_minutes: mins, p_reason: reason.value }));
+  };
+  const lift = kind => async () => done(kind === 'ban' ? `ปลดแบน ${p.name} แล้ว` : `เปิดแชทให้ ${p.name} แล้ว`, await apRpc('admin_ban', { p_id: p.id, p_kind: kind, p_minutes: 0, p_reason: reason.value }));
+  row(dur, btn('แบน', 'bad', ban('ban')), btn('ปิดแชท', 'bad', ban('mute')));
+  row(btn('ปลดแบน', '', lift('ban')), btn('เปิดแชท', '', lift('mute')));
+  box.appendChild(apEl('p', 'gm-note', 'แบน: เข้าเมือง แชท และจับคู่ไม่ได้ · ปิดแชท: ยังเล่นได้แต่พิมพ์แชทไม่ได้'));
+
+  box.appendChild(apEl('h3', '', 'ไอเทม'));
+  row(btn('ส่งไอเทมให้คนนี้', 'go', () => { $('gm-to').value = p.name; $('gm-online').checked = $('gm-all').checked = false; openGm(); }));
+  const items = apEl('div'); box.appendChild(items);
+  const chatBox = apEl('div', 'ap-chat');
+  box.appendChild(apEl('h3', '', 'แชทล่าสุด (ไม่รวมกระซิบ)')); box.appendChild(chatBox);
+  if (!serverOn()) return;
+  const [it, ch] = await Promise.all([online.sb.rpc('admin_player_items', { p_id: p.id }), online.sb.rpc('admin_player_chat', { p_id: p.id, p_limit: 30 })]);
+  if (ap.pick !== p.id) return;
+  if (it.error) items.appendChild(apEl('p', '', apErr(it.error)));
+  else if (!it.data.length) items.appendChild(apEl('p', '', 'ไม่มีไอเทม'));
+  else {
+    const t = apEl('table'), h = t.insertRow(); for (const x of ['ไอเทม', 'จำนวน', 'สถานะ', 'หมดอายุ']) h.appendChild(apEl('th', '', x));
+    for (const r of it.data) {
+      const tr = t.insertRow();
+      for (const x of [(ITEMS[r.item_id] || {}).name || r.item_id, r.qty, r.mail_id ? 'อยู่ในจดหมาย' : r.equipped ? 'สวมอยู่' : 'ในกระเป๋า', r.expires_at ? apTime(r.expires_at) : 'ถาวร']) tr.insertCell().textContent = x;
+    }
+    items.appendChild(t);
+  }
+  if (ch.error) chatBox.appendChild(apEl('p', '', apErr(ch.error)));
+  else if (!ch.data.length) chatBox.appendChild(apEl('p', '', 'ยังไม่มีแชท (แชทเก็บไว้ 3 วัน)'));
+  for (const m of ch.data || []) {
+    const line = apEl('p'); line.append(apEl('time', '', apTime(m.created_at)), apEl('span', '', `[${(CH[m.channel] || {}).th || m.channel}] ${m.body}`));
+    line.appendChild(btn('ลบ', 'mini bad', async () => { if (await delChat(m.id)) line.remove(); }));
+    chatBox.appendChild(line);
+  }
+}
+
+// delete one chat message (from the panel, or the ✕ on a chat line); everyone's chat drops it
+async function delChat(id) {
+  if (!serverOn() || !await askYes('ลบข้อความ', 'ลบข้อความนี้ออกจากแชทของทุกคนใช่ไหม? (เก็บไว้ในประวัติแอดมิน)', 'ลบ')) return false;
+  const { error } = await online.sb.rpc('admin_delete_chat', { p_ids: [id] });
+  if (error) { toast(apErr(error)); return false; }
+  dropMsg(id); toast('ลบข้อความแล้ว'); return true;
+}
+
+// money: to names, or everyone in the game; negative takes away
+$('ap-m-all').onchange = () => { $('ap-m-to').disabled = $('ap-m-all').checked; };
+$('ap-m-send').onclick = async () => {
+  $('ap-m-ok').textContent = '';
+  if (!serverOn()) { apSay('ต้องล็อกอินก่อน'); return; }
+  const all = $('ap-m-all').checked, names = $('ap-m-to').value.split(',').map(x => x.trim()).filter(Boolean);
+  const gold = $('ap-m-gold').value | 0, gem = $('ap-m-gem').value | 0, coupon = $('ap-m-coupon').value | 0;
+  if (!all && !names.length) { apSay('ใส่ชื่อผู้รับ หรือติ๊กผู้เล่นทุกคนในเกม'); return; }
+  if (!gold && !gem && !coupon) { apSay('ใส่จำนวนทอง เพชร หรือคูปองก่อน'); return; }
+  let ids = [];
+  if (!all) {
+    const { data, error } = await online.sb.from('profiles').select('id, name').in('name', names);
+    if (error) { apSay(apErr(error)); return; }
+    const found = new Set((data || []).map(r => r.name.toLowerCase())), miss = names.filter(n => !found.has(n.toLowerCase()));
+    if (miss.length) { apSay(`ไม่พบผู้เล่นชื่อ ${miss.join(', ')}`); return; }
+    ids = data.map(r => r.id);
+  }
+  if (all && !await askYes('ส่งเงินให้ทุกคน', `ส่งให้ผู้เล่นทุกคนในเกม: ทอง ${apNum(gold)} เพชร ${apNum(gem)} คูปอง ${apNum(coupon)} ใช่ไหม?`, 'ส่ง')) return;
+  const { data } = await apRpc('admin_give_money', { p_ids: ids, p_all: all, p_gold: gold, p_gem: gem, p_coupon: coupon, p_reason: $('ap-m-why').value });
+  if (data == null) return;
+  const t = `ส่งเงินให้ ${apNum(data)} คนแล้ว (${new Date().toLocaleTimeString('th-TH')})`; $('ap-m-ok').textContent = t; toast(t);
+  refreshProgress();
+};
+
+// win rate per job, against bots and against players
+async function apStats() {
+  const box = $('ap-stats'); box.textContent = '';
+  if (!serverOn()) return;
+  const { data } = await apRpc('admin_job_stats', { p_days: +$('ap-days').value });
+  if (!data) return;
+  const by = {}; for (const r of data) (by[r.job] = by[r.job] || {})[r.vs] = r;
+  const cell = r => !r || !+r.games ? '-' : `${apNum(r.games)} แมตช์ · ชนะ ${Math.round(r.wins * 100 / r.games)}%`;
+  const t = apEl('table'), h = t.insertRow();
+  for (const x of ['อาชีพ', 'สู้กับบอท', 'สู้กับผู้เล่น', 'รวม']) h.appendChild(apEl('th', '', x));
+  for (const j of JOBS) {
+    const b = (by[j.k] || {}).bot, v = (by[j.k] || {}).pvp, g = (+(b && b.games) || 0) + (+(v && v.games) || 0), w = (+(b && b.wins) || 0) + (+(v && v.wins) || 0);
+    const tr = t.insertRow();
+    for (const x of [`${j.th} (${j.name})`, cell(b), cell(v), g ? `${apNum(g)} แมตช์ · ชนะ ${Math.round(w * 100 / g)}%` : '-']) tr.insertCell().textContent = x;
+  }
+  box.appendChild(t);
+  if (!data.length) box.appendChild(apEl('p', '', 'ยังไม่มีผลแมตช์ในช่วงนี้'));
+}
+$('ap-days').onchange = apStats; $('ap-stats-re').onclick = apStats;
+
+// the admin log, newest first
+const AP_ACT = { exp: 'เพิ่ม/ลด EXP', set: 'แก้ค่าผู้เล่น', reset_skills: 'รีเซ็ตสกิล', ban: 'แบน', unban: 'ปลดแบน', mute: 'ปิดแชท', unmute: 'เปิดแชท',
+  delete_chat: 'ลบแชท', money: 'ส่งเงิน', item: 'เสกไอเทม', setting: 'ตั้งค่าเกม' };
+function apWhat(r) {
+  const d = r.detail || {}, why = d.reason ? ` · เหตุผล: ${d.reason}` : '';
+  switch (r.action) {
+    case 'exp': return `${d.delta > 0 ? '+' : ''}${apNum(d.delta)} EXP (Lv.${d.from.level} → Lv.${d.to.level})${why}`;
+    case 'set': return Object.keys(d.to || {}).filter(k => d.to[k] !== d.from[k]).map(k => `${{ level: 'เลเวล', exp: 'EXP', gold: 'ทอง', gem: 'เพชร', coupon: 'คูปอง', skill_bonus: 'แต้มสกิลโบนัส' }[k] || k} ${apNum(d.from[k])} → ${apNum(d.to[k])}`).join(', ') + why;
+    case 'reset_skills': return `${d.job === 'all' ? 'ทุกอาชีพ' : (jobOf(d.job) || {}).th || d.job}${why}`;
+    case 'ban': case 'mute': return `${d.minutes == null ? 'ถาวร' : `ถึง ${apTime(d.until)}`}${why}`;
+    case 'delete_chat': return `"${d.body}"`;
+    case 'money': return `${d.players === 'all' ? 'ทุกคน' : apNum(d.players) + ' คน'}: ทอง ${apNum(d.gold)} เพชร ${apNum(d.gem)} คูปอง ${apNum(d.coupon)}${why}`;
+    case 'item': return `${(ITEMS[d.item] || {}).name || d.item} x${d.qty} ให้ ${apNum(d.players)} คน ${d.via === 'mail' ? 'ทางจดหมาย' : 'เข้ากระเป๋า'}`;
+    case 'setting': return d.key === 'maintenance' ? (d.value.on ? `เปิดโหมดปิดปรับปรุง${d.value.msg ? ': ' + d.value.msg : ''}` : 'ปิดโหมดปิดปรับปรุง')
+      : 'อาชีพที่เปิดให้ทุกคน: ' + (Object.keys(d.value).filter(k => d.value[k]).map(k => (jobOf(k) || {}).th || k).join(', ') || 'ไม่มี');
+    default: return why;
+  }
+}
+async function apLog() {
+  const box = $('ap-log'); box.textContent = '';
+  if (!serverOn()) return;
+  const { data, error } = await online.sb.from('admin_log').select('*').order('created_at', { ascending: false }).limit(150);
+  if (error) { apSay(apErr(error)); return; }
+  if (!data.length) { box.appendChild(apEl('p', '', 'ยังไม่มีประวัติ')); return; }
+  const t = apEl('table'), h = t.insertRow(); for (const x of ['เวลา', 'แอดมิน', 'ทำอะไร', 'กับใคร', 'รายละเอียด']) h.appendChild(apEl('th', '', x));
+  for (const r of data) { const tr = t.insertRow(); for (const x of [apTime(r.created_at), r.admin_name, AP_ACT[r.action] || r.action, r.target_name || (r.target_id ? '-' : 'ทั้งเกม'), apWhat(r)]) tr.insertCell().textContent = x; }
+  box.appendChild(t);
+}
+$('ap-log-re').onclick = apLog;
+
+// game settings: maintenance and admin-only jobs
+const settings = { maintenance: { on: false, msg: '' }, jobs_open: {} };
+async function loadSettings() {
+  if (!online.sb || !online.user || online.user.id === 'preview') return;
+  const { data, error } = await online.sb.from('game_settings').select('key, value');
+  if (error || !Array.isArray(data)) return; // supabase-admin.sql not run yet: nothing is switched on
+  for (const r of data) if (r.key in settings && r.value && typeof r.value === 'object') settings[r.key] = r.value;
+  if (online.me) gate();
+}
+function apSettings() {
+  $('ap-mt-on').checked = !!settings.maintenance.on; $('ap-mt-msg').value = settings.maintenance.msg || ''; $('ap-set-ok').textContent = '';
+  const box = $('ap-jobs'); box.textContent = '';
+  for (const j of JOBS.filter(x => x.admin)) {
+    const l = apEl('label'), c = apEl('input'); c.type = 'checkbox'; c.checked = !!settings.jobs_open[j.k];
+    c.onchange = async () => {
+      const v = Object.assign({}, settings.jobs_open, { [j.k]: c.checked });
+      const { error } = await apRpc('admin_set_setting', { p_key: 'jobs_open', p_value: v });
+      if (error) { c.checked = !c.checked; return; }
+      settings.jobs_open = v; $('ap-set-ok').textContent = `${j.th} ${c.checked ? 'เปิดให้ทุกคนเล่นแล้ว' : 'กลับไปเปิดเฉพาะแอดมินแล้ว'}`;
+    };
+    l.append(c, ` เปิด ${j.th} (${j.name}) ให้ทุกคนเล่น`); const r = apEl('div', 'ap-row'); r.appendChild(l); box.appendChild(r);
+  }
+  if (!box.childElementCount) box.appendChild(apEl('p', '', 'ไม่มีอาชีพที่เปิดเฉพาะแอดมิน'));
+}
+$('ap-mt-save').onclick = async () => {
+  const v = { on: $('ap-mt-on').checked, msg: $('ap-mt-msg').value.trim() };
+  if (v.on && !settings.maintenance.on && !await askYes('ปิดปรับปรุง', 'ผู้เล่นที่ไม่ใช่แอดมินจะเข้าเมือง แชท และจับคู่ไม่ได้จนกว่าจะปิดโหมดนี้ ใช่ไหม?', 'ปิดปรับปรุง')) return;
+  const { error } = await apRpc('admin_set_setting', { p_key: 'maintenance', p_value: v });
+  if (error) return;
+  settings.maintenance = v; $('ap-set-ok').textContent = v.on ? 'เปิดโหมดปิดปรับปรุงแล้ว' : 'ปิดโหมดปิดปรับปรุงแล้ว เกมเปิดตามปกติ';
+};
+// an admin-only job (Nekomancer) is open to a player when the admin has switched it on for everyone
+const jobLocked = k => !!(JOB[k] && JOB[k].admin) && !isAdmin() && !settings.jobs_open[k];
+
+// banned, or closed for maintenance: a screen in front of everything (the server refuses chat and matchmaking too)
+function gate() {
+  const me = online.me || {}, m = $('m-block');
+  let title = '', text = '';
+  if (!me.is_admin && apOn(me.banned_until)) {
+    title = 'บัญชีนี้ถูกระงับ';
+    text = `${me.banned_until === 'infinity' ? 'ระงับถาวร' : `ระงับถึง ${apTime(me.banned_until)}`}${me.ban_reason ? ` · เหตุผล: ${me.ban_reason}` : ''}`;
+  } else if (!me.is_admin && settings.maintenance.on) {
+    title = 'ปิดปรับปรุงชั่วคราว'; text = settings.maintenance.msg || 'เกมกำลังปิดปรับปรุง กลับมาใหม่อีกครั้งภายหลัง';
+  }
+  if (title) {
+    $('t-block').textContent = title; $('block-text').textContent = text; m.dataset.lock = '1'; m.hidden = false;
+    if (!gameBox.hidden) $('back').click(); // out of a match too
+    if (co.seek) stopMatch();
+  } else if (!m.hidden) { delete m.dataset.lock; m.hidden = true; }
+}
+$('block-out').onclick = () => $('ac-out').onclick();
+setInterval(loadSettings, 30000);
 
 const JOBS = [
   { k: 'blade', foot: 0.69, th: 'นักดาบ', name: 'Swordman', diff: 1, desc: 'นักสู้แนวหน้า ยืนรับดาเมจแทนทีม',
@@ -2408,8 +2853,8 @@ function pickJob(k) {
 // resolves with { name, job }; nameLocked keeps an existing player's name
 function createChar(name, nameLocked) {
   $('cr-name').value = name || ''; $('cr-name').readOnly = !!nameLocked; $('cr-err').textContent = '';
-  for (const b of $('cr-list').children) b.hidden = !!JOB[b.dataset.k].admin && !isAdmin();
-  if (crJob && JOB[crJob].admin && !isAdmin()) crJob = null;
+  for (const b of $('cr-list').children) b.hidden = jobLocked(b.dataset.k);
+  if (crJob && jobLocked(crJob)) crJob = null;
   pickJob(crJob || 'blade');
   $('create').hidden = false; setTimeout(() => (nameLocked ? $('cr-go') : $('cr-name')).focus(), 50);
   return new Promise(r => { crWait = r; });
@@ -2423,7 +2868,7 @@ $('create').onsubmit = async e => {
   e.preventDefault();
   const n = $('cr-name').value.trim().replace(/\s+/g, ' ').slice(0, 16);
   if (!n) { $('cr-err').textContent = 'ตั้งชื่ออย่างน้อย 1 ตัวอักษร'; $('cr-name').focus(); return; }
-  if (!crJob || (JOB[crJob].admin && !isAdmin())) { $('cr-err').textContent = 'เลือกอาชีพก่อน'; return; }
+  if (!crJob || jobLocked(crJob)) { $('cr-err').textContent = 'เลือกอาชีพก่อน'; return; }
   $('cr-go').disabled = true; $('cr-err').textContent = '';
   try {
     if (!$('cr-name').readOnly && await nameTaken(n)) { $('cr-err').textContent = 'ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น'; $('cr-name').focus(); return; }
@@ -2477,9 +2922,14 @@ function addMsg(m) {
   if (ch !== 'whisper' || !mine) { who.dataset.uid = m.user_id; if (isAdminId(m.user_id)) who.classList.add('adm'); }
   const replyTo = ch === 'whisper' ? (mine ? { id: m.to_id, name: m.to_name } : { id: m.user_id, name: m.name }) : (mine ? null : { id: m.user_id, name: m.name });
   if (replyTo && replyTo.id) { b.title = `กระซิบหา ${replyTo.name}`; b.onclick = () => setSend('whisper', replyTo); }
-  p.append(tag, b, document.createTextNode(m.body)); addLine(p, ch);
+  p.append(tag, b, document.createTextNode(m.body)); p.dataset.mid = m.id;
+  if (isAdmin() && m.id) { const x = document.createElement('button'); x.type = 'button'; x.className = 'del'; x.textContent = '✕'; x.title = 'ลบข้อความนี้ (แอดมิน)'; x.setAttribute('aria-label', x.title); x.onclick = () => delChat(m.id); p.appendChild(x); }
+  addLine(p, ch);
   if (chatEl.classList.contains('min')) chatEl.classList.add('unread');
 }
+
+// a message an admin deleted leaves everyone's chat
+function dropMsg(id) { for (const p of log.querySelectorAll('p[data-mid]')) if (p.dataset.mid === String(id)) p.remove(); }
 
 // tabs on the right filter what the log shows
 const TABS = [['all', 'ทั้งหมด'], ...Object.entries(CH).map(([k, v]) => [k, v.th])];
@@ -2539,7 +2989,8 @@ function why(err) {
 }
 const SEND_ERR = {
   slow_down: 'ส่งเร็วไป รอสักครู่', no_guild: 'คุณยังไม่มีกิลด์ (ระบบกิลด์เร็วๆ นี้)', no_room: 'ยังไม่ได้เข้าห้อง เข้า Stadium ก่อน',
-  no_target: 'ไม่พบผู้เล่นคนนี้', not_admin: 'ประกาศได้เฉพาะแอดมิน', chat_messages_channel_check: 'ต้องรัน SQL ช่องแชทใน Supabase ก่อน',
+  no_target: 'ไม่พบผู้เล่นคนนี้', not_admin: 'ประกาศได้เฉพาะแอดมิน', banned: 'บัญชีนี้ถูกระงับ', maintenance: 'เกมกำลังปิดปรับปรุง',
+  muted: 'คุณถูกปิดแชทอยู่ ส่งข้อความไม่ได้', chat_messages_channel_check: 'ต้องรัน SQL ช่องแชทใน Supabase ก่อน',
 };
 const sendErr = e => { const s = String(e && e.message || ''); for (const k in SEND_ERR) if (s.includes(k)) return SEND_ERR[k]; return why(e); };
 
@@ -2571,7 +3022,8 @@ async function loadProfile() {
     if (await setProfile({ job: c.job })) online.me.job = c.job;
   }
   Object.assign(prof, { uid: id, name: online.me.name, job: online.me.job || prof.job || '', level: online.me.level || 1, exp: online.me.exp || 0 });
-  if (online.me.skills && typeof online.me.skills === 'object') prof.skills = online.me.skills; // the server copy of the skill levels wins
+  if (online.me.skills && typeof online.me.skills === 'object') prof.skills = JSON.parse(JSON.stringify(online.me.skills)); // the server copy of the skill levels wins
+  online.skillsSeen = canon(online.me.skills || {});
   saveProf(); renderProf();
   online.v2 = 'guild' in online.me;
 }
@@ -2579,14 +3031,33 @@ async function loadProfile() {
 // every 15 s while the page is on screen and whenever it comes back into view; the frame and the bag update without a reload
 async function refreshProgress() {
   if (!online.sb || !online.user || online.user.id === 'preview' || !online.me || document.hidden) return;
-  const { data, error } = await online.sb.from('profiles').select('level, exp').eq('id', online.user.id).maybeSingle();
+  const { data, error } = await online.sb.from('profiles').select('*').eq('id', online.user.id).maybeSingle();
   if (error || !data) return;
+  // a ban, a mute, money and bonus skill points come from the admin panel (supabase-admin.sql)
+  const was = Object.assign({}, online.me);
+  for (const k of ['banned_until', 'ban_reason', 'muted_until', 'mute_reason', 'gold', 'gem', 'coupon', 'skill_bonus']) if (k in data) online.me[k] = data[k];
+  gate();
+  const money = ['gold', 'gem', 'coupon', 'skill_bonus'].some(k => was[k] !== online.me[k]);
+  // skills changed outside this page (an admin's free reset): the server copy wins
+  // (compared with what this page last read or saved, so the player's own unconfirmed clicks never count as a change)
+  const skills = !!data.skills && typeof data.skills === 'object' && 'skillsSeen' in online && canon(data.skills) !== online.skillsSeen;
+  if (skills) {
+    online.me.skills = data.skills; online.skillsSeen = canon(data.skills); prof.skills = JSON.parse(JSON.stringify(data.skills)); jb.base = null; saveProf();
+    toast('แอดมินรีเซ็ตสกิลให้แล้ว ได้แต้มคืนทั้งหมด');
+    if (!$('m-bag').hidden) renderJobs();
+  }
   const level = data.level || 1, exp = data.exp || 0;
-  if (level === (prof.level || 1) && exp === (prof.exp || 0)) return;
+  const lvl = level !== (prof.level || 1) || exp !== (prof.exp || 0);
+  if (!lvl && !money && !skills) return;
   Object.assign(online.me, { level, exp }); Object.assign(prof, { level, exp });
   saveProf(); renderProf(); sharePresence();
   if (!$('m-bag').hidden) renderBag();
 }
+// the same JSON whatever order the keys come in (the database sorts them its own way)
+const canon = v => Array.isArray(v) ? '[' + v.map(canon).join(',') + ']' : v && typeof v === 'object' ? '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canon(v[k])).join(',') + '}' : JSON.stringify(v);
+// last seen, for the admin panel
+const seen = () => { if (serverOn()) online.sb.rpc('touch_seen').then(() => {}, () => {}); };
+setInterval(seen, 5 * 60000);
 // new letters (and items sent straight into the bag) show up within 15 s too
 async function refreshMail() {
   if (!serverOn() || document.hidden) return;
@@ -2609,14 +3080,17 @@ async function startChat() {
   chatState('กำลังเชื่อมต่อ...', false);
   try {
     const sb = online.sb;
+    await loadSettings(); // before the profile: a new character's job list needs the admin's job switches
     await loadProfile();
-    if (online.me && online.me.tutorial_done === false) startTutorial();
+    seen(); gate();
+    if (online.me && online.me.tutorial_done === false && $('m-block').hidden) startTutorial();
     loadAdmins(); refreshMail(); loadIce();
     // no history: each visit (and each refresh) starts with an empty chat and shows only new messages
     if (!online.v2) sysLine('ตอนนี้ใช้ได้แค่ช่องโลก ต้องรัน SQL ช่องแชทใน Supabase ก่อน');
     else if (online.me.guild) sysLine(`คุณอยู่กิลด์ ${online.me.guild}`);
     sb.channel('town-chat')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, p => addMsg(p.new))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'chat_messages' }, p => p.old && dropMsg(p.old.id))
       .subscribe(st => {
         if (st === 'SUBSCRIBED') chatState(`ออนไลน์ ในชื่อ ${prof.name}`, true);
         else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') chatState('การเชื่อมต่อแชทสะดุด กำลังลองใหม่', true);
@@ -2827,7 +3301,7 @@ function acctModal() {
   $('ac-gm').hidden = !isAdmin();
   acMsg(); openModal('m-acct');
 }
-$('ac-gm').onclick = () => { closeModal($('m-acct')); openGm(); };
+$('ac-gm').onclick = () => { closeModal($('m-acct')); openAp(); };
 $('ac-rename').onclick = () => { closeModal($('m-acct')); nameModal(false); };
 $('ac-pass-f').onsubmit = async e => {
   e.preventDefault(); acMsg();
@@ -2907,6 +3381,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.50</div>
+<div id="ver">v0.61.51</div>
 </body>
 </html>
