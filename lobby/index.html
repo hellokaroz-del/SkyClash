@@ -779,6 +779,21 @@ img.jb { pointer-events: auto; } /* the small job badge keeps its name tooltip *
 .ap .ap-chat time { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .ap .mini { height: 28px; padding: 0 8px; font-size: 13px; border-radius: 8px; }
 .ap .err, .ap .ok { min-height: 1.3em; }
+/* settings page in layers: one card per group, and one card per mode for the coupon eggs (Karoz 2026-10-15) */
+.ap-card { background: rgba(21, 17, 31, .7); border: 2px solid var(--line); border-radius: 14px; padding: 4px 14px 12px; margin-bottom: 12px; }
+.ap-card > h3 { margin-top: 10px; }
+.ap-eggs { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; margin-top: 10px; }
+.ap-egg { background: #15111f; border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.ap-egg.live { border-color: #3fa66b; }
+.ap-egg h4 { margin: 0; font-size: 15px; color: #fff; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.ap-egg h4 .ap-tag { margin: 0; }
+.ap-egg .ap-tag.live { background: #2e8b57; }
+.ap-egg small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+.ap-egg .now { color: #ffe08a; font-size: 13px; }
+.ap-egg .mm { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ap-egg .mm label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
+.ap .ap-egg input[type=number] { width: 100%; height: 36px; }
+.ap-egg > .btn { margin-top: auto; }
 #log .del { border: 0; background: none; color: #ff8a80; cursor: pointer; font-size: 14px; padding: 0 4px; margin-left: 6px; opacity: .7; }
 #log .del:hover { opacity: 1; }
 /* banned, or the game is closed for maintenance: a screen in front of the town */
@@ -1208,14 +1223,20 @@ img.jb { pointer-events: auto; } /* the small job badge keeps its name tooltip *
     </section>
 
     <section data-p="set" hidden>
-      <h3>ปิดปรับปรุง</h3>
-      <div class="ap-row"><label><input type="checkbox" id="ap-mt-on"> ปิดเกมปรับปรุง (เข้าได้เฉพาะแอดมิน)</label></div>
-      <div class="ap-row"><input type="text" class="grow" id="ap-mt-msg" maxlength="200" placeholder="ข้อความที่ผู้เล่นจะเห็น" aria-label="ข้อความปิดปรับปรุง"><button type="button" class="btn go" id="ap-mt-save">บันทึก</button></div>
-      <h3>ไข่คูปองหลังลุยกับบอท</h3>
-      <div class="ap-row"><label>ต่ำสุด <input type="number" id="ap-egg-min" min="0" max="1000000" step="1" aria-label="คูปองต่ำสุดในไข่"></label><label>สูงสุด <input type="number" id="ap-egg-max" min="0" max="1000000" step="1" aria-label="คูปองสูงสุดในไข่"></label><button type="button" class="btn go" id="ap-egg-save">บันทึก</button></div>
-      <p class="gm-note">ไข่ 12 ฟองสุ่มจำนวนคูปองในช่วงนี้ใหม่ทุกเกม ยังไม่ตั้งค่าหรือสูงสุดเป็น 0 จะไม่มีทุบไข่</p>
-      <h3>อาชีพที่ยังเปิดเฉพาะแอดมิน</h3>
-      <div id="ap-jobs"></div>
+      <div class="ap-card">
+        <h3>ระบบเกม</h3>
+        <div class="ap-row"><label><input type="checkbox" id="ap-mt-on"> ปิดเกมปรับปรุง (เข้าได้เฉพาะแอดมิน)</label></div>
+        <div class="ap-row"><input type="text" class="grow" id="ap-mt-msg" maxlength="200" placeholder="ข้อความที่ผู้เล่นจะเห็น" aria-label="ข้อความปิดปรับปรุง"><button type="button" class="btn go" id="ap-mt-save">บันทึก</button></div>
+      </div>
+      <div class="ap-card">
+        <h3>ไข่คูปองหลังจบเกม แยกตามโหมด</h3>
+        <p class="gm-note">ไข่ 12 ฟองสุ่มจำนวนคูปองในช่วงที่ตั้งใหม่ทุกเกม ยังไม่ตั้งค่าหรือสูงสุดเป็น 0 โหมดนั้นจะไม่มีทุบไข่</p>
+        <div class="ap-eggs" id="ap-eggs"></div>
+      </div>
+      <div class="ap-card">
+        <h3>อาชีพที่ยังเปิดเฉพาะแอดมิน</h3>
+        <div id="ap-jobs"></div>
+      </div>
       <p class="ok" id="ap-set-ok" role="status"></p>
     </section>
   </div>
@@ -2961,7 +2982,7 @@ function apWhat(r) {
     case 'delete_chat': return `"${d.body}"`;
     case 'money': return `${d.players === 'all' ? 'ทุกคน' : apNum(d.players) + ' คน'}: ทอง ${apNum(d.gold)} เพชร ${apNum(d.gem)} คูปอง ${apNum(d.coupon)}${why}`;
     case 'item': return `${(ITEMS[d.item] || {}).name || d.item} x${d.qty} ให้ ${apNum(d.players)} คน ${d.via === 'mail' ? 'ทางจดหมาย' : 'เข้ากระเป๋า'}`;
-    case 'setting': return d.key === 'egg' ? `ไข่คูปอง ${apNum(d.value.min)} - ${apNum(d.value.max)} ใบ` : d.key === 'maintenance' ? (d.value.on ? `เปิดโหมดปิดปรับปรุง${d.value.msg ? ': ' + d.value.msg : ''}` : 'ปิดโหมดปิดปรับปรุง')
+    case 'setting': return d.key === 'egg' ? 'ไข่คูปอง ' + Object.entries(eggModes(d.value)).map(([k, r]) => `${EGG_TH[k]} ${apNum(r.min)} - ${apNum(r.max)}`).join(', ') : d.key === 'maintenance' ? (d.value.on ? `เปิดโหมดปิดปรับปรุง${d.value.msg ? ': ' + d.value.msg : ''}` : 'ปิดโหมดปิดปรับปรุง')
       : 'อาชีพที่เปิดให้ทุกคน: ' + (Object.keys(d.value).filter(k => d.value[k]).map(k => (jobOf(k) || {}).th || k).join(', ') || 'ไม่มี');
     default: return why;
   }
@@ -2980,6 +3001,18 @@ $('ap-log-re').onclick = apLog;
 
 // game settings: maintenance and admin-only jobs
 const settings = { maintenance: { on: false, msg: '' }, jobs_open: {}, egg: {} };
+// coupon eggs, one range per mode: settings.egg = { rush_bot: { min, max }, ... }. Only ลุย against the bot hands out eggs
+// so far; the others keep their range for when they do (Karoz 2026-10-15)
+const EGG_MODES = [
+  { k: 'rush_bot', th: 'ลุย · เจอบอท', live: true, note: 'จับคู่เกิน 30 วิแล้วเจอบอท ผู้เล่นที่ทำดาเมจได้ทุบไข่ 1 ฟอง' },
+  { k: 'rush', th: 'ลุย · เจอผู้เล่น', note: 'โหมดนี้ยังไม่แจกไข่ ตั้งไว้ก่อนได้' },
+  { k: 'duel', th: 'ดวล', note: 'โหมดนี้ยังไม่แจกไข่ ตั้งไว้ก่อนได้' },
+  { k: 'dungeon', th: 'ดันเจี้ยน', note: 'โหมดยังไม่เปิด ตั้งไว้ก่อนได้' },
+];
+const EGG_TH = Object.fromEntries(EGG_MODES.map(m => [m.k, m.th]));
+// before per-mode ranges the setting was one { min, max }, which was for ลุย against the bot
+const eggModes = v => { v = v && typeof v === 'object' ? v : {}; if (typeof v.min === 'number') return { rush_bot: { min: v.min, max: v.max } };
+  const o = {}; for (const m of EGG_MODES) if (v[m.k] && typeof v[m.k].min === 'number') o[m.k] = { min: v[m.k].min, max: v[m.k].max }; return o; };
 async function loadSettings() {
   if (!online.sb || !online.user || online.user.id === 'preview') return;
   const { data, error } = await online.sb.from('game_settings').select('key, value');
@@ -2989,7 +3022,7 @@ async function loadSettings() {
 }
 function apSettings() {
   $('ap-mt-on').checked = !!settings.maintenance.on; $('ap-mt-msg').value = settings.maintenance.msg || ''; $('ap-set-ok').textContent = '';
-  $('ap-egg-min').value = settings.egg.min != null ? settings.egg.min : ''; $('ap-egg-max').value = settings.egg.max != null ? settings.egg.max : '';
+  apEggs();
   const box = $('ap-jobs'); box.textContent = '';
   for (const j of JOBS.filter(x => x.admin)) {
     const l = apEl('label'), c = apEl('input'); c.type = 'checkbox'; c.checked = !!settings.jobs_open[j.k];
@@ -3003,13 +3036,27 @@ function apSettings() {
   }
   if (!box.childElementCount) box.appendChild(apEl('p', '', 'ไม่มีอาชีพที่เปิดเฉพาะแอดมิน'));
 }
-$('ap-egg-save').onclick = async () => {
-  const mn = Number($('ap-egg-min').value), mx = Number($('ap-egg-max').value);
-  if ($('ap-egg-min').value === '' || $('ap-egg-max').value === '' || !Number.isInteger(mn) || !Number.isInteger(mx) || mn < 0 || mx < mn || mx > 1e6) { apSay('ใส่จำนวนเต็ม ต่ำสุดไม่เกินสูงสุด (0 - 1,000,000)'); return; }
-  const v = { min: mn, max: mx }, { error } = await apRpc('admin_set_setting', { p_key: 'egg', p_value: v });
-  if (error) return;
-  settings.egg = v; $('ap-set-ok').textContent = `ไข่คูปองตั้งเป็น ${mn.toLocaleString('th-TH')} - ${mx.toLocaleString('th-TH')} ใบแล้ว`;
-};
+function apEggs() {
+  const box = $('ap-eggs'), eg = eggModes(settings.egg); box.textContent = '';
+  for (const m of EGG_MODES) {
+    const c = apEl('div', 'ap-egg' + (m.live ? ' live' : '')), h = apEl('h4', '', m.th), cur = eg[m.k];
+    h.appendChild(apEl('span', 'ap-tag' + (m.live ? ' live' : ''), m.live ? 'แจกไข่อยู่' : 'ยังไม่แจก'));
+    const now = apEl('div', 'now', cur && cur.max > 0 ? `ตอนนี้ ${apNum(cur.min)} - ${apNum(cur.max)} ใบ` : 'ตอนนี้ไม่มีไข่');
+    const mm = apEl('div', 'mm'), ins = ['ต่ำสุด', 'สูงสุด'].map((t, i) => {
+      const l = apEl('label', '', t), n = apEl('input'); n.type = 'number'; n.min = 0; n.max = 1e6; n.step = 1;
+      n.setAttribute('aria-label', `คูปอง${t}ในไข่ ${m.th}`); if (cur) n.value = i ? cur.max : cur.min; l.appendChild(n); mm.appendChild(l); return n;
+    });
+    const b = apEl('button', 'btn go', 'บันทึก'); b.type = 'button';
+    b.onclick = async () => {
+      const [mn, mx] = ins.map(n => Number(n.value));
+      if (ins.some(n => n.value === '') || !Number.isInteger(mn) || !Number.isInteger(mx) || mn < 0 || mx < mn || mx > 1e6) { apSay('ใส่จำนวนเต็ม ต่ำสุดไม่เกินสูงสุด (0 - 1,000,000)'); return; }
+      const v = Object.assign(eggModes(settings.egg), { [m.k]: { min: mn, max: mx } }), { error } = await apRpc('admin_set_setting', { p_key: 'egg', p_value: v });
+      if (error) return;
+      settings.egg = v; apEggs(); $('ap-set-ok').textContent = `ไข่คูปอง ${m.th} ตั้งเป็น ${apNum(mn)} - ${apNum(mx)} ใบแล้ว`;
+    };
+    c.append(h, apEl('small', '', m.note), now, mm, b); box.appendChild(c);
+  }
+}
 $('ap-mt-save').onclick = async () => {
   const v = { on: $('ap-mt-on').checked, msg: $('ap-mt-msg').value.trim() };
   if (v.on && !settings.maintenance.on && !await askYes('ปิดปรับปรุง', 'ผู้เล่นที่ไม่ใช่แอดมินจะเข้าเมือง แชท และจับคู่ไม่ได้จนกว่าจะปิดโหมดนี้ ใช่ไหม?', 'ปิดปรับปรุง')) return;
@@ -3613,6 +3660,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.58</div>
+<div id="ver">v0.61.59</div>
 </body>
 </html>

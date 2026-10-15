@@ -93,7 +93,8 @@ end $$;
 revoke all on function public.admin_note(text, uuid, jsonb) from public, anon, authenticated;
 
 -- 3) game settings: maintenance = { "on": true/false, "msg": "..." }, jobs_open = { "doram": true },
---    egg = { "min": n, "max": n } (coupons in each egg after a ลุย bot match, supabase-rush.sql)
+--    egg = { "rush_bot": { "min": n, "max": n }, "rush": {...}, "duel": {...}, "dungeon": {...} } (coupons in each egg,
+--    one range per mode; only rush_bot hands out eggs so far, supabase-rush.sql)
 create table if not exists public.game_settings (
   key text primary key check (key in ('maintenance', 'jobs_open', 'egg')),
   value jsonb not null default '{}'::jsonb,
@@ -354,14 +355,20 @@ end $$;
 -- maintenance and job switches
 create or replace function public.admin_set_setting(p_key text, p_value jsonb) returns void
 language plpgsql security definer set search_path = public as $$
+declare k text; r jsonb;
 begin
   perform public.admin_me();
   if p_key not in ('maintenance', 'jobs_open', 'egg') or p_value is null or jsonb_typeof(p_value) <> 'object' then raise exception 'bad_setting'; end if;
-  -- egg coupons: whole numbers, 0 <= min <= max <= 1,000,000
-  if p_key = 'egg' and not (jsonb_typeof(p_value->'min') = 'number' and jsonb_typeof(p_value->'max') = 'number'
-    and (p_value->>'min')::numeric = floor((p_value->>'min')::numeric) and (p_value->>'max')::numeric = floor((p_value->>'max')::numeric)
-    and (p_value->>'min')::numeric >= 0 and (p_value->>'max')::numeric >= (p_value->>'min')::numeric and (p_value->>'max')::numeric <= 1000000) then
-    raise exception 'bad_setting';
+  -- egg coupons, one range per mode: whole numbers, 0 <= min <= max <= 1,000,000
+  if p_key = 'egg' then
+    for k, r in select * from jsonb_each(p_value) loop
+      if k not in ('rush_bot', 'rush', 'duel', 'dungeon') or jsonb_typeof(r) <> 'object'
+        or not (jsonb_typeof(r->'min') = 'number' and jsonb_typeof(r->'max') = 'number'
+        and (r->>'min')::numeric = floor((r->>'min')::numeric) and (r->>'max')::numeric = floor((r->>'max')::numeric)
+        and (r->>'min')::numeric >= 0 and (r->>'max')::numeric >= (r->>'min')::numeric and (r->>'max')::numeric <= 1000000) then
+        raise exception 'bad_setting';
+      end if;
+    end loop;
   end if;
   insert into public.game_settings (key, value, updated_at) values (p_key, p_value, now())
   on conflict (key) do update set value = excluded.value, updated_at = now();
