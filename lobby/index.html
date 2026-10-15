@@ -743,7 +743,7 @@ img { -webkit-user-drag: none; user-drag: none; }
 .jb-pts { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #1d3f73; color: #fff; border-radius: 10px; padding: 6px 10px; font-weight: 700; }
 .jb-pts b { color: #ffe08a; font-size: 20px; }
 .jb-pts button, .jb-lv button { border: 2px solid #8fbff0; border-radius: 10px; background: linear-gradient(#2f62a8, #1d3f73); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
-.jb-pts button { padding: 4px 12px; } .jb-pts button:disabled, .jb-lv button:disabled { opacity: .4; cursor: default; }
+.jb-pts button { padding: 4px 12px; } .jb-acts { display: flex; gap: 6px; } .jb-pts button.ok { background: linear-gradient(#3fbf6a, #23864a); border-color: #b9f0c8; } .jb-pts button:disabled, .jb-lv button:disabled { opacity: .4; cursor: default; }
 .jb-note { margin: 0; font-size: 13px; color: #3f6fb0; }
 .jb-skills h4 { margin: 4px 0 0; color: #1d3f73; font-size: 16px; }
 .jb-skills { position: relative; }
@@ -987,7 +987,7 @@ img { -webkit-user-drag: none; user-drag: none; }
       <div class="bg-pane jb-list" id="jb-list" role="radiogroup" aria-label="อาชีพ"></div>
       <div class="bg-pane jb-skills" id="jb-skills">
         <div class="jb-veil" id="jb-veil">ไม่ใช่อาชีพปัจจุบันของคุณ</div>
-        <div class="jb-pts"><span>แต้มสกิล <b id="jb-pts">0</b></span><button type="button" id="jb-reset">รีเซ็ต</button></div>
+        <div class="jb-pts"><span>แต้มสกิล <b id="jb-pts">0</b></span><span class="jb-acts"><button type="button" id="jb-cancel" hidden>ยกเลิก</button><button type="button" id="jb-ok" class="ok" hidden>ยืนยัน</button><button type="button" id="jb-reset">รีเซ็ต</button></span></div>
         <p class="jb-note" id="jb-note"></p>
         <div class="jb-load" id="jb-load" aria-label="สกิลที่ใช้ในสนาม"></div>
         <h4 class="jb-h">Active Skill <small>สกิลกดใช้ · ใส่ลงสนามได้ 6</small></h4>
@@ -1149,7 +1149,7 @@ function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add(
 // ---------- modals ----------
 let lastFocus = null;
 function openModal(id) { lastFocus = document.activeElement; const m = $(id); m.hidden = false; const f = m.querySelector('input, .btn'); if (f) f.focus(); }
-function closeModal(m) { if (m.dataset.lock) return; m.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+function closeModal(m) { if (m.dataset.lock) return; if (m.id === 'm-bag') cancelPend(); m.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
 for (const m of document.querySelectorAll('.modal')) {
   m.addEventListener('click', e => { if ((e.target === m && !m.hasAttribute('data-xonly')) || e.target.closest('[data-close]')) closeModal(m); });
 }
@@ -1707,7 +1707,7 @@ function botModal(k) {
 const PROF_KEY = 'sky-lobby-profile';
 let prof = { uid: '', name: '', level: 1, exp: 0 };
 try { Object.assign(prof, JSON.parse(localStorage.getItem(PROF_KEY) || '{}')); } catch (_) {}
-const saveProf = () => { try { localStorage.setItem(PROF_KEY, JSON.stringify(prof)); } catch (_) {} };
+const saveProf = () => { try { localStorage.setItem(PROF_KEY, JSON.stringify(Object.assign({}, prof, { skills: savedSkills() }))); } catch (_) {} };
 function renderProf() {
   $('nm').textContent = prof.name || 'NAME'; $('nm').classList.toggle('adm', isAdmin());
   const nm = $('nm'); nm.style.fontSize = ''; for (let f = 68; f > 34 && nm.scrollWidth > nm.clientWidth; f -= 4) nm.style.fontSize = f - 4 + 'px';
@@ -1869,6 +1869,7 @@ function renderBag() {
   $('bg-pow').textContent = c ? Math.round(sum('hp') / 10 + sum('atk') + sum('matk') + sum('def') + sum('mdef') + sum('spd') + sum('luk')).toLocaleString() : '0';
 }
 function openBag() {
+  cancelPend();
   renderBag(); openModal('m-bag');
   loadInv().then(renderBag);
   if (!gameData) loadGameData().then(() => { renderBag(); if (bagView === 'jobs') renderJobs(); }).catch(() => {});
@@ -1877,6 +1878,7 @@ function openBag() {
 // the top tabs: อุปกรณ์สวมใส่ and Jobs work, the rest come later
 let bagView = 'gear';
 function showBagView(v) {
+  if (v !== bagView) cancelPend();
   bagView = v;
   for (const b of $('bg-tabs').children) b.classList.toggle('on', b.dataset.view === v);
   $('bg-gear').hidden = v !== 'gear'; $('bg-jobs').hidden = v !== 'jobs';
@@ -1972,7 +1974,7 @@ const jBtn = (text, fn, label) => { const b = jEl('button', '', text); b.type = 
 // − pips + : learn, level up or give back a skill's points
 function lvBox(id, name, o) {
   const L = o.lv[id] | 0, top = topLv(prof.job, id), left = skillPoints() - pointsUsed(prof.job), box = jEl('div', 'jb-lv');
-  const minus = jBtn('−', () => setSkillLv(id, L - 1), L === 1 ? `ลืม ${name}` : `ลดเลเวล ${name}`); minus.disabled = L <= 0;
+  const minus = jBtn('−', () => setSkillLv(id, L - 1), L === 1 ? `ลืม ${name}` : `ลดเลเวล ${name}`); minus.disabled = L <= floorLv(id);
   const plus = jBtn('+', () => setSkillLv(id, L + 1), L ? `อัปเลเวล ${name}` : `เรียน ${name}`); plus.disabled = L >= top || left <= 0;
   const out = jEl('output', '', !L ? 'ยังไม่เรียน' : top === 1 ? 'เรียนแล้ว' : `Lv.${L}`);
   if (top > 1) { const pips = jEl('span'); for (let i = 1; i <= top; i++) pips.appendChild(jEl('i', i <= L ? 'on' : '')); box.append(minus, pips, out, plus); }
@@ -2025,8 +2027,8 @@ function renderJobs() {
   // another job's skills are only a preview: blurred under a note (Karoz 2026-10-15)
   $('jb-skills').classList.toggle('other', !mine);
   const pool = poolOf(j.k), o = mine && pool ? skillsOf(j.k) : null;
-  $('jb-pts').textContent = mine ? skillPoints() - pointsUsed(j.k) : '-'; $('jb-reset').disabled = !mine || !pointsUsed(j.k);
-  $('jb-note').textContent = mine ? `ได้ 1 แต้มต่อเลเวล (สูงสุด ${SKILL_CAP} แต้ม รวมสกิลเริ่มต้นแล้ว) กด + เพื่อเรียนสกิลใหม่ (1 แต้ม เริ่ม Lv.1) แล้วอัปได้ถึง Lv.${SKILL_MAX} ตัวเลขในคำอธิบายเปลี่ยนตามเลเวล พาสซีฟเรียนครั้งเดียว 1 แต้ม กดช่องด้านบนแล้วกด "ใส่" ที่สกิลเพื่อเปลี่ยนสกิลในช่องนั้น`
+  $('jb-pts').textContent = mine ? skillPoints() - pointsUsed(j.k) : '-'; $('jb-reset').disabled = !mine || !pointsUsed(j.k); $('jb-ok').hidden = $('jb-cancel').hidden = !(mine && pending());
+  $('jb-note').textContent = mine ? `ได้ 1 แต้มต่อเลเวล (สูงสุด ${SKILL_CAP} แต้ม รวมสกิลเริ่มต้นแล้ว) กด + เพื่อเรียนสกิลใหม่ (1 แต้ม เริ่ม Lv.1) แล้วอัปได้ถึง Lv.${SKILL_MAX} ตัวเลขในคำอธิบายเปลี่ยนตามเลเวล แล้วกด "ยืนยัน" เพื่อบันทึก (ยืนยันแล้วลดเลเวลไม่ได้ ต้องใช้รีเซ็ต) พาสซีฟเรียนครั้งเดียว 1 แต้ม กดช่องด้านบนแล้วกด "ใส่" ที่สกิลเพื่อเปลี่ยนสกิลในช่องนั้น`
     : 'ดูสกิลของอาชีพนี้ได้ อัปสกิลและจัดสกิลได้เฉพาะอาชีพปัจจุบัน';
   const ul = $('jb-sk'), ult = $('jb-ult'), pl = $('jb-pas'), load = $('jb-load');
   for (const e of [ul, ult, pl, load]) e.textContent = '';
@@ -2089,9 +2091,31 @@ function equipSkill(id) {
   saveSkills();
 }
 // learn (0 -> 1), level up or down, or forget (1 -> 0) a skill; a newly learned skill goes into the first empty slot
+// levels added since the last confirm wait for ยืนยัน (Karoz 2026-10-15): until then − can take back only those, a confirmed
+// level never goes down (only the reset button gives points back), and nothing is saved; ยกเลิก or leaving the tab drops them
+function floorLv(id) { return jb.base && jb.base.job === prof.job ? jb.base.lv[id] | 0 : (skillsOf(prof.job).lv[id] | 0); }
+const pending = () => !!(jb.base && jb.base.job === prof.job);
+function savedSkills() {
+  try { jb; } catch (_) { return prof.skills; } // saveProf can run before the Jobs code has loaded
+  if (!jb.base || !prof.skills || !prof.skills[jb.base.job]) return prof.skills;
+  const all = JSON.parse(JSON.stringify(prof.skills));
+  Object.assign(all[jb.base.job], { lv: Object.assign({}, jb.base.lv), load: Object.assign({}, jb.base.load) });
+  return all;
+}
+function cancelPend() {
+  if (!jb.base) return;
+  const o = prof.skills && prof.skills[jb.base.job];
+  if (o) { o.lv = Object.assign({}, jb.base.lv); o.load = Object.assign({}, jb.base.load); }
+  jb.base = null;
+  if (bagView === 'jobs' && !$('m-bag').hidden) renderJobs();
+}
+$('jb-ok').onclick = () => { if (!pending()) return; jb.base = null; saveSkills(); toast('ยืนยันการอัปสกิลแล้ว'); };
+$('jb-cancel').onclick = () => { cancelPend(); toast('ยกเลิกแต้มที่ยังไม่ยืนยันแล้ว'); };
 function setSkillLv(id, L) {
   const o = skillsOf(prof.job), pool = poolOf(prof.job), was = o.lv[id] | 0;
-  L = Math.max(0, Math.min(topLv(prof.job, id), L));
+  L = Math.max(floorLv(id), Math.min(topLv(prof.job, id), L));
+  if (L === was) return;
+  if (!pending()) jb.base = { job: prof.job, lv: Object.assign({}, o.lv), load: Object.assign({}, o.load) };
   if (L > was && pointsUsed(prof.job) + (L - was) > skillPoints()) return;
   if (pool.act.includes(id) && !isOpen(o, id)) return;
   const before = pool.act.filter(k => isOpen(o, k));
@@ -2105,10 +2129,12 @@ function setSkillLv(id, L) {
   skillsOf(prof.job); // a forgotten skill leaves its slot; a tier 2 skill is forgotten if its source drops under Lv 3
   const opened = pool.act.filter(k => isOpen(o, k) && !before.includes(k));
   for (const k of opened) toast(`ปลดล็อก ${skillDef(k).name} ให้เรียนได้แล้ว`);
-  saveSkills();
+  const ids = new Set([...Object.keys(o.lv), ...Object.keys(jb.base.lv)]);
+  if ([...ids].every(k => (o.lv[k] | 0) === (jb.base.lv[k] | 0))) cancelPend(); // back where it was confirmed: nothing to confirm
+  renderJobs();
 }
 // reset gives every point back, the starting skill's too (Karoz 2026-10-15)
-$('jb-reset').onclick = () => { const o = skillsOf(prof.job); o.lv = {}; o.load = {}; skillsOf(prof.job); saveSkills(); toast('รีเซ็ตแต้มสกิลแล้ว คืนแต้มทั้งหมด'); };
+$('jb-reset').onclick = () => { jb.base = null; const o = skillsOf(prof.job); o.lv = {}; o.load = {}; skillsOf(prof.job); saveSkills(); toast('รีเซ็ตแต้มสกิลแล้ว คืนแต้มทั้งหมด'); };
 // levels and loadout go to the server a moment after the last click (one write for a burst of clicks)
 const serverLive = () => !!(online.sb && online.user && online.user.id !== 'preview' && online.me);
 function saveSkills() {
@@ -2116,9 +2142,9 @@ function saveSkills() {
   clearTimeout(jb.saveT);
   jb.saveT = setTimeout(async () => {
     if (!serverLive()) return;
-    const { error } = await online.sb.from('profiles').update({ skills: prof.skills }).eq('id', online.user.id);
+    const { error } = await online.sb.from('profiles').update({ skills: savedSkills() }).eq('id', online.user.id);
     if (error) { console.warn('skills', error); toast(/skills/.test(error.message) ? 'ต้องรัน supabase-jobs.sql ใน Supabase ก่อน สกิลถึงจะบันทึกถาวร' : why(error)); }
-    else online.me.skills = prof.skills;
+    else online.me.skills = savedSkills();
   }, 600);
 }
 for (const b of $('bg-side').querySelectorAll('button')) b.onclick = () => { bagTab = b.dataset.tab; for (const o of $('bg-side').children) o.classList.toggle('on', o === b); renderBag(); };
@@ -2876,6 +2902,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.38</div>
+<div id="ver">v0.61.39</div>
 </body>
 </html>
