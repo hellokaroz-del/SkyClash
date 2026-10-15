@@ -677,7 +677,9 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
    no picture can be dragged out; only the boxes players type into keep normal selection */
 html, body { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
 input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
-img { -webkit-user-drag: none; user-drag: none; }
+/* pictures never take the mouse (Karoz 2026-10-15): the button or panel under them does, so Edge's Visual Search button never pops up over them */
+img { -webkit-user-drag: none; user-drag: none; pointer-events: none; }
+img.jb { pointer-events: auto; } /* the small job badge keeps its name tooltip */
 
 /* mail (Karoz's DDTank reference 2026-10-08): letters on the left, the open letter with its items on the right */
 .mail { position: relative; width: min(860px, 100%); max-height: 100%; overflow: auto; border-radius: 14px; padding: 12px;
@@ -3611,6 +3613,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.56</div>
+<div id="ver">v0.61.57</div>
 </body>
 </html>

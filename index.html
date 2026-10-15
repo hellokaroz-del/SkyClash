@@ -12,6 +12,8 @@
 </head>
 <body>
 <style>
+/* pictures never take the mouse: what is under them does, so Edge's Visual Search button never pops up over them */
+img { -webkit-user-drag: none; pointer-events: none; }
 /* the setup menu is never shown to players (Karoz 2026-10-07): the town presses its buttons for them */
 #setup { display: none !important; }
 /* Layout: one column; setup panel above a 16:9 game canvas, touch controls below. Single "sky arena" look on purpose. */
