@@ -7,7 +7,7 @@
 -- lowest level in the team). When the match ends the town sends the ticket and the result to rush_end, which pays:
 --   gold 100 x (level / 10) and EXP 200 x (level / 10), level = the lowest level in the team (Lv.17 -> x1.7, Lv.32 -> x3.2);
 --   a loss or a draw gets 25% of that; a player who dealt no damage at all gets nothing, and no egg (Karoz 2026-10-15)
--- and fills 12 eggs with a random number of coupons each (between egg.min and egg.max from the admin panel's settings),
+-- and fills 12 eggs with a random number of coupons each (between egg.rush_bot.min and .max from the admin panel's settings),
 -- new for every match. egg_pick breaks the egg the player picked and adds its coupons. A ticket pays once.
 -- Teams are one player for now (the game plays 1 against 1), so the lowest level in the team is the player's own.
 
@@ -83,7 +83,8 @@ begin
   g := round(10 * t.level * share); -- 100 x level / 10
   e := round(20 * t.level * share); -- 200 x level / 10
   if share > 0 then
-    select value into eg from public.game_settings where key = 'egg';
+    -- this mode's range; before per-mode ranges the setting was one { min, max } for this mode
+    select coalesce(value->'rush_bot', case when value ? 'min' then value end) into eg from public.game_settings where key = 'egg';
     if eg is not null and jsonb_typeof(eg->'min') = 'number' and jsonb_typeof(eg->'max') = 'number' then
       mn := greatest(0, (eg->>'min')::numeric::int); mx := greatest(mn, (eg->>'max')::numeric::int);
       if mx > 0 then arr := array(select mn + floor(random() * (mx - mn + 1))::int from generate_series(1, 12)); end if;
