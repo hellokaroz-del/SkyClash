@@ -374,10 +374,14 @@ const POW_MAX = 120, BOLT_R = SEG; // homing circle around the enemy: 2 slots ac
 const ADMIN = { god: false, pow: false, nocd: false, hitbox: false };
 // auto battle test: SIM is set while bot-vs-bot matches run at full speed; ST holds that match's numbers per player
 let SIM = null, ST = null;
-function stAdd(i, k, v) { if (ST && ST.p[i]) ST.p[i][k] += v; }
+function stAdd(i, k, v) {
+  if (k === 'dmg' && v > 0 && S && S.dealt) S.dealt[i] = (S.dealt[i] || 0) + v; // damage each side dealt, sent to the town at the end (ลุย rewards)
+  if (ST && ST.p[i]) ST.p[i][k] += v;
+}
 const botSoft = o => 1; // bots hit as hard as players; bot difficulty is aim accuracy only (BOT_ACC)
 // bot difficulty (Karoz): the share of the bot's shots that are aimed to hit
 const BOT_ACC = { easy: 0.40, normal: 0.60, hard: 0.83 };
+let botAccOv = null; // a ลุย bot's own accuracy, set by the town (window.__bot.acc)
 let botLv = 'normal'; try { const v = localStorage.getItem('sky-botlv'); if (BOT_ACC[v]) botLv = v; } catch (_) {}
 // a character's hit box: the crawling body, centred on its feet point (x) and standing on the ground (y)
 const HB = { w: 56, h: 36 };
@@ -609,6 +613,12 @@ function setLoadout(p, ld) {
   p.maxEn = c.maxEn; p.energy = Math.min(p.energy, p.maxEn);
 }
 // the bot gets as many skills as the player has: its job's first ones, the ultimate only if the player has one, as many passives
+// a ลุย bot from the town's matchmaking (Karoz 2026-10-15): every skill slot, the ultimate and both passives of its job
+function botFull(b) {
+  const d = CLASSES_GD[b.k]; if (!d) return;
+  const o = { b: d.b, p1: d.p1, p2: d.p2 }; for (const x of SLOT_IDS) o[x] = d[x];
+  setLoadout(b, o);
+}
 function botLoadout(b, ld) {
   const d = CLASSES_GD[b.k]; if (!d || !ld) return;
   const n = SLOT_IDS.filter(x => SKILLS[ld[x]]).length, np = ['p1', 'p2'].filter(x => PASSIVES[ld[x]]).length, o = {};
@@ -1209,12 +1219,22 @@ function newMatch(demo) {
   }
   const pls = [mk(0, picks[0], STAGE.spawn[0], false), mk(1, picks[1], STAGE.spawn[1], vsBot)];
   if (!demo && vsBot && myInfo()) { applyInfo(pls[0], myInfo(), 'คุณ'); if (myInfo().ld) botLoadout(pls[1], myInfo().ld); if (myInfo().sl) setSkills(pls[1], botLevels(pls[1], myInfo().sl)); setLevel(pls[1], myInfo().lv); } // against the bot: the town's player under their own name, the bot at the same level and skill levels
+  // ลุย with nobody found (Karoz 2026-10-15): the town's window.__bot = { lv, acc, full } gives a bot one level above the player,
+  // with every skill slot filled, the player's skill levels, and its own accuracy
+  botAccOv = null;
+  const tb = !demo && vsBot ? townBot() : null;
+  if (tb) {
+    if (tb.full) botFull(pls[1]);
+    if (myInfo() && myInfo().sl) setSkills(pls[1], botLevels(pls[1], myInfo().sl));
+    setLevel(pls[1], Math.max(1, Math.min(100, tb.lv | 0 || 1)));
+    if (+tb.acc > 0 && +tb.acc <= 1) botAccOv = +tb.acc;
+  }
   // the higher max Energy (from SPD) starts; a tie is a coin flip
   const e0 = pls[0].maxEn, e1 = pls[1].maxEn;
   S = {
     demo, players: pls,
     turn: e0 === e1 ? (Math.random() < 0.5 ? 0 : 1) : e0 > e1 ? 0 : 1, state: 'aim', power: 0, timer: TURN_TIME, wind: 0, projs: [], settle: 0, zones: [],
-    banner: 0, bot: null, frame: 0, turnCount: 0,
+    banner: 0, bot: null, frame: 0, turnCount: 0, dealt: {},
   };
   fx.booms.length = fx.parts.length = fx.texts.length = fx.gfx.length = 0;
   S.golem = null; S.golemDone = false;
@@ -1583,7 +1603,7 @@ function botPlan(p) {
   let best = null;
   // difficulty is accuracy: this shot is aimed at the enemy (BOT_ACC of the time) or at a spot 1.5-3.5 slots beside them.
   // A hidden enemy can't be seen, so the bot aims at its guess. The test bots (SIM) always aim to hit.
-  const aimHit = SIM || e.hidden > 0 || Math.random() < BOT_ACC[botLv];
+  const aimHit = SIM || e.hidden > 0 || Math.random() < (botAccOv != null ? botAccOv : BOT_ACC[botLv]);
   const tx = aimHit ? ex : ex + (Math.random() < 0.5 ? -1 : 1) * SLOT_PX * (1.5 + Math.random() * 2), ty = (aimHit ? botSeeY(e) : surfaceY(tx)) - 14;
   const wind = S.wind;
   const tryShot = (ang, pow) => {
@@ -2520,7 +2540,7 @@ function endMatch(winner, why) {
   }, RESULT_DELAY);
   // tell the town how this screen's player did (the admin panel's job win rates); not the tutorial or the slime stage
   if (human && !S.tut && !S.mob && window.parent !== window) try {
-    parent.postMessage({ type: 'aoa-match-end', vs: vsBot ? 'bot' : 'pvp', result: !winner ? 'draw' : winner === human ? 'win' : 'loss' }, location.origin);
+    parent.postMessage({ type: 'aoa-match-end', vs: vsBot ? 'bot' : 'pvp', result: !winner ? 'draw' : winner === human ? 'win' : 'loss', dmg: Math.round((S.dealt || {})[human.i] || 0) }, location.origin);
   } catch (_) {}
   // tell the lobby (which opens the game in a frame for new characters) that the tutorial is won; it shows the EXP summary
   if (tutWon && window.parent !== window) setTimeout(() => {
@@ -4210,6 +4230,10 @@ function boomParts(x, y, ice) {
 }
 // who is playing: the town hands its signed-in player's name, level and guild to the game (window.__me); each side sends
 // its own in the room presence (me), so both screens show the real players, not placeholders (Karoz 2026-10-09)
+function townBot() {
+  let b = null; try { b = window.parent !== window && window.parent.__bot; } catch (_) {}
+  return b && typeof b === 'object' ? b : null;
+}
 function myInfo() {
   let m = null; try { m = window.parent !== window && window.parent.__me; } catch (_) {}
   if (!m) return null;
@@ -5046,7 +5070,7 @@ loadSavedData();
 cam.x = 0;
 fitCanvas(); drawStripResize();
 requestAnimationFrame(loop);
-window.__game = { NET, get S() { return S; }, get cam() { return cam; }, input, fire, useSkill, botPlan, useUlt, useSlot, runSim, simPairs, simSummary, simCSV, statOf, hitDamage, critChance, get SKILLS() { return SKILLS; }, explode, selfSkill, foeSkill, turnStartEffects, setLoadout, botLoadout, get CLASSES() { return CLASSES; } };
+window.__game = { NET, get S() { return S; }, get cam() { return cam; }, input, fire, useSkill, botPlan, useUlt, useSlot, runSim, simPairs, simSummary, simCSV, statOf, hitDamage, critChance, get SKILLS() { return SKILLS; }, explode, selfSkill, foeSkill, turnStartEffects, setLoadout, botLoadout, get CLASSES() { return CLASSES; }, get botAccOv() { return botAccOv; } };
 })();
 </script>
 

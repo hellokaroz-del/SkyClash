@@ -92,9 +92,10 @@ begin
 end $$;
 revoke all on function public.admin_note(text, uuid, jsonb) from public, anon, authenticated;
 
--- 3) game settings: maintenance = { "on": true/false, "msg": "..." }, jobs_open = { "doram": true }
+-- 3) game settings: maintenance = { "on": true/false, "msg": "..." }, jobs_open = { "doram": true },
+--    egg = { "min": n, "max": n } (coupons in each egg after a ลุย bot match, supabase-rush.sql)
 create table if not exists public.game_settings (
-  key text primary key check (key in ('maintenance', 'jobs_open')),
+  key text primary key check (key in ('maintenance', 'jobs_open', 'egg')),
   value jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
@@ -103,6 +104,8 @@ revoke all on public.game_settings from anon, authenticated;
 grant select on public.game_settings to anon, authenticated;
 drop policy if exists "settings readable" on public.game_settings;
 create policy "settings readable" on public.game_settings for select to anon, authenticated using (true);
+alter table public.game_settings drop constraint if exists game_settings_key_check;
+alter table public.game_settings add constraint game_settings_key_check check (key in ('maintenance', 'jobs_open', 'egg'));
 insert into public.game_settings (key, value) values ('maintenance', '{"on": false, "msg": ""}'), ('jobs_open', '{}') on conflict (key) do nothing;
 
 create or replace function public.maintenance_on() returns boolean
@@ -353,7 +356,13 @@ create or replace function public.admin_set_setting(p_key text, p_value jsonb) r
 language plpgsql security definer set search_path = public as $$
 begin
   perform public.admin_me();
-  if p_key not in ('maintenance', 'jobs_open') or p_value is null or jsonb_typeof(p_value) <> 'object' then raise exception 'bad_setting'; end if;
+  if p_key not in ('maintenance', 'jobs_open', 'egg') or p_value is null or jsonb_typeof(p_value) <> 'object' then raise exception 'bad_setting'; end if;
+  -- egg coupons: whole numbers, 0 <= min <= max <= 1,000,000
+  if p_key = 'egg' and not (jsonb_typeof(p_value->'min') = 'number' and jsonb_typeof(p_value->'max') = 'number'
+    and (p_value->>'min')::numeric = floor((p_value->>'min')::numeric) and (p_value->>'max')::numeric = floor((p_value->>'max')::numeric)
+    and (p_value->>'min')::numeric >= 0 and (p_value->>'max')::numeric >= (p_value->>'min')::numeric and (p_value->>'max')::numeric <= 1000000) then
+    raise exception 'bad_setting';
+  end if;
   insert into public.game_settings (key, value, updated_at) values (p_key, p_value, now())
   on conflict (key) do update set value = excluded.value, updated_at = now();
   perform public.admin_note('setting', null, jsonb_build_object('key', p_key, 'value', p_value));

@@ -540,6 +540,31 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 #game.tut #back { display: none; }
 #tut-done { position: absolute; inset: 0; z-index: 42; display: grid; place-items: center; background: rgba(5, 4, 10, .75); padding: 16px; }
 #tut-done[hidden] { display: none; }
+/* ลุย bot reward: 12 eggs, one to break (Karoz 2026-10-15) */
+#eggs { position: absolute; inset: 0; z-index: 43; display: grid; place-items: center; background: rgba(5, 4, 10, .8); padding: 16px; }
+#eggs[hidden] { display: none; }
+.egg-box { width: min(760px, 100%); max-height: 100%; overflow: auto; padding: 22px; border-radius: 16px; border: 3px solid #c99a3c; text-align: center;
+  box-shadow: 0 0 0 2px #5a3d16 inset, 0 24px 70px rgba(0, 0, 0, .7); background: radial-gradient(circle at 50% 20%, #3a2a3a, #1c1420 70%); }
+.egg-box h2 { margin: 0; font-size: 28px; color: #ffe08a; text-shadow: 0 2px 0 #6a3a10, 0 0 14px rgba(255, 200, 80, .5); }
+.egg-box p { margin: 6px 0 14px; color: #e8dccb; font-size: 16px; min-height: 1.3em; }
+.egg-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px 10px; margin-bottom: 16px; }
+.egg { position: relative; height: 112px; border: 0; padding: 0; background: none; cursor: pointer; display: grid; place-items: end center; font-family: inherit; }
+.egg::before { content: ""; width: 70px; height: 92px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; box-shadow: inset -8px -10px 0 rgba(150, 90, 20, .25), 0 6px 10px rgba(0, 0, 0, .45);
+  background: radial-gradient(circle at 34% 26%, #fff 0 8%, transparent 9%), radial-gradient(circle at 64% 58%, #e8a93a 0 7%, transparent 8%),
+    radial-gradient(circle at 36% 70%, #e8a93a 0 5%, transparent 6%), radial-gradient(circle at 70% 30%, #e8a93a 0 5%, transparent 6%), linear-gradient(#fff4d6, #f2cf7c);
+  transition: transform .15s; }
+.egg:hover::before, .egg:focus-visible::before { transform: translateY(-6px) rotate(-4deg); }
+.egg:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; border-radius: 12px; }
+.egg:disabled { cursor: default; }
+.egg:disabled:hover::before { transform: none; }
+.egg.shake::before { animation: eggShake .5s ease-in-out 2; }
+@keyframes eggShake { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+.egg.open::before { clip-path: polygon(0 45%, 12% 38%, 25% 47%, 38% 37%, 50% 46%, 62% 36%, 75% 46%, 88% 37%, 100% 44%, 100% 100%, 0 100%); }
+.egg.dim { opacity: .55; }
+.egg .won { position: absolute; left: 50%; top: 6px; transform: translateX(-50%); white-space: nowrap; padding: 2px 10px; border-radius: 999px; font-weight: 800; font-size: 15px;
+  background: #2a1d38; border: 1px solid #c99a3c; color: #ffe39a; }
+.egg.open .won { font-size: 19px; background: linear-gradient(#ffe48a, #e0a32a); color: #3a2200; border-color: #fff3c4; box-shadow: 0 0 16px rgba(255, 210, 90, .9); animation: resStamp .45s cubic-bezier(.2, 1.6, .5, 1) both; }
+@media (max-width: 720px) { .egg-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 #g-cover { position: absolute; inset: 0; z-index: 40; padding: 16px; text-align: center; display: grid; place-items: center; background: #0d0b14; color: #ffe7a0; font-size: 20px; font-weight: 700; }
 #g-cover[hidden] { display: none; }
 /* end-of-match EXP summary (Karoz's DDTank reference): the character in a burst of light on the left, the EXP rows and
@@ -1184,6 +1209,9 @@ img { -webkit-user-drag: none; user-drag: none; }
       <h3>ปิดปรับปรุง</h3>
       <div class="ap-row"><label><input type="checkbox" id="ap-mt-on"> ปิดเกมปรับปรุง (เข้าได้เฉพาะแอดมิน)</label></div>
       <div class="ap-row"><input type="text" class="grow" id="ap-mt-msg" maxlength="200" placeholder="ข้อความที่ผู้เล่นจะเห็น" aria-label="ข้อความปิดปรับปรุง"><button type="button" class="btn go" id="ap-mt-save">บันทึก</button></div>
+      <h3>ไข่คูปองหลังลุยกับบอท</h3>
+      <div class="ap-row"><label>ต่ำสุด <input type="number" id="ap-egg-min" min="0" max="1000000" step="1" aria-label="คูปองต่ำสุดในไข่"></label><label>สูงสุด <input type="number" id="ap-egg-max" min="0" max="1000000" step="1" aria-label="คูปองสูงสุดในไข่"></label><button type="button" class="btn go" id="ap-egg-save">บันทึก</button></div>
+      <p class="gm-note">ไข่ 12 ฟองสุ่มจำนวนคูปองในช่วงนี้ใหม่ทุกเกม ยังไม่ตั้งค่าหรือสูงสุดเป็น 0 จะไม่มีทุบไข่</p>
       <h3>อาชีพที่ยังเปิดเฉพาะแอดมิน</h3>
       <div id="ap-jobs"></div>
       <p class="ok" id="ap-set-ok" role="status"></p>
@@ -1235,13 +1263,21 @@ img { -webkit-user-drag: none; user-drag: none; }
 <div id="game" hidden>
   <button id="back" type="button">← กลับเมือง</button>
   <div id="g-cover" hidden>กำลังเข้าสู่ด่านฝึก...</div>
+  <div id="eggs" hidden>
+    <div class="egg-box" role="dialog" aria-labelledby="egg-h">
+      <h2 id="egg-h">ทุบไข่ลุ้นคูปอง</h2>
+      <p id="egg-msg" role="status">เลือกไข่ 1 ฟอง ในแต่ละฟองมีคูปองไม่เท่ากัน</p>
+      <div class="egg-grid" id="egg-grid"></div>
+      <button class="btn go wide" id="egg-go" type="button" hidden>กลับห้อง</button>
+    </div>
+  </div>
   <div id="tut-done" hidden>
     <div class="res" role="dialog" aria-labelledby="td-h">
       <div class="res-l"><div class="res-art" id="td-art"></div><div class="res-me"><b id="td-name"></b><span id="td-lv"></span></div></div>
       <div class="res-r">
         <h2 id="td-h">ผลการต่อสู้</h2>
-        <div class="res-sec"><h3>EXP จากการต่อสู้</h3><ul id="td-rows"></ul></div>
-        <div class="res-total"><span>Total</span><div><small>EXP รวม</small><b id="td-exp"></b></div></div>
+        <div class="res-sec"><h3 id="td-sec">EXP จากการต่อสู้</h3><ul id="td-rows"></ul></div>
+        <div class="res-total"><span>Total</span><div><small id="td-totl">EXP รวม</small><b id="td-exp"></b></div></div>
         <p id="td-msg"></p>
         <button class="btn go wide" id="td-go" type="button">ต่อไป</button>
       </div>
@@ -1402,8 +1438,9 @@ async function loadIce() {
     else console.warn('turn-credentials', error || data);
   } catch (e) { console.warn('turn-credentials', e); }
 }
-function launch(setup, watchRoom) {
+function launch(setup, watchRoom, bot) {
   window.__iceReady = loadIce();
+  window.__bot = bot || null; // a ลุย bot (level, accuracy, full skills); the game reads it when the match starts
   // the game reads who is playing from here (name, level, guild) and shows it to both sides online
   // skills: the levels picked in the bag's Jobs tab for the current job (the game scales each skill's strength by them)
   window.__me = { name: prof.name || 'ผู้เล่น', level: prof.level || 1, guild: (online.me && online.me.guild) || '', ...battleSkills() };
@@ -1510,7 +1547,8 @@ async function finishTutorial() {
 }
 // end-of-match summary: rows of [label, EXP] and the total, counted up like DDTank's result screen.
 // Stage EXP comes from Karoz per stage (exp-rules-2026-10-07); the tutorial is the only match that gives EXP so far.
-function showResult(rows, total) {
+function showResult(rows, total, sec = 'EXP จากการต่อสู้', totalLabel = 'EXP รวม') {
+  $('td-sec').textContent = sec; $('td-totl').textContent = totalLabel;
   const art = $('td-art'); art.textContent = ''; const im = artImg(prof.job, 'res-im'); if (im) art.appendChild(im);
   $('td-name').textContent = prof.name || ''; $('td-name').classList.toggle('adm', isAdmin()); $('td-lv').textContent = 'Lv.' + (prof.level || 1);
   const ul = $('td-rows'); ul.textContent = '';
@@ -1529,7 +1567,12 @@ function watchGameRoom(fr) {
     if (m && co.room && co.host && m[1] !== co.game) { co.game = m[1]; sharePresence(); } // guests in the waiting room follow this code
   }, 1500);
 }
-$('back').onclick = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; $('g-cover').hidden = true; if (co.room) { co.game = null; if (co.host && co.mode === 'rush') { Object.assign(co, { map: null, lastGame: null }); stopMatch(); } matchStarted = null; sharePresence(); openModal('m-room'); renderRoom(); } };
+$('back').onclick = () => {
+  if (rush.ticket && rush.ending && gameBox.querySelector('iframe')) { rushReward(); return; } // the bot match is over: straight to the reward
+  if (rush.ticket && !rush.ending) rush.ticket = null;
+  backToTown();
+};
+const backToTown = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; $('g-cover').hidden = true; if (co.room) { co.game = null; if (co.host && co.mode === 'rush') { Object.assign(co, { map: null, lastGame: null }); stopMatch(); } matchStarted = null; sharePresence(); openModal('m-room'); renderRoom(); } };
 const press = (d, sel) => { const el = d.querySelector(sel); if (el) el.click(); return !!el; };
 
 // ---------- Colosseum: room list and waiting room ----------
@@ -1727,18 +1770,18 @@ function renderRoom() {
   $('rm-map').classList.toggle('rnd', rnd && !co.rolling);
   $('rm-mapname').textContent = co.rolling || (rnd ? 'ทั้งหมด' : (map || MAPS[0]).name);
   $('rm-mapsub').textContent = rnd ? 'เครื่องสุ่มแผนที่' : 'เลือกแผนที่';
-  $('rm-rules').innerHTML = rnd ? '<li>ระบบสุ่มแผนที่ให้ทุกครั้ง</li><li>จับคู่กับห้องอื่นตามจำนวนคนในห้อง</li><li>1 คนเจอ 1-1, 2 คนเจอ 2-2</li>'
+  $('rm-rules').innerHTML = rnd ? '<li>ระบบสุ่มแผนที่ให้ทุกครั้ง</li><li>จับคู่กับห้องอื่นตามจำนวนคนในห้อง</li><li>1 คนเจอ 1-1, 2 คนเจอ 2-2</li><li>ไม่เจอผู้เล่นใน 30 วิ จะเจอบอทระดับยากแทน</li>'
     : '<li>หัวห้องเลือกแผนที่</li><li>ครบ 2 คน หัวห้องกดลุยได้เลย</li>';
   const n = mem.length;
   $('rm-go').disabled = !co.host || !!co.rolling || !!r.vs;
   $('rm-go').textContent = !co.host ? 'รอหัวห้อง' : r.seek && !r.vs ? 'ยกเลิก' : 'ลุย';
   if (rnd) { // ลุย: the room is one team; the opponent is another room with the same number of people
     const t = r.seek ? Math.floor((Date.now() - r.seek) / 1000) : 0, clock = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
-    $('rm-state').textContent = r.game ? 'กำลังเล่นอยู่' : r.vs ? `เจอคู่แข่งแล้ว ห้อง ${r.vs}` : r.seek ? `กำลังหาคู่แข่ง ${n}-${n}` : !co.host ? 'รอหัวห้องกดลุย' : `กดลุยเพื่อหาคู่แข่ง ${n}-${n}`;
+    $('rm-state').textContent = r.game ? 'กำลังเล่นอยู่' : r.vs === 'bot' ? 'ไม่เจอผู้เล่น สู้กับบอทแทน' : r.vs ? `เจอคู่แข่งแล้ว ห้อง ${r.vs}` : r.seek ? `กำลังหาคู่แข่ง ${n}-${n}` : !co.host ? 'รอหัวห้องกดลุย' : `กดลุยเพื่อหาคู่แข่ง ${n}-${n}`;
     const seeking = !!(r.seek && !r.game && !co.rolling);
     $('rm-map').classList.toggle('seek', seeking);
     $('rm-clock').textContent = clock;
-    $('rm-clocksub').textContent = r.vs ? 'เจอคู่แข่งแล้ว กำลังเข้าเกม...' : 'กำลังจับคู่ โปรดรอสักครู่...';
+    $('rm-clocksub').textContent = r.vs === 'bot' ? 'กำลังเข้าเกมกับบอท...' : r.vs ? 'เจอคู่แข่งแล้ว กำลังเข้าเกม...' : 'กำลังจับคู่ ไม่เจอใครใน 30 วิจะเจอบอท';
     clearTimeout(roomClock); if (seeking) roomClock = setTimeout(renderRoom, 1000); // everyone in the room sees the clock run
   } else $('rm-state').textContent = r.game ? 'กำลังเล่นอยู่' : !co.host ? 'รอหัวห้องกดลุย' : n < 2 ? 'รอผู้เล่นเข้าห้อง' : n > GAME_MAX ? `ตอนนี้เกมเล่นได้ทีละ ${GAME_MAX} คน` : 'พร้อมแล้ว กดลุยได้เลย';
 }
@@ -1765,6 +1808,9 @@ function startRoom() {
 // and keeps trying while the host's game is still opening. Cancel takes the player out of the queue.
 let matchClock = 0, matchStarted = null;
 const mm = { on: false, busy: false };
+// Karoz 2026-10-15: nobody found in 30 s -> a hard bot one level up with every skill slot and 67% accuracy (lobby/supabase-rush.sql)
+const RUSH_BOT_AFTER = 30000, RUSH_BOT_ACC = 0.67;
+const rush = { ticket: null, level: 1, ending: false, result: null, timer: 0 };
 async function seekMatch() {
   const msg = $('rm-msg'), n = membersOf(co.room).length;
   if (co.seek) { stopMatch(); msg.textContent = ''; return; } // ยกเลิก
@@ -1800,7 +1846,91 @@ function onMatch(d) {
     }
     return;
   }
+  if (co.seek && Date.now() - co.seek >= RUSH_BOT_AFTER) { rushBot(); return; }
   matchTick();
+}
+async function rushBot() {
+  if (!mm.on) return; // (called from inside a poll, so mm.busy is still set)
+  mm.on = false; clearTimeout(matchClock);
+  const { data, error } = await online.sb.rpc('match_bot');
+  if (error) {
+    if (/too_soon/.test(error.message || '')) { mm.on = true; matchTick(); return; } // the server's clock says not yet: keep looking
+    stopMatch(); $('rm-msg').textContent = /match_bot|schema cache|function/.test(error.message || '') ? 'ต้องรัน supabase-rush.sql ใน Supabase ก่อน' : why(error); return;
+  }
+  if (data && data.status === 'matched') { mm.on = true; onMatch(data); return; } // a player turned up at the last moment
+  if (!data || data.status !== 'bot') { stopMatch(); $('rm-msg').textContent = 'หลุดจากคิว กดลุยอีกครั้ง'; return; }
+  Object.assign(rush, { ticket: data.ticket, level: data.level, ending: false, result: null });
+  co.vs = 'bot'; co.game = null; sharePresence(); renderRoom();
+  const pick = MAPS[Math.floor(Math.random() * MAPS.length)]; co.map = pick.k;
+  launch(d => {
+    press(d, '#mode-bot'); press(d, '#botlv .seg[data-lv="hard"]'); press(d, '#stage-' + pick.k);
+    if (prof.job) press(d, `#pick-0-${prof.job}`);
+    const bots = [...d.querySelectorAll('#cards-1 .cls')].filter(c => !/doram/.test(c.id)); // Nekomancer is not released yet
+    if (bots.length) bots[Math.floor(Math.random() * bots.length)].click();
+    press(d, '#start');
+  }, false, { lv: Math.min(100, data.bot_level || data.level + 1), acc: RUSH_BOT_ACC, full: true });
+}
+// the bot match ended: wait for the game's Victory/Defeat, then the reward
+addEventListener('message', e => {
+  const d = e.data;
+  if (e.origin !== location.origin || !d || d.type !== 'aoa-match-end' || d.vs !== 'bot' || !rush.ticket || rush.ending) return;
+  rush.ending = true; rush.result = { result: ['win', 'loss', 'draw'].includes(d.result) ? d.result : 'loss', dmg: Math.max(0, d.dmg | 0) };
+  clearTimeout(rush.timer); rush.timer = setTimeout(rushReward, 4500);
+});
+async function rushReward() {
+  clearTimeout(rush.timer);
+  if (!rush.ticket || !rush.result) return;
+  const ticket = rush.ticket, r = rush.result, lv0 = prof.level || 1;
+  const fr = gameBox.querySelector('iframe'); if (fr) fr.remove();
+  gameBox.hidden = false; $('g-cover').hidden = true; $('back').hidden = true;
+  const { data, error } = await online.sb.rpc('rush_end', { p_ticket: ticket, p_result: r.result, p_dmg: r.dmg });
+  const go = $('td-go');
+  if (error) {
+    const em = error.message || '';
+    showResult([['ทอง', 0], ['EXP', 0]], 0, 'ของรางวัล', 'EXP ที่ได้');
+    $('td-msg').textContent = /too_fast/.test(em) ? 'เกมจบเร็วเกินไป ไม่ได้รับของรางวัล' : /already_ended/.test(em) ? 'รับของรางวัลเกมนี้ไปแล้ว' : 'บันทึกของรางวัลไม่สำเร็จ: ' + why(error);
+    go.textContent = 'กลับห้อง'; go.disabled = false; go.onclick = rushDone; go.focus(); return;
+  }
+  const me = data.me || {};
+  online.me = Object.assign(online.me || {}, me); Object.assign(prof, { level: me.level || prof.level, exp: me.exp != null ? me.exp : prof.exp }); saveProf(); renderProf(); sharePresence();
+  const head = r.result === 'win' ? 'ชนะ' : r.result === 'draw' ? 'เสมอ' : 'แพ้';
+  showResult([['ทอง', data.gold | 0], ['EXP', data.exp | 0]], data.exp | 0, `ของรางวัล (${head} · Lv.${data.level} x${(data.level / 10).toFixed(1)})`, 'EXP ที่ได้');
+  $('td-up').hidden = !(prof.level > lv0);
+  $('td-msg').textContent = !(data.dmg > 0) ? 'ไม่ได้ทำดาเมจเลย ไม่ได้รับของรางวัลและไม่ได้ทุบไข่'
+    : r.result === 'win' ? 'ชนะบอทได้ของรางวัลเต็ม' : 'ได้ของรางวัล 25% ของตอนชนะ';
+  if (data.eggs > 0) { go.textContent = 'ทุบไข่'; go.onclick = () => { $('tut-done').hidden = true; showEggs(ticket, data.eggs); }; }
+  else { go.textContent = 'กลับห้อง'; go.onclick = rushDone; }
+  go.disabled = false; go.focus();
+}
+function showEggs(ticket, n) {
+  const grid = $('egg-grid'), msg = $('egg-msg'), out = $('egg-go'); grid.textContent = ''; out.hidden = true;
+  msg.textContent = 'เลือกไข่ 1 ฟอง ในแต่ละฟองมีคูปองไม่เท่ากัน';
+  for (let i = 0; i < n; i++) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'egg'; b.setAttribute('aria-label', `ไข่ฟองที่ ${i + 1}`);
+    b.onclick = async () => {
+      for (const x of grid.children) x.disabled = true;
+      b.classList.add('shake');
+      const [{ data, error }] = await Promise.all([online.sb.rpc('egg_pick', { p_ticket: ticket, p_index: i }), new Promise(r => setTimeout(r, 1000))]);
+      b.classList.remove('shake');
+      if (error) { msg.textContent = /already_picked/.test(error.message || '') ? 'ทุบไข่ของเกมนี้ไปแล้ว' : 'ทุบไข่ไม่สำเร็จ: ' + why(error); for (const x of grid.children) x.disabled = false; out.hidden = false; return; }
+      const label = (el, v) => { const w = document.createElement('span'); w.className = 'won'; w.textContent = `คูปอง ${(+v).toLocaleString('th-TH')}`; el.appendChild(w); };
+      b.classList.add('open'); label(b, data.won);
+      msg.textContent = `ได้คูปอง ${(+data.won).toLocaleString('th-TH')} ใบ`;
+      if (online.me) online.me.coupon = data.coupon;
+      // then what was in the other eggs
+      setTimeout(() => { [...grid.children].forEach((x, k) => { if (k !== i && data.eggs) { x.classList.add('dim'); label(x, data.eggs[k]); } }); out.hidden = false; out.focus(); }, 700);
+    };
+    grid.appendChild(b);
+  }
+  out.onclick = rushDone;
+  $('eggs').hidden = false; grid.firstChild && grid.firstChild.focus();
+}
+// back to the room the player made
+function rushDone() {
+  Object.assign(rush, { ticket: null, ending: false, result: null }); clearTimeout(rush.timer);
+  $('eggs').hidden = true; $('tut-done').hidden = true; $('back').hidden = false;
+  $('back').click();
+  if (!$('m-bag').hidden) renderBag();
 }
 // while waiting: ask the server every second (that also tells it this player is still here)
 function matchTick() {
@@ -2827,7 +2957,7 @@ function apWhat(r) {
     case 'delete_chat': return `"${d.body}"`;
     case 'money': return `${d.players === 'all' ? 'ทุกคน' : apNum(d.players) + ' คน'}: ทอง ${apNum(d.gold)} เพชร ${apNum(d.gem)} คูปอง ${apNum(d.coupon)}${why}`;
     case 'item': return `${(ITEMS[d.item] || {}).name || d.item} x${d.qty} ให้ ${apNum(d.players)} คน ${d.via === 'mail' ? 'ทางจดหมาย' : 'เข้ากระเป๋า'}`;
-    case 'setting': return d.key === 'maintenance' ? (d.value.on ? `เปิดโหมดปิดปรับปรุง${d.value.msg ? ': ' + d.value.msg : ''}` : 'ปิดโหมดปิดปรับปรุง')
+    case 'setting': return d.key === 'egg' ? `ไข่คูปอง ${apNum(d.value.min)} - ${apNum(d.value.max)} ใบ` : d.key === 'maintenance' ? (d.value.on ? `เปิดโหมดปิดปรับปรุง${d.value.msg ? ': ' + d.value.msg : ''}` : 'ปิดโหมดปิดปรับปรุง')
       : 'อาชีพที่เปิดให้ทุกคน: ' + (Object.keys(d.value).filter(k => d.value[k]).map(k => (jobOf(k) || {}).th || k).join(', ') || 'ไม่มี');
     default: return why;
   }
@@ -2845,7 +2975,7 @@ async function apLog() {
 $('ap-log-re').onclick = apLog;
 
 // game settings: maintenance and admin-only jobs
-const settings = { maintenance: { on: false, msg: '' }, jobs_open: {} };
+const settings = { maintenance: { on: false, msg: '' }, jobs_open: {}, egg: {} };
 async function loadSettings() {
   if (!online.sb || !online.user || online.user.id === 'preview') return;
   const { data, error } = await online.sb.from('game_settings').select('key, value');
@@ -2855,6 +2985,7 @@ async function loadSettings() {
 }
 function apSettings() {
   $('ap-mt-on').checked = !!settings.maintenance.on; $('ap-mt-msg').value = settings.maintenance.msg || ''; $('ap-set-ok').textContent = '';
+  $('ap-egg-min').value = settings.egg.min != null ? settings.egg.min : ''; $('ap-egg-max').value = settings.egg.max != null ? settings.egg.max : '';
   const box = $('ap-jobs'); box.textContent = '';
   for (const j of JOBS.filter(x => x.admin)) {
     const l = apEl('label'), c = apEl('input'); c.type = 'checkbox'; c.checked = !!settings.jobs_open[j.k];
@@ -2868,6 +2999,13 @@ function apSettings() {
   }
   if (!box.childElementCount) box.appendChild(apEl('p', '', 'ไม่มีอาชีพที่เปิดเฉพาะแอดมิน'));
 }
+$('ap-egg-save').onclick = async () => {
+  const mn = Number($('ap-egg-min').value), mx = Number($('ap-egg-max').value);
+  if ($('ap-egg-min').value === '' || $('ap-egg-max').value === '' || !Number.isInteger(mn) || !Number.isInteger(mx) || mn < 0 || mx < mn || mx > 1e6) { apSay('ใส่จำนวนเต็ม ต่ำสุดไม่เกินสูงสุด (0 - 1,000,000)'); return; }
+  const v = { min: mn, max: mx }, { error } = await apRpc('admin_set_setting', { p_key: 'egg', p_value: v });
+  if (error) return;
+  settings.egg = v; $('ap-set-ok').textContent = `ไข่คูปองตั้งเป็น ${mn.toLocaleString('th-TH')} - ${mx.toLocaleString('th-TH')} ใบแล้ว`;
+};
 $('ap-mt-save').onclick = async () => {
   const v = { on: $('ap-mt-on').checked, msg: $('ap-mt-msg').value.trim() };
   if (v.on && !settings.maintenance.on && !await askYes('ปิดปรับปรุง', 'ผู้เล่นที่ไม่ใช่แอดมินจะเข้าเมือง แชท และจับคู่ไม่ได้จนกว่าจะปิดโหมดนี้ ใช่ไหม?', 'ปิดปรับปรุง')) return;
@@ -3471,6 +3609,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.54</div>
+<div id="ver">v0.61.55</div>
 </body>
 </html>
