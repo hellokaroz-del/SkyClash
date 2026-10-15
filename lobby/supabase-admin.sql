@@ -259,6 +259,28 @@ begin
   perform public.admin_note('reset_skills', p_id, jsonb_build_object('job', coalesce(p_job, 'all'), 'reason', coalesce(p_reason, '')));
 end $$;
 
+-- change a player's job (the player can't: profiles_job_lock). Skills are kept per job, so each job's points stay as they were.
+create or replace function public.profiles_job_lock() returns trigger language plpgsql set search_path = public as $$
+begin
+  if tg_op = 'UPDATE' and old.job is not null and new.job is distinct from old.job and current_user in ('anon', 'authenticated') then
+    raise exception 'job_locked';
+  end if;
+  return new;
+end $$;
+
+create or replace function public.admin_set_job(p_id uuid, p_job text, p_reason text) returns public.profiles
+language plpgsql security definer set search_path = public as $$
+declare was text; p public.profiles;
+begin
+  perform public.admin_me();
+  if p_job is null or p_job not in ('blade', 'mage', 'archer', 'cleric', 'thief', 'merchant', 'doram') then raise exception 'bad_job'; end if;
+  select job into was from public.profiles where id = p_id;
+  if not found then raise exception 'no_target'; end if;
+  update public.profiles set job = p_job where id = p_id returning * into p;
+  perform public.admin_note('job', p_id, jsonb_build_object('from', was, 'to', p_job, 'reason', coalesce(p_reason, '')));
+  return p;
+end $$;
+
 -- ban or mute: p_minutes > 0 for a while, null for good, 0 to lift it
 create or replace function public.admin_ban(p_id uuid, p_kind text, p_minutes int, p_reason text) returns public.profiles
 language plpgsql security definer set search_path = public as $$
@@ -363,12 +385,12 @@ begin
 end $$;
 
 revoke all on function public.admin_player_items(uuid), public.admin_player_chat(uuid, int), public.admin_add_exp(uuid, int, text),
-  public.admin_set_player(uuid, int, int, bigint, bigint, bigint, int, text), public.admin_reset_skills(uuid, text, text),
+  public.admin_set_player(uuid, int, int, bigint, bigint, bigint, int, text), public.admin_reset_skills(uuid, text, text), public.admin_set_job(uuid, text, text),
   public.admin_ban(uuid, text, int, text), public.admin_delete_chat(bigint[]), public.admin_give_money(uuid[], boolean, bigint, bigint, bigint, text),
   public.admin_give_item_all(text, text, int, boolean, jsonb, int, text, text, text, int), public.admin_set_setting(text, jsonb),
   public.admin_overview(), public.admin_job_stats(int) from public;
 grant execute on function public.admin_player_items(uuid), public.admin_player_chat(uuid, int), public.admin_add_exp(uuid, int, text),
-  public.admin_set_player(uuid, int, int, bigint, bigint, bigint, int, text), public.admin_reset_skills(uuid, text, text),
+  public.admin_set_player(uuid, int, int, bigint, bigint, bigint, int, text), public.admin_reset_skills(uuid, text, text), public.admin_set_job(uuid, text, text),
   public.admin_ban(uuid, text, int, text), public.admin_delete_chat(bigint[]), public.admin_give_money(uuid[], boolean, bigint, bigint, bigint, text),
   public.admin_give_item_all(text, text, int, boolean, jsonb, int, text, text, text, int), public.admin_set_setting(text, jsonb),
   public.admin_overview(), public.admin_job_stats(int) to authenticated;
