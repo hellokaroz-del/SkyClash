@@ -2518,6 +2518,10 @@ function endMatch(winner, why) {
     if (S !== s0) return;
     R.f0 = S.frame; S.result = R; res.textContent = txt; res.hidden = false;
   }, RESULT_DELAY);
+  // tell the town how this screen's player did (the admin panel's job win rates); not the tutorial or the slime stage
+  if (human && !S.tut && !S.mob && window.parent !== window) try {
+    parent.postMessage({ type: 'aoa-match-end', vs: vsBot ? 'bot' : 'pvp', result: !winner ? 'draw' : winner === human ? 'win' : 'loss' }, location.origin);
+  } catch (_) {}
   // tell the lobby (which opens the game in a frame for new characters) that the tutorial is won; it shows the EXP summary
   if (tutWon && window.parent !== window) setTimeout(() => {
     if (S === s0) try { parent.postMessage({ type: 'aoa-tutorial-done' }, location.origin); } catch (_) {}

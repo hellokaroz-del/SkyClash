@@ -5,10 +5,12 @@
 -- each player's skills, per job: { "<job>": { "lv": { "<skill id>": 1-5 }, "load": { "s1".."s6", "b", "p1", "p2": "<skill id>" } } }
 alter table public.profiles add column if not exists skills jsonb not null default '{}'::jsonb;
 grant update (skills) on public.profiles to authenticated;
+-- bonus skill points an admin gives (supabase-admin.sql); players cannot change it
+alter table public.profiles add column if not exists skill_bonus int not null default 0;
 
 -- skill points (Karoz 2026-10-15): 1 per character level, 40 at most, for each job. Learning a skill costs 1 (Lv 1) and each
 -- level after that 1 more, so a job's spent points are its skill levels added up (a passive is 0 or 1). Levels are 0 to 5;
--- a player can never spend more than they have.
+-- a player can never spend more than they have. An admin can add bonus points on top (skill_bonus).
 create or replace function public.profiles_skills_check() returns trigger language plpgsql set search_path = public as $$
 declare
   job text; body jsonb; sk text; lv jsonb; spent int;
@@ -25,7 +27,7 @@ begin
         spent := spent + (lv::text)::int;
       end loop;
     end if;
-    if spent > least(greatest(coalesce(new.level, 1), 1), 40) then raise exception 'not_enough_skill_points'; end if;
+    if spent > least(greatest(coalesce(new.level, 1), 1), 40) + coalesce(new.skill_bonus, 0) then raise exception 'not_enough_skill_points'; end if;
   end loop;
   return new;
 end $$;

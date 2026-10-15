@@ -84,6 +84,11 @@ begin
     n := n + 1;
   end loop;
   if n = 0 then raise exception 'no_target'; end if;
+  -- the admin log (supabase-admin.sql), once that file has been run
+  if to_regprocedure('public.admin_note(text, uuid, jsonb)') is not null then
+    perform public.admin_note('item', case when n = 1 then t.id end, jsonb_build_object('item', p_item, 'qty', p_qty, 'via', p_via,
+      'players', n, 'days', p_days, 'names', to_jsonb(coalesce(p_names, '{}'))));
+  end if;
   return n;
 end $$;
 revoke all on function public.admin_give_item(text[], uuid[], text, text, int, boolean, jsonb, int, text, text, text, int) from public;
