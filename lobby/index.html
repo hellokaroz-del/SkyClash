@@ -728,7 +728,7 @@ img { -webkit-user-drag: none; user-drag: none; }
 .bg-slot.fit, .bg-grid.fit .cell { box-shadow: 0 0 0 3px #2a7fe0, 0 0 12px rgba(42, 127, 224, .7); }
 .bg-slot.has, .bg-grid .cell.has { touch-action: none; }
 /* Jobs tab: pick a job, level its skills with skill points */
-.jb-body { display: grid; grid-template-columns: 220px minmax(0, 1fr) minmax(0, 1.3fr); gap: 12px; height: min(690px, calc(100vh - 170px)); min-height: 420px; }
+.jb-body { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px; height: min(690px, calc(100vh - 170px)); min-height: 420px; }
 .jb-body[hidden], .bg-body[hidden] { display: none; }
 .jb-body > .bg-pane { overflow-y: auto; overscroll-behavior: contain; }
 .jb-list { display: flex; flex-direction: column; gap: 6px; }
@@ -739,16 +739,6 @@ img { -webkit-user-drag: none; user-drag: none; }
 .jb-job span { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
 .jb-job b { font-size: 16px; } .jb-job small { font-size: 12px; color: #cfe6ff; }
 .jb-job em { margin-left: auto; font-style: normal; font-size: 11px; font-weight: 700; color: #1d3f73; background: #ffe08a; border-radius: 8px; padding: 2px 6px; white-space: nowrap; }
-.jb-card { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; }
-.jb-art { position: relative; flex: none; height: 250px; border-radius: 14px; background: radial-gradient(circle at 50% 70%, #fff8, transparent 70%), linear-gradient(#9fd0ff, #5a9be0); overflow: hidden; }
-.jb-art img { position: absolute; left: 50%; bottom: 4px; height: 94%; width: auto; max-width: none; transform: translateX(var(--fx, -50%)); filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .4)); }
-.jb-card h3 { margin: 4px 0 0; font-size: 24px; color: #1d3f73; } .jb-card h3 small { font-size: 15px; color: #3f6fb0; margin-left: 8px; }
-.jb-card p { margin: 0; color: #1d3f73; font-size: 15px; }
-.jb-diff { color: #3f6fb0; font-size: 14px; font-weight: 700; } .jb-diff i { font-style: normal; color: #b9c9de; } .jb-diff i.on { color: #f5b82a; }
-.jb-go { margin-top: 4px; border: 2px solid #f2d27a; border-radius: 12px; background: linear-gradient(#ffd45a, #e09a1a); color: #4a2a00; font: inherit; font-weight: 800; font-size: 17px; padding: 10px; cursor: pointer; }
-.jb-go:hover:not(:disabled) { filter: brightness(1.08); }
-.jb-go:disabled { background: #cfdcec; border-color: #9fb6d6; color: #3f6fb0; cursor: default; }
-.jb-go.sure { background: linear-gradient(#ff8a6a, #d9442a); color: #fff; }
 .jb-skills { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .jb-pts { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #1d3f73; color: #fff; border-radius: 10px; padding: 6px 10px; font-weight: 700; }
 .jb-pts b { color: #ffe08a; font-size: 20px; }
@@ -794,7 +784,7 @@ img { -webkit-user-drag: none; user-drag: none; }
 .jb-slot .jb-ico { width: 36px; height: 36px; background-color: #0d2142; }
 .jb-slot.on { border-color: #ffe08a; box-shadow: 0 0 10px rgba(255, 224, 138, .9); }
 .jb-slot:disabled { cursor: default; opacity: 1; }
-@media (max-width: 900px) { .jb-body { grid-template-columns: minmax(0, 1fr); height: auto; } .jb-body > .bg-pane { overflow: visible; } .jb-list { flex-direction: row; flex-wrap: wrap; } .jb-job { flex: 1 1 140px; } .jb-art { height: 180px; } }
+@media (max-width: 900px) { .jb-body { grid-template-columns: minmax(0, 1fr); height: auto; } .jb-body > .bg-pane { overflow: visible; } .jb-list { flex-direction: row; flex-wrap: wrap; } .jb-job { flex: 1 1 140px; } }
 @media (max-width: 480px) { .jb-sk li { grid-template-columns: 38px minmax(0, 1fr); } .jb-side { grid-column: 1 / -1; flex-direction: row; justify-content: flex-end; } .jb-ico { width: 38px; height: 38px; } .jb-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .dragging { opacity: .35; }
 
@@ -994,13 +984,6 @@ img { -webkit-user-drag: none; user-drag: none; }
     </div>
     <div class="jb-body" id="bg-jobs" hidden>
       <div class="bg-pane jb-list" id="jb-list" role="radiogroup" aria-label="อาชีพ"></div>
-      <div class="bg-pane jb-card">
-        <div class="jb-art"><img id="jb-img" alt=""></div>
-        <h3 id="jb-name"></h3>
-        <p id="jb-desc"></p>
-        <div class="jb-diff" id="jb-diff"></div>
-        <button type="button" class="jb-go" id="jb-go"></button>
-      </div>
       <div class="bg-pane jb-skills" id="jb-skills">
         <div class="jb-veil" id="jb-veil">ไม่ใช่อาชีพปัจจุบันของคุณ</div>
         <div class="jb-pts"><span>แต้มสกิล <b id="jb-pts">0</b></span><button type="button" id="jb-reset">รีเซ็ต</button></div>
@@ -2003,14 +1986,8 @@ function renderJobs() {
   }
   const j = JOB[jb.pick]; if (!j) return;
   const mine = jb.pick === prof.job;
-  const img = $('jb-img'); img.style.setProperty('--fx', `-${j.foot * 100}%`); img.src = `img/cls-${j.k}.webp?v=${ART_V}`; img.alt = j.name;
-  $('jb-name').textContent = j.th; $('jb-name').appendChild(jEl('small', '', j.name));
-  $('jb-desc').textContent = j.desc;
-  $('jb-diff').innerHTML = 'ความยาก ' + [1, 2, 3, 4, 5].map(n => `<i class="${n <= j.diff ? 'on' : ''}">★</i>`).join('');
   // another job's skills are only a preview: blurred under a note (Karoz 2026-10-15)
   $('jb-skills').classList.toggle('other', !mine);
-  // changing job: on screen, locked for now (Karoz 2026-10-15)
-  const go = $('jb-go'); go.disabled = true; go.textContent = mine ? 'อาชีพปัจจุบันของคุณ' : `🔒 เปลี่ยนเป็น ${j.th} (ยังไม่เปิด)`;
   const pool = poolOf(j.k), o = mine && pool ? skillsOf(j.k) : null;
   $('jb-pts').textContent = mine ? skillPoints() - pointsUsed(j.k) : '-'; $('jb-reset').disabled = !mine || !pointsUsed(j.k);
   $('jb-note').textContent = mine ? `ได้ 1 แต้มทุกครั้งที่เลเวลอัป สกิลเริ่มที่ Lv.1 (แรง 60%) อัปได้ถึง Lv.${SKILL_MAX} (แรง 100%) กดช่องด้านล่างแล้วกด "ใส่" ที่สกิลเพื่อเปลี่ยนสกิลในช่องนั้น`
@@ -2851,6 +2828,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.33</div>
+<div id="ver">v0.61.34</div>
 </body>
 </html>
