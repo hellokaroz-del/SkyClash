@@ -591,7 +591,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
   font-size: 22px; cursor: pointer; }
 .bag .x:hover { background: #2a5596; }
 .bag h2 { margin: 0 0 10px; font-size: 34px; font-style: italic; font-weight: 900; color: #fff; text-shadow: 0 3px 0 #2a5596, 0 0 10px rgba(80, 160, 255, .8); }
-.bg-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 0 56px 12px 0; }
+.bg-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0 56px 12px 0; }
 .bg-tabs button, .bg-side button, .bg-acts button { border: 2px solid #8fbff0; border-radius: 12px; background: linear-gradient(#2f62a8, #1d3f73); color: #fff;
   font: 700 16px/1.2 inherit; padding: 10px 6px; cursor: pointer; }
 .bg-tabs button.on, .bg-side button.on { background: linear-gradient(#58b6ff, #2a7fe0); border-color: #fff; box-shadow: 0 0 12px rgba(120, 200, 255, .9); }
@@ -638,7 +638,7 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .bg-side { display: flex; flex-direction: column; gap: 8px; }
 .bg-side button { padding: 14px 4px; font-size: 15px; }
 @media (max-width: 900px) {
-  .bg-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); } .bg-tabs button { padding: 6px 4px; font-size: 14px; }
+  .bg-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bg-tabs button { padding: 6px 4px; font-size: 14px; }
   .bg-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bg-body { grid-template-columns: minmax(0, 1fr); }
   .bg-side { flex-direction: row; order: -1; } .bg-side button { flex: 1; padding: 8px 4px; }
@@ -1028,7 +1028,7 @@ img { -webkit-user-drag: none; user-drag: none; }
     <h2 id="t-bag">กระเป๋า</h2>
     <div class="bg-tabs" id="bg-tabs">
       <button type="button" class="on" data-view="gear">อุปกรณ์สวมใส่</button><button type="button" data-view="jobs">Jobs</button>
-      <button type="button">Ruin</button><button type="button">Card</button><button type="button">ช่องเก็บของ</button>
+      <button type="button">Ruin</button><button type="button">Card</button>
     </div>
     <div class="bg-body" id="bg-gear">
       <div class="bg-pane">
@@ -2068,7 +2068,7 @@ function openBag() {
   renderBag(); openModal('m-bag');
   loadInv().then(renderBag);
   if (!gameData) loadGameData().then(() => { renderBag(); if (bagView === 'jobs') renderJobs(); }).catch(() => {});
-  showBagView(bagView);
+  showBagView('gear'); // the bag always opens on อุปกรณ์สวมใส่ (Karoz 2026-10-15)
 }
 // the top tabs: อุปกรณ์สวมใส่ and Jobs work, the rest come later
 let bagView = 'gear';
@@ -3471,6 +3471,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.53</div>
+<div id="ver">v0.61.54</div>
 </body>
 </html>
