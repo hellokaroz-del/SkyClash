@@ -404,6 +404,13 @@ const ELEM = { fire: { n: 'ไฟ', col: '#ff6a2a', i: 0 }, water: { n: 'น้�
 const ELEM_ORDER = ['fire', 'water', 'thunder', 'nature'];
 const REACTIONS = { 'fire+thunder': { name: 'Explosion', bonus: 70 }, 'thunder+water': { name: 'Electro Stun', bonus: 15, stun: 2 },
   'nature+water': { name: 'Root Bind', bonus: 35, bind: 1 }, 'fire+nature': { name: 'Wildfire', burn: 25, burnTurns: 2 } };
+// a skill's own reaction values by its level (Spirit Burst's table): field on the skill -> which reaction and which value it sets
+const RX_LV = { rxFT: ['fire+thunder', 'bonus'], rxWT: ['thunder+water', 'bonus'], rxWN: ['nature+water', 'bonus'], rxFN: ['fire+nature', 'burn'] };
+function skillRx(rx, sk) {
+  if (!rx || !sk) return rx;
+  for (const [f, [key, v]] of Object.entries(RX_LV)) if (+sk[f] && REACTIONS[key] === rx) return Object.assign({}, rx, { [v]: +sk[f] });
+  return rx;
+}
 // skill slot icons (Karoz's art)
 const ICONS = {"warp": "assets/a092.png", "meteor": "assets/a093.png", "ice": "assets/a094.png", "sw_bash": "assets/a212.webp", "sw_magnum": "assets/a213.webp", "sw_armor": "assets/a214.webp", "sw_provoke": "assets/a215.webp", "sw_endure": "assets/a216.webp", "sw_charge": "assets/a217.webp", "pa_swordm": "assets/a218.webp", "pa_ironbody": "assets/a219.webp", "sw_shieldbash": "assets/a224.webp", "sw_shatter": "assets/a225.webp", "sw_counter": "assets/a226.webp", "sw_cry": "assets/a227.webp", "sw_wall": "assets/a228.webp", "sw_crush": "assets/a229.webp", "pa_shieldm": "assets/a230.webp", "pa_berserk": "assets/a231.webp", "pa_steadfast": "assets/a232.webp", "pa_veteran": "assets/a233.webp"};
 const ready = im => im && im.complete && im.naturalWidth > 0;
@@ -655,19 +662,29 @@ function setLevel(p, L) {
   p.hp = p.maxHp = p.c.hp; p.maxEn = p.c.maxEn; p.energy = p.maxEn;
 }
 
-// skill levels (Karoz's roadmap: skills level up with skill points): the numbers in the data are the skill at its top level,
-// Lv 1 is 60% of them and each level adds 10% (Lv 5 = 100%). Only strengths scale (damage, heal, shield, buffs, debuffs, DoT);
-// cooldowns, turns and counts stay. A player with no levels from the town (old town page, standalone game) keeps 100%.
+// skill levels (Karoz's roadmap: skills level up with skill points): each skill's lvTab holds its value at Lv 1-5 from Karoz's
+// upgrade sheet (attack damage starts at the data value and grows, buffs, debuffs, heals and shields grow up to the data value).
+// A skill without a table falls back to 60% at Lv 1, +10% per level. Cooldowns, turns and counts stay. A player with no levels
+// from the town (old town page, standalone game) uses the data values as they are.
 const SKILL_MAX = 5, SKILL_SCALE = ['dmg', 'vsDot', 'dotPct', 'zone', 'heal', 'healMatk', 'shieldMatk', 'shieldPct', 'bAtk', 'bDef', 'bMatk', 'bMdef', 'bNext', 'bNextMagic', 'bTaken',
   'debDeal', 'debDef', 'debMdef', 'debTaken', 'gHp', 'gStat', 'debAtk', 'debMatk', 'debSpd', 'debHealCut', 'deathMark', 'vsPoison', 'vsHidden', 'vsMark', 'counter', 'takenOnce',
   'critNext', 'hotMatk', 'zoneHeal', 'teamShieldPct'];
 const skillMul = L => 0.6 + 0.1 * (Math.max(1, Math.min(SKILL_MAX, L | 0 || 1)) - 1);
-// the % numbers of a skill's text at a level: each number that is one of its scaled values (or a multi-shot total) becomes that value
-// times m, so the description matches what the skill really does; other numbers (a self penalty, a duration) stay
-function lvText(s, txt, m) {
-  const map = {};
-  for (const k of SKILL_SCALE) if (+s[k]) map[+s[k]] = Math.round(+s[k] * m);
-  if (+s.dmg && (s.count | 0) > 1) map[+s.dmg * s.count] = Math.round(+s.dmg * m) * s.count;
+// a skill's values at level L: its Lv.1-5 table (lvTab, Karoz's upgrade sheet) where it has one, otherwise the old 60-100% rule
+function skillAt(s, L) {
+  L = Math.max(1, Math.min(SKILL_MAX, L | 0 || 1));
+  const o = {};
+  if (s.lvTab) { for (const [k, v] of Object.entries(s.lvTab)) if (Array.isArray(v) && v.length) o[k] = +v[Math.min(L, v.length) - 1]; }
+  else { const m = skillMul(L); for (const k of SKILL_SCALE) if (+s[k]) o[k] = Math.round(+s[k] * m); }
+  return o;
+}
+// the % numbers of a skill's text at a level: each number that is one of its level values (or a multi-shot total) becomes the
+// value at that level, so the description matches what the skill really does; other numbers (a self penalty, a duration) stay
+function lvText(s, txt, L) {
+  const at = skillAt(s, L), map = {};
+  for (const [k, v] of Object.entries(at)) if (+s[k]) map[+s[k]] = v;
+  if (at.dmg != null && +s.dmg && (s.count | 0) > 1) map[+s.dmg * s.count] = Math.round(at.dmg * s.count * 10) / 10;
+  for (const [n, v] of Object.entries(s.lvTxt || {})) if (Array.isArray(v) && v.length) map[+n] = +v[Math.min(Math.max(1, L | 0 || 1), v.length) - 1];
   return String(txt).replace(/(\d+(?:\.\d+)?)%/g, (w, n) => (+n in map ? map[+n] + '%' : w));
 }
 function setSkills(p, sl) {
@@ -675,9 +692,8 @@ function setSkills(p, sl) {
   const sk = {};
   for (const [slot, s] of Object.entries((p.c0 || p.c).sk || {})) { // always from the unscaled skills
     if (!s) { sk[slot] = s; continue; }
-    const L = sl[s.id], m = skillMul(L), o = Object.assign({}, s);
-    for (const k of SKILL_SCALE) if (+o[k]) o[k] = Math.round(+o[k] * m);
-    if (o.short) o.short = lvText(s, o.short, m); if (o.tip) o.tip = lvText(s, o.tip, m);
+    const L = sl[s.id], o = Object.assign({}, s, skillAt(s, L));
+    if (o.short) o.short = lvText(s, o.short, L); if (o.tip) o.tip = lvText(s, o.tip, L);
     o.lv = Math.max(1, Math.min(SKILL_MAX, L | 0 || 1)); sk[slot] = o;
   }
   p.c = Object.assign({}, p.c, { sk }); p.sl = sl;
@@ -1413,7 +1429,7 @@ function explode(q) {
     const foe = teamOf(pl.i) !== teamOf(owner.i);
     if (pct <= 0 && !foe) continue;
     let dmg = pct > 0 ? hitDamage(owner, pl, base, sk && sk.vsDot && hasDot(pl) ? sk.vsDot : pct, sk ? sk.ignoreDef : 0, q.up) : 0, rx = null; const defR = HD_DEFR;
-    if (foe && sk && sk.burst) { rx = reactionOf(pl, owner); if (rx && rx.bonus) dmg += hitDamage(owner, pl, 'matk', rx.bonus, 0, q.up) * (1 + (owner.c.pv.reactDmg || 0) / 100); }
+    if (foe && sk && sk.burst) { rx = skillRx(reactionOf(pl, owner), sk); if (rx && rx.bonus) dmg += hitDamage(owner, pl, 'matk', rx.bonus, 0, q.up) * (1 + (owner.c.pv.reactDmg || 0) / 100); }
     if (foe && sk && sk.vsPoison && pl.dots.some(d => d.kind === 'poison')) { dmg += hitDamage(owner, pl, base, sk.vsPoison, 0, q.up); pl.dots = pl.dots.filter(d => d.kind !== 'poison'); say(pl, 'พิษระเบิด!', '#8de05a', 80, 104); } // Poison Explosion
     if (foe && sk && sk.vsMark && pl.marks.some(m => m.by === owner.i)) dmg *= 1 + sk.vsMark / 100; // Spirit Overload
     const dm = foe && pl.debs.find(d => d.dmark > 0 && d.by === owner.i); // Death Mark: the owner's next hit adds its damage, then it is gone
