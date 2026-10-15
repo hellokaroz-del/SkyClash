@@ -1895,6 +1895,24 @@ for (const b of $('bg-tabs').querySelectorAll('button')) b.onclick = b.dataset.v
 // (and profiles.skills once supabase-jobs.sql is run); a skill not learned has no entry and an empty slot is ''. Changing job is shown but locked for now (Karoz 2026-10-15).
 const SKILL_MAX = 5, LOAD_SLOTS = ['s1', 's2', 's3', 's4', 's5', 's6'];
 const skillMul = L => 0.6 + 0.1 * (Math.max(1, Math.min(SKILL_MAX, L | 0 || 1)) - 1);
+// the same fields the game scales by level, a skill's values at a level and its text at that level (see skillAt / lvText in the game)
+const SKILL_SCALE = ['dmg', 'vsDot', 'dotPct', 'zone', 'heal', 'healMatk', 'shieldMatk', 'shieldPct', 'bAtk', 'bDef', 'bMatk', 'bMdef', 'bNext', 'bNextMagic', 'bTaken',
+  'debDeal', 'debDef', 'debMdef', 'debTaken', 'gHp', 'gStat', 'debAtk', 'debMatk', 'debSpd', 'debHealCut', 'deathMark', 'vsPoison', 'vsHidden', 'vsMark', 'counter', 'takenOnce',
+  'critNext', 'hotMatk', 'zoneHeal', 'teamShieldPct'];
+function skillAt(s, L) {
+  L = Math.max(1, Math.min(SKILL_MAX, L | 0 || 1));
+  const o = {};
+  if (s.lvTab) { for (const [k, v] of Object.entries(s.lvTab)) if (Array.isArray(v) && v.length) o[k] = +v[Math.min(L, v.length) - 1]; }
+  else { const m = skillMul(L); for (const k of SKILL_SCALE) if (+s[k]) o[k] = Math.round(+s[k] * m); }
+  return o;
+}
+function lvText(s, txt, L) {
+  const at = skillAt(s, L), map = {};
+  for (const [k, v] of Object.entries(at)) if (+s[k]) map[+s[k]] = v;
+  if (at.dmg != null && +s.dmg && (s.count | 0) > 1) map[+s.dmg * s.count] = Math.round(at.dmg * s.count * 10) / 10;
+  for (const [n, v] of Object.entries(s.lvTxt || {})) if (Array.isArray(v) && v.length) map[+n] = +v[Math.min(Math.max(1, L | 0 || 1), v.length) - 1];
+  return String(txt || '').replace(/(\d+(?:\.\d+)?)%/g, (w, n) => (+n in map ? map[+n] + '%' : w));
+}
 // the game's skill icons (index.html ICONS); skills without art show their slot number
 const SKILL_ICONS = { ice: 'a094.png', meteor: 'a093.png', sw_bash: 'a212.webp', sw_magnum: 'a213.webp', sw_armor: 'a214.webp', sw_provoke: 'a215.webp', sw_endure: 'a216.webp', sw_charge: 'a217.webp', pa_swordm: 'a218.webp', pa_ironbody: 'a219.webp', sw_shieldbash: 'a224.webp', sw_shatter: 'a225.webp', sw_counter: 'a226.webp', sw_cry: 'a227.webp', sw_wall: 'a228.webp', sw_crush: 'a229.webp', pa_shieldm: 'a230.webp', pa_berserk: 'a231.webp', pa_steadfast: 'a232.webp', pa_veteran: 'a233.webp' };
 let gameData = null;
@@ -1959,14 +1977,16 @@ function lvBox(id, name, o) {
   const out = jEl('output', '', !L ? 'ยังไม่เรียน' : top === 1 ? 'เรียนแล้ว' : `Lv.${L}`);
   if (top > 1) { const pips = jEl('span'); for (let i = 1; i <= top; i++) pips.appendChild(jEl('i', i <= L ? 'on' : '')); box.append(minus, pips, out, plus); }
   else box.append(minus, out, plus);
-  if (L && top > 1) out.title = `แรง ${Math.round(skillMul(L) * 100)}% ของค่าในคำอธิบาย`;
+  if (L && top > 1) out.title = `ตัวเลขในคำอธิบายเป็นค่าของ Lv.${L}`;
   return box;
 }
 // one skill row: icon, name and what it does, its level (own job) and how to put it into battle
 function skillRow(id, mine, o, opts) {
   const s = skillDef(id); if (!s) return null;
-  const li = jEl('li', opts.cls || ''), txt = jEl('div', 'jb-txt'), name = jEl('b', '', s.name), info = jEl('div', '', s.short || '');
-  if (s.tip) li.title = s.tip;
+  const shownLv = mine ? Math.max(1, o.lv[id] | 0) : 1, short = lvText(s, s.short, shownLv);
+  const li = jEl('li', opts.cls || ''), txt = jEl('div', 'jb-txt'), name = jEl('b', '', s.name), info = jEl('div', '', short);
+  if (s.tip) li.title = lvText(s, s.tip, shownLv);
+  if (short !== (s.short || '') && !(mine && o.lv[id])) info.textContent += ' (ค่าตอน Lv.1)';
   const tags = [];
   if (opts.tier2) tags.push('ขั้น 2');
   if (s.cd) tags.push(`CD ${s.cd}`);
@@ -1980,7 +2000,6 @@ function skillRow(id, mine, o, opts) {
   if (opts.levels && open) {
     const L = o.lv[id] | 0; side.appendChild(lvBox(id, s.name, o));
     if (!L) li.classList.add('off');
-    else if (L < SKILL_MAX && (s.dmg || s.heal || s.healMatk || s.shieldMatk || s.shieldPct || s.hotMatk || s.zoneHeal || s.deathMark || s.bAtk || s.bDef || s.bTaken || s.takenOnce || s.critNext || s.bNextMagic || s.debDeal || s.debDef || s.debSpd || s.debHealCut)) info.textContent += ` (ตอนนี้แรง ${Math.round(skillMul(L) * 100)}%)`;
   } else if (mine) li.classList.add('off');
   if (opts.equip) side.appendChild(opts.equip(open && known(o, id)));
   li.appendChild(side);
@@ -2007,7 +2026,7 @@ function renderJobs() {
   $('jb-skills').classList.toggle('other', !mine);
   const pool = poolOf(j.k), o = mine && pool ? skillsOf(j.k) : null;
   $('jb-pts').textContent = mine ? skillPoints() - pointsUsed(j.k) : '-'; $('jb-reset').disabled = !mine || !pointsUsed(j.k);
-  $('jb-note').textContent = mine ? `ได้ 1 แต้มต่อเลเวล (สูงสุด ${SKILL_CAP} แต้ม รวมสกิลเริ่มต้นแล้ว) กด + เพื่อเรียนสกิลใหม่ (1 แต้ม เริ่ม Lv.1 แรง 60%) แล้วอัปได้ถึง Lv.${SKILL_MAX} (แรง 100%) พาสซีฟเรียนครั้งเดียว 1 แต้ม กดช่องด้านบนแล้วกด "ใส่" ที่สกิลเพื่อเปลี่ยนสกิลในช่องนั้น`
+  $('jb-note').textContent = mine ? `ได้ 1 แต้มต่อเลเวล (สูงสุด ${SKILL_CAP} แต้ม รวมสกิลเริ่มต้นแล้ว) กด + เพื่อเรียนสกิลใหม่ (1 แต้ม เริ่ม Lv.1) แล้วอัปได้ถึง Lv.${SKILL_MAX} ตัวเลขในคำอธิบายเปลี่ยนตามเลเวล พาสซีฟเรียนครั้งเดียว 1 แต้ม กดช่องด้านบนแล้วกด "ใส่" ที่สกิลเพื่อเปลี่ยนสกิลในช่องนั้น`
     : 'ดูสกิลของอาชีพนี้ได้ อัปสกิลและจัดสกิลได้เฉพาะอาชีพปัจจุบัน';
   const ul = $('jb-sk'), ult = $('jb-ult'), pl = $('jb-pas'), load = $('jb-load');
   for (const e of [ul, ult, pl, load]) e.textContent = '';
@@ -2857,6 +2876,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.37</div>
+<div id="ver">v0.61.38</div>
 </body>
 </html>
