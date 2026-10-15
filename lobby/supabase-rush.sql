@@ -75,8 +75,9 @@ begin
   if t.ended_at is not null then raise exception 'already_ended'; end if;
   if p_result is null or p_result not in ('win', 'loss', 'draw') then raise exception 'bad_result'; end if;
   if t.created_at < now() - interval '2 hours' then raise exception 'expired'; end if;
-  -- a real match lasts more than a few turns; a result sent straight away pays nothing
-  if t.created_at > now() - interval '40 seconds' then raise exception 'too_fast'; end if;
+  -- a result sent straight away (no match played) pays nothing; with strong gear one shot can end a real match,
+  -- so this only stops a result sent within 10 s of the bot match being handed out (Karoz 2026-10-15)
+  if t.created_at > now() - interval '10 seconds' then raise exception 'too_fast'; end if;
   -- a winner gets it all, a loss or a draw 25%; no damage dealt, nothing (Karoz 2026-10-15)
   share := case when coalesce(p_dmg, 0) <= 0 then 0 when p_result = 'win' then 1 else 0.25 end;
   g := round(10 * t.level * share); -- 100 x level / 10
