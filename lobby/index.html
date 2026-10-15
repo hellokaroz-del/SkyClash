@@ -761,6 +761,7 @@ img { -webkit-user-drag: none; user-drag: none; }
 .ask { text-align: center; }
 .ask-item { width: 84px; height: 84px; margin: 6px auto 10px; border-radius: 12px; border: 2px solid #e6c27a; background: linear-gradient(#fff7e6, #f5dfb3); display: grid; place-items: center; position: relative; }
 .ask-item img { width: 80%; height: 80%; object-fit: contain; }
+.ask-item[hidden] { display: none; }
 .btn.bad { background: #c0392b; border-color: #e8705f; color: #fff; }
 .btn.bad:hover { background: #d9483a; }
 /* dragging an item: the picture follows the pointer; a slot it fits lights up; outside the bag turns it red (destroy) */
@@ -2629,6 +2630,17 @@ async function apDetail(p) {
     done('บันทึกค่าผู้เล่นแล้ว', r);
   }));
 
+  box.appendChild(apEl('h3', '', 'เปลี่ยนอาชีพ'));
+  const nj = apEl('select'); nj.setAttribute('aria-label', 'อาชีพใหม่');
+  for (const x of JOBS) { const o = apEl('option', '', `${x.th} (${x.name})`); o.value = x.k; nj.appendChild(o); }
+  if (p.job) nj.value = p.job;
+  row(nj, btn('เปลี่ยนอาชีพ', 'go', async () => {
+    if (nj.value === p.job) { apSay('ผู้เล่นใช้อาชีพนี้อยู่แล้ว'); return; }
+    if (!await askYes('เปลี่ยนอาชีพ', `เปลี่ยนอาชีพของ ${p.name} จาก ${j ? j.th : 'ยังไม่มีอาชีพ'} เป็น ${jobOf(nj.value).th} ใช่ไหม?`, 'เปลี่ยน')) return;
+    done(`เปลี่ยน ${p.name} เป็น ${jobOf(nj.value).th} แล้ว`, await apRpc('admin_set_job', { p_id: p.id, p_job: nj.value, p_reason: reason.value }));
+  }));
+  box.appendChild(apEl('p', 'gm-note', 'เลเวลและ EXP คงเดิม สกิลแยกเก็บตามอาชีพ ถ้าเปลี่ยนกลับมาอาชีพเดิมสกิลยังอยู่ครบ'));
+
   box.appendChild(apEl('h3', '', 'รีเซ็ตสกิลฟรี'));
   const rj = apEl('select'); rj.setAttribute('aria-label', 'อาชีพที่จะรีเซ็ต');
   for (const [v, t] of [['', 'ทุกอาชีพ'], ...JOBS.map(x => [x.k, `${x.th} (${x.name})`])]) { const o = apEl('option', '', t); o.value = v; rj.appendChild(o); }
@@ -2732,13 +2744,14 @@ async function apStats() {
 $('ap-days').onchange = apStats; $('ap-stats-re').onclick = apStats;
 
 // the admin log, newest first
-const AP_ACT = { exp: 'เพิ่ม/ลด EXP', set: 'แก้ค่าผู้เล่น', reset_skills: 'รีเซ็ตสกิล', ban: 'แบน', unban: 'ปลดแบน', mute: 'ปิดแชท', unmute: 'เปิดแชท',
+const AP_ACT = { exp: 'เพิ่ม/ลด EXP', set: 'แก้ค่าผู้เล่น', reset_skills: 'รีเซ็ตสกิล', job: 'เปลี่ยนอาชีพ', ban: 'แบน', unban: 'ปลดแบน', mute: 'ปิดแชท', unmute: 'เปิดแชท',
   delete_chat: 'ลบแชท', money: 'ส่งเงิน', item: 'เสกไอเทม', setting: 'ตั้งค่าเกม' };
 function apWhat(r) {
   const d = r.detail || {}, why = d.reason ? ` · เหตุผล: ${d.reason}` : '';
   switch (r.action) {
     case 'exp': return `${d.delta > 0 ? '+' : ''}${apNum(d.delta)} EXP (Lv.${d.from.level} → Lv.${d.to.level})${why}`;
     case 'set': return Object.keys(d.to || {}).filter(k => d.to[k] !== d.from[k]).map(k => `${{ level: 'เลเวล', exp: 'EXP', gold: 'ทอง', gem: 'เพชร', coupon: 'คูปอง', skill_bonus: 'แต้มสกิลโบนัส' }[k] || k} ${apNum(d.from[k])} → ${apNum(d.to[k])}`).join(', ') + why;
+    case 'job': return `${(jobOf(d.from) || {}).th || d.from || '-'} → ${(jobOf(d.to) || {}).th || d.to}${why}`;
     case 'reset_skills': return `${d.job === 'all' ? 'ทุกอาชีพ' : (jobOf(d.job) || {}).th || d.job}${why}`;
     case 'ban': case 'mute': return `${d.minutes == null ? 'ถาวร' : `ถึง ${apTime(d.until)}`}${why}`;
     case 'delete_chat': return `"${d.body}"`;
@@ -3046,9 +3059,16 @@ async function refreshProgress() {
     toast('แอดมินรีเซ็ตสกิลให้แล้ว ได้แต้มคืนทั้งหมด');
     if (!$('m-bag').hidden) renderJobs();
   }
+  // the job changed in the admin panel
+  const job = !!data.job && data.job !== prof.job;
+  if (job) {
+    online.me.job = prof.job = data.job; jb.base = null; jb.pick = data.job;
+    toast(`แอดมินเปลี่ยนอาชีพให้แล้ว ตอนนี้เป็น ${(jobOf(data.job) || {}).th || data.job}`);
+    if (!$('m-bag').hidden) renderJobs();
+  }
   const level = data.level || 1, exp = data.exp || 0;
   const lvl = level !== (prof.level || 1) || exp !== (prof.exp || 0);
-  if (!lvl && !money && !skills) return;
+  if (!lvl && !money && !skills && !job) return;
   Object.assign(online.me, { level, exp }); Object.assign(prof, { level, exp });
   saveProf(); renderProf(); sharePresence();
   if (!$('m-bag').hidden) renderBag();
@@ -3381,6 +3401,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.51</div>
+<div id="ver">v0.61.52</div>
 </body>
 </html>

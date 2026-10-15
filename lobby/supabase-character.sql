@@ -9,9 +9,10 @@ grant insert (id, name, job) on public.profiles to authenticated;
 grant update (job) on public.profiles to authenticated;
 
 -- a job can be set once (players from before this update pick theirs once), never changed by the player afterwards
+-- (admin_set_job in supabase-admin.sql and the Table Editor can: they don't run as a player's role)
 create or replace function public.profiles_job_lock() returns trigger language plpgsql set search_path = public as $$
 begin
-  if tg_op = 'UPDATE' and old.job is not null and new.job is distinct from old.job then
+  if tg_op = 'UPDATE' and old.job is not null and new.job is distinct from old.job and current_user in ('anon', 'authenticated') then
     raise exception 'job_locked';
   end if;
   return new;
