@@ -1929,6 +1929,8 @@ const skillDef = id => (gameData && gameData.skills && gameData.skills[id]) || n
 const pasDef = id => (gameData && gameData.passives && gameData.passives[id]) || null;
 // the skill every character starts with: the job's slot 1 skill
 const startSkill = job => { const d = jobData(job), p = poolOf(job); return p ? (p.act.includes(d.s1) ? d.s1 : p.act[0]) : null; };
+// an ultimate can be learned (and levelled) once the character reaches Lv 10 (Karoz 2026-10-15)
+const ULT_LV = 10, ultOpen = () => (prof.level | 0) >= ULT_LV;
 const isOpen = (o, id) => { const s = skillDef(id); return !s || !s.req || (o.lv[s.req] | 0) >= (s.reqLv || 3); };
 const known = (o, id) => !!id && (o.lv[id] | 0) > 0;
 const topLv = (job, id) => poolOf(job).pas.includes(id) ? 1 : SKILL_MAX;
@@ -1944,6 +1946,7 @@ function skillsOf(job) {
   for (const id of ids) { const L = Math.min(topLv(job, id), Math.max(0, o.lv[id] | 0)); if (L) o.lv[id] = L; else delete o.lv[id]; }
   let over = pointsUsed(job, o) - skillPoints(); // a lower level (or an admin's change) takes points back, newest skills first
   for (const id of [...ids].reverse()) { if (over <= 0) break; const dd = Math.min(over, o.lv[id] | 0); if (dd > 0) { o.lv[id] -= dd; over -= dd; if (!o.lv[id]) delete o.lv[id]; } }
+  if (!ultOpen()) for (const id of pool.ult) delete o.lv[id]; // under Lv 10 no ultimate (its points come back)
   for (const id of pool.act) if (!isOpen(o, id)) delete o.lv[id]; // a tier 2 skill whose source drops under Lv 3 is forgotten (its points come back)
   if (o.fresh) { delete o.fresh; if (first && skillPoints() >= 1) { o.lv[first] = 1; o.load = { s1: first }; } }
   const used = new Set();
@@ -1994,7 +1997,8 @@ function skillRow(id, mine, o, opts) {
   if (s.cd) tags.push(`CD ${s.cd}`);
   if (tags.length) name.appendChild(jEl('small', '', tags.join(' · ')));
   txt.append(name, info);
-  const open = !mine || isOpen(o, id);
+  const open = !mine || (opts.ult ? ultOpen() : isOpen(o, id));
+  if (opts.ult) txt.appendChild(jEl('div', 'jb-req' + (mine && !open ? ' lock' : ''), `${mine && !open ? '🔒 ' : ''}ปลดล็อกเมื่อตัวละครเลเวล ${ULT_LV}`));
   if (opts.tier2) { const src = skillDef(s.req); const need = jEl('div', 'jb-req' + (mine && !open ? ' lock' : ''), `${mine && !open ? '🔒 ' : ''}ปลดล็อกเมื่อ ${src ? src.name : s.req} Lv.${s.reqLv || 3}`); txt.appendChild(need); }
   li.append(skillIcon(s.icon, opts.label), txt);
   if (!mine) return li;
@@ -2064,7 +2068,7 @@ function renderJobs() {
     if (row) ul.appendChild(row);
   }
   for (const id of pool.ult) {
-    const row = skillRow(id, mine, o, { cls: 'ult', levels: true, label: 'B',
+    const row = skillRow(id, mine, o, { cls: 'ult', ult: true, levels: true, label: 'B',
       equip: can => { const on = o.load.b === id, b = jBtn(on ? 'ใช้อยู่' : 'เลือก', () => { o.load.b = id; saveSkills(); }, `เลือกท่าไม้ตาย ${(skillDef(id) || {}).name}`); b.className = 'jb-put' + (on ? ' in' : ''); b.disabled = on || !can; return b; } });
     if (row) ult.appendChild(row);
   }
@@ -2118,6 +2122,7 @@ function setSkillLv(id, L) {
   if (!pending()) jb.base = { job: prof.job, lv: Object.assign({}, o.lv), load: Object.assign({}, o.load) };
   if (L > was && pointsUsed(prof.job) + (L - was) > skillPoints()) return;
   if (pool.act.includes(id) && !isOpen(o, id)) return;
+  if (pool.ult.includes(id) && !ultOpen()) return;
   const before = pool.act.filter(k => isOpen(o, k));
   if (L) o.lv[id] = L; else delete o.lv[id];
   if (!was && L) {
@@ -2902,6 +2907,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.40</div>
+<div id="ver">v0.61.41</div>
 </body>
 </html>
