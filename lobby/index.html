@@ -1896,7 +1896,7 @@ for (const b of $('bg-tabs').querySelectorAll('button')) b.onclick = b.dataset.v
 const SKILL_MAX = 5, LOAD_SLOTS = ['s1', 's2', 's3', 's4', 's5', 's6'];
 const skillMul = L => 0.6 + 0.1 * (Math.max(1, Math.min(SKILL_MAX, L | 0 || 1)) - 1);
 // the game's skill icons (index.html ICONS); skills without art show their slot number
-const SKILL_ICONS = { ice: 'a094.png', meteor: 'a093.png', sw_bash: 'a212.webp', sw_magnum: 'a213.webp', sw_armor: 'a214.webp', sw_provoke: 'a215.webp', sw_endure: 'a216.webp', sw_charge: 'a217.webp', pa_swordm: 'a218.webp', pa_ironbody: 'a219.webp' };
+const SKILL_ICONS = { ice: 'a094.png', meteor: 'a093.png', sw_bash: 'a212.webp', sw_magnum: 'a213.webp', sw_armor: 'a214.webp', sw_provoke: 'a215.webp', sw_endure: 'a216.webp', sw_charge: 'a217.webp', pa_swordm: 'a218.webp', pa_ironbody: 'a219.webp', sw_shieldbash: 'a224.webp', sw_shatter: 'a225.webp', sw_counter: 'a226.webp', sw_cry: 'a227.webp', sw_wall: 'a228.webp', sw_crush: 'a229.webp', pa_shieldm: 'a230.webp', pa_berserk: 'a231.webp', pa_steadfast: 'a232.webp', pa_veteran: 'a233.webp' };
 let gameData = null;
 const loadGameData = () => gameData ? Promise.resolve(gameData) : fetch('../game-data.json', { cache: 'no-cache' }).then(r => r.json()).then(d => { gameData = d; classStats = d.classes || {}; return d; });
 loadGameData().catch(() => {});
@@ -2857,6 +2857,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.36</div>
+<div id="ver">v0.61.37</div>
 </body>
 </html>

@@ -405,7 +405,7 @@ const ELEM_ORDER = ['fire', 'water', 'thunder', 'nature'];
 const REACTIONS = { 'fire+thunder': { name: 'Explosion', bonus: 70 }, 'thunder+water': { name: 'Electro Stun', bonus: 15, stun: 2 },
   'nature+water': { name: 'Root Bind', bonus: 35, bind: 1 }, 'fire+nature': { name: 'Wildfire', burn: 25, burnTurns: 2 } };
 // skill slot icons (Karoz's art)
-const ICONS = {"warp": "assets/a092.png", "meteor": "assets/a093.png", "ice": "assets/a094.png", "sw_bash": "assets/a212.webp", "sw_magnum": "assets/a213.webp", "sw_armor": "assets/a214.webp", "sw_provoke": "assets/a215.webp", "sw_endure": "assets/a216.webp", "sw_charge": "assets/a217.webp", "pa_swordm": "assets/a218.webp", "pa_ironbody": "assets/a219.webp"};
+const ICONS = {"warp": "assets/a092.png", "meteor": "assets/a093.png", "ice": "assets/a094.png", "sw_bash": "assets/a212.webp", "sw_magnum": "assets/a213.webp", "sw_armor": "assets/a214.webp", "sw_provoke": "assets/a215.webp", "sw_endure": "assets/a216.webp", "sw_charge": "assets/a217.webp", "pa_swordm": "assets/a218.webp", "pa_ironbody": "assets/a219.webp", "sw_shieldbash": "assets/a224.webp", "sw_shatter": "assets/a225.webp", "sw_counter": "assets/a226.webp", "sw_cry": "assets/a227.webp", "sw_wall": "assets/a228.webp", "sw_crush": "assets/a229.webp", "pa_shieldm": "assets/a230.webp", "pa_berserk": "assets/a231.webp", "pa_steadfast": "assets/a232.webp", "pa_veteran": "assets/a233.webp"};
 const ready = im => im && im.complete && im.naturalWidth > 0;
 // ---------- game data ----------
 // Everything the game maker edits lives in one data object: classes, skills, stages and uploaded files.
@@ -4476,7 +4476,7 @@ const PROJ_OPTS = [['fire', 'ลูกไฟเล็ก'], ['orb', 'ลูก�
   ['arrow', 'ลูกศร'], ['cart', 'รถเข็น'], ['spirit', 'วิญญาณแมว'], ['bolt', 'ลูกสายฟ้า']];
 const SKILL_PROJ_OPTS = [['', 'ใช้กระสุนปกติของอาชีพ'], ['fireball', 'ลูกไฟอุกกาบาต']].concat(PROJ_OPTS);
 const SOUND_OPTS = [['', 'ไม่มีเสียง'], ['meteor', 'เสียงฝนดาวตก'], ['ice', 'เสียงน้ำแข็ง'], ['bolt', 'เสียงสายฟ้า']];
-const ICON_OPTS = [['', 'ไม่มี (แสดงชื่อสกิล)'], ['meteor', 'ไอคอนฝนดาวตก'], ['ice', 'ไอคอนน้ำแข็ง'], ['warp', 'ไอคอนลูกแก้ววาร์ป'], ['sw_bash', 'ไอคอน Bash'], ['sw_magnum', 'ไอคอน Magnum Break'], ['sw_armor', 'ไอคอน Armor Break'], ['sw_provoke', 'ไอคอน Provoke'], ['sw_endure', 'ไอคอน Endure'], ['sw_charge', 'ไอคอน Charge Strike']];
+const ICON_OPTS = [['', 'ไม่มี (แสดงชื่อสกิล)'], ['meteor', 'ไอคอนฝนดาวตก'], ['ice', 'ไอคอนน้ำแข็ง'], ['warp', 'ไอคอนลูกแก้ววาร์ป'], ['sw_bash', 'ไอคอน Bash'], ['sw_magnum', 'ไอคอน Magnum Break'], ['sw_armor', 'ไอคอน Armor Break'], ['sw_provoke', 'ไอคอน Provoke'], ['sw_endure', 'ไอคอน Endure'], ['sw_charge', 'ไอคอน Charge Strike'], ['sw_shieldbash', 'ไอคอน Shield Bash'], ['sw_shatter', 'ไอคอน Earth Shatter'], ['sw_counter', 'ไอคอน Counter Stance'], ['sw_cry', 'ไอคอน Battle Cry'], ['sw_wall', 'ไอคอน Guardian Wall'], ['sw_crush', 'ไอคอน Crushing Blow']];
 const IMG_OPTS = { bg: [['', 'ท้องฟ้าธรรมดา'], ['jungle-bg', 'ฉากป่าโบราณ']], fg: [['hills', 'เนินหญ้า (ในตัว)'], ['jungle-fg', 'พื้นป่าโบราณ']], col: [['', 'ใช้ส่วนทึบของรูปพื้น'], ['jungle-col', 'ขอบเขตพื้นป่าโบราณ']] };
 const TABS = { classes: 'อาชีพ', skills: 'สกิล', passives: 'พาสซีฟ', stages: 'ด่าน' };
 const $m = id => document.getElementById(id);
