@@ -765,6 +765,32 @@ img { -webkit-user-drag: none; user-drag: none; }
 .btn.bad { background: #c0392b; border-color: #e8705f; color: #fff; }
 .btn.bad:hover { background: #d9483a; }
 /* dragging an item: the picture follows the pointer; a slot it fits lights up; outside the bag turns it red (destroy) */
+/* item tooltip: a card in layers (name, stats, requirements, status, what a click does) */
+#itip { position: fixed; z-index: 70; left: 0; top: 0; width: 280px; pointer-events: none; border-radius: 14px; padding: 2px;
+  background: linear-gradient(160deg, #f8dc8a, #a87418 45%, #f5c64a 75%, #8a5d12); box-shadow: 0 14px 34px rgba(0, 0, 0, .55); color: #efe6d2; font-size: 14px; line-height: 1.35; }
+#itip[hidden] { display: none; }
+#itip .in { border-radius: 12px; overflow: hidden; background: linear-gradient(#2a2140, #17121f); }
+#itip .hd { display: flex; gap: 10px; align-items: center; padding: 10px 12px; background: radial-gradient(120% 140% at 0 0, rgba(245, 198, 74, .22), transparent 60%); }
+#itip .pic { flex: none; width: 52px; height: 52px; border-radius: 10px; display: grid; place-items: center; border: 2px solid #e6c27a; background: linear-gradient(#fff7e6, #f5dfb3); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6); }
+#itip .pic img { width: 86%; height: 86%; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .35)); }
+#itip .nm { font-size: 18px; font-weight: 700; color: #ffe39a; text-shadow: 0 1px 0 #000; }
+#itip .nm i { font-style: normal; font-size: 14px; color: #cbbfa5; margin-left: 4px; }
+#itip .kind { font-size: 13px; color: #b8aed0; }
+#itip .sec { padding: 8px 12px; border-top: 1px solid rgba(245, 198, 74, .22); }
+#itip .sec h4 { margin: 0 0 4px; font-size: 12px; font-weight: 600; letter-spacing: .04em; color: #c9a85a; }
+#itip .row { display: flex; justify-content: space-between; gap: 10px; }
+#itip .row b { font-weight: 700; }
+#itip .up { color: #7ee08a; }
+#itip .ok { color: #efe6d2; }
+#itip .no { color: #ff7a6b; }
+#itip .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+#itip .tag { padding: 2px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; border: 1px solid; }
+#itip .tag.mine { color: #ffcf8a; border-color: rgba(255, 190, 100, .55); background: rgba(255, 170, 60, .12); }
+#itip .tag.pub { color: #8fd3ff; border-color: rgba(120, 200, 255, .55); background: rgba(80, 170, 255, .12); }
+#itip .tag.time { color: #d9d0ea; border-color: rgba(200, 190, 230, .4); background: rgba(255, 255, 255, .06); }
+#itip .tag.soon { color: #ffb0a6; border-color: rgba(255, 120, 100, .55); background: rgba(255, 90, 70, .12); }
+#itip .ft { padding: 7px 12px 9px; font-size: 12.5px; color: #a79fbb; background: rgba(0, 0, 0, .25); border-top: 1px solid rgba(245, 198, 74, .22); }
+#itip .ft div::before { content: '• '; color: #c9a85a; }
 .drag-ghost { position: fixed; z-index: 60; width: 64px; height: 64px; pointer-events: none; transform: translate(-50%, -50%) scale(1.1); filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .45)); }
 .drag-ghost.out { filter: drop-shadow(0 0 8px #ff3b2a) drop-shadow(0 0 2px #ff3b2a); }
 .bg-slot.fit, .bg-grid.fit .cell { box-shadow: 0 0 0 3px #2a7fe0, 0 0 12px rgba(42, 127, 224, .7); }
@@ -1938,6 +1964,49 @@ function itemTip(r) {
   const lv = (r.min_level | 0) > 1 ? `ใช้ได้ตั้งแต่ Lv.${r.min_level}` : '';
   return [it.name + (r.qty > 1 ? ` x${r.qty}` : ''), st.join(' '), lv, (r.bound ? 'ส่วนตัว (เทรดไม่ได้)' : 'สาธารณะ (เทรดได้ ใส่แล้วจะเป็นส่วนตัว)') + ' · ' + left].filter(Boolean).join('\n');
 }
+// the same, drawn as a card: shown next to the mouse over a cell or slot that has setTip on it
+function itemCard(r, hints) {
+  const it = ITEMS[r.item_id], mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const card = mk('div', 'in'), hd = mk('div', 'hd'), pic = mk('div', 'pic'), who = mk('div');
+  pic.appendChild(itemImg(r.item_id));
+  const nm = mk('div', 'nm', it.name); if (r.qty > 1) nm.appendChild(mk('i', '', 'x' + r.qty));
+  who.append(nm, mk('div', 'kind', CATS[it.cat] || ''));
+  hd.append(pic, who); card.appendChild(hd);
+  const sec = (title, rows) => { if (!rows.length) return; const d = mk('div', 'sec'); d.appendChild(mk('h4', '', title)); d.append(...rows); card.appendChild(d); };
+  const row = (k, v, cls) => { const d = mk('div', 'row'); d.append(mk('span', '', k), mk('b', cls, v)); return d; };
+  sec('ค่าพลัง', Object.entries(r.stats || {}).filter(([, v]) => +v).map(([k, v]) => row(STAT_NAMES[k] || k, (+v > 0 ? '+' : '') + (+v).toLocaleString('th-TH'), +v > 0 ? 'up' : 'no')));
+  const need = [];
+  if (it.jobs) need.push(row('อาชีพ', it.jobs.map(k => (jobOf(k) || {}).th || k).join(', '), it.jobs.includes(prof.job) ? 'ok' : 'no'));
+  if ((r.min_level | 0) > 1) need.push(row('เลเวล', `Lv.${r.min_level} ขึ้นไป`, (prof.level || 1) >= r.min_level ? 'ok' : 'no'));
+  sec('เงื่อนไขการใช้', need);
+  const tags = mk('div', 'tags'), days = r.expires_at ? Math.max(0, Math.ceil((new Date(r.expires_at) - new Date()) / 864e5)) : null;
+  tags.append(r.bound ? mk('span', 'tag mine', 'ส่วนตัว · เทรดไม่ได้') : mk('span', 'tag pub', 'สาธารณะ · เทรดได้'),
+    mk('span', 'tag ' + (days == null ? 'time' : days <= 3 ? 'soon' : 'time'), days == null ? 'ถาวร' : `เหลือ ${days} วัน`));
+  const st = mk('div', 'sec'); st.appendChild(tags); card.appendChild(st);
+  if (!r.bound) st.appendChild(mk('div', 'kind', 'สวมใส่แล้วจะกลายเป็นของส่วนตัว'));
+  if (hints && hints.length) { const ft = mk('div', 'ft'); for (const h of hints) ft.appendChild(mk('div', '', h)); card.appendChild(ft); }
+  return card;
+}
+// el shows r's card on hover (null clears it); the text goes in aria-label for screen readers
+function setTip(el, r, hints = []) {
+  el._tip = r ? { r, hints } : null; el.removeAttribute('title');
+  if (r) el.setAttribute('aria-label', [itemTip(r), ...hints].join('\n')); else el.removeAttribute('aria-label');
+}
+const itip = { el: null, on: null };
+function hideTip() { if (itip.el) itip.el.hidden = true; itip.on = null; }
+addEventListener('pointermove', e => {
+  const t = e.pointerType !== 'touch' && !drag.r && e.target.closest && e.target.closest('.tipped');
+  if (!t || !t._tip || !t.isConnected) { hideTip(); return; }
+  if (!itip.el) { itip.el = document.createElement('div'); itip.el.id = 'itip'; itip.el.hidden = true; document.body.appendChild(itip.el); }
+  if (itip.on !== t._tip) { itip.on = t._tip; itip.el.textContent = ''; itip.el.appendChild(itemCard(t._tip.r, t._tip.hints)); itip.el.hidden = false; }
+  // beside the mouse, flipped to stay inside the window
+  const w = itip.el.offsetWidth, h = itip.el.offsetHeight, gap = 18;
+  let x = e.clientX + gap, y = e.clientY + gap;
+  if (x + w > innerWidth - 8) x = e.clientX - gap - w;
+  if (y + h > innerHeight - 8) y = Math.max(8, innerHeight - 8 - h);
+  itip.el.style.transform = `translate(${Math.max(8, x)}px, ${y}px)`;
+});
+addEventListener('pointerdown', hideTip); addEventListener('keydown', hideTip); addEventListener('blur', hideTip);
 function fillItem(el, r) {
   el.appendChild(itemImg(r.item_id));
   if (r.qty > 1) { const q = document.createElement('i'); q.className = 'qty'; q.textContent = r.qty; el.appendChild(q); }
@@ -1967,14 +2036,15 @@ function renderBag() {
   const art = $('bg-art'); art.textContent = ''; const im = gearArt(prof.job); if (im) art.appendChild(im);
   // the weapon slot shows what is worn (click to take it off); the grid shows the rest (click to wear)
   const ws = $('bg-weapon'), worn = wornIn('weapon');
-  ws.textContent = 'อาวุธ'; ws.classList.toggle('has', !!worn); ws.onclick = null; ws.title = '';
+  hideTip();
+  ws.textContent = 'อาวุธ'; ws.classList.toggle('has', !!worn); ws.onclick = null; ws.classList.add('tipped'); setTip(ws, null);
   ws.onpointerdown = null;
-  if (worn) { ws.textContent = ''; fillItem(ws, worn); ws.title = itemTip(worn) + '\n(กดเพื่อถอด หรือลากออกนอกกระเป๋าเพื่อทำลาย)'; ws.onclick = () => drag.justDropped || setWorn(worn, false); ws.onpointerdown = e => dragStart(e, worn, ws); }
+  if (worn) { ws.textContent = ''; fillItem(ws, worn); setTip(ws, worn, ['คลิกเพื่อถอด', 'ลากออกนอกกระเป๋าเพื่อทำลาย']); ws.onclick = () => drag.justDropped || setWorn(worn, false); ws.onpointerdown = e => dragStart(e, worn, ws); }
   const items = invRows().filter(r => !r.equipped && BAG_TABS[bagTab].includes(ITEMS[r.item_id].cat));
   [...grid.children].forEach((c, i) => {
-    c.textContent = ''; c.className = 'cell'; c.onclick = null; c.onpointerdown = null; c.title = '';
+    c.textContent = ''; c.className = 'cell tipped'; c.onclick = null; c.onpointerdown = null; setTip(c, null);
     const r = items[i]; if (!r) return;
-    c.classList.add('has'); fillItem(c, r); c.title = itemTip(r) + (ITEMS[r.item_id].slot ? '\n(กดเพื่อสวมใส่)' : '') + '\n(ลากออกนอกกระเป๋าเพื่อทำลาย)';
+    c.classList.add('has'); fillItem(c, r); setTip(c, r, [...(ITEMS[r.item_id].slot ? ['คลิกเพื่อสวมใส่'] : []), 'ลากออกนอกกระเป๋าเพื่อทำลาย']);
     if (ITEMS[r.item_id].slot) c.onclick = () => drag.justDropped || setWorn(r, true);
     c.onpointerdown = e => dragStart(e, r, c);
   });
@@ -2387,7 +2457,7 @@ function renderMail() {
   const m = mail.rows.find(x => x.id === mail.open);
   $('ml-from').textContent = m ? m.from_name : ''; $('ml-subj').textContent = m ? m.subject : ''; $('ml-text').textContent = m ? m.body : '';
   const att = $('ml-att'); att.textContent = ''; const items = m ? mailItems(m.id) : [];
-  for (let i = 0; i < 5; i++) { const d = document.createElement('div'); const r = items[i]; if (r) { fillItem(d, r); d.title = itemTip(r); } att.appendChild(d); }
+  for (let i = 0; i < 5; i++) { const d = document.createElement('div'); const r = items[i]; if (r) { fillItem(d, r); d.classList.add('tipped'); setTip(d, r); } att.appendChild(d); }
   $('ml-take').disabled = !items.length;
   $('ml-all').disabled = !mail.items.length;
   markMailIcon();
@@ -3401,6 +3471,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.52</div>
+<div id="ver">v0.61.53</div>
 </body>
 </html>
