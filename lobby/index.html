@@ -1443,7 +1443,7 @@ function launch(setup, watchRoom, bot) {
   window.__bot = bot || null; // a ลุย bot (level, accuracy, full skills); the game reads it when the match starts
   // the game reads who is playing from here (name, level, guild) and shows it to both sides online
   // skills: the levels picked in the bag's Jobs tab for the current job (the game scales each skill's strength by them)
-  window.__me = { name: prof.name || 'ผู้เล่น', level: prof.level || 1, guild: (online.me && online.me.guild) || '', ...battleSkills() };
+  window.__me = { name: prof.name || 'ผู้เล่น', level: prof.level || 1, guild: (online.me && online.me.guild) || '', ...battleSkills(), gear: gearStats() };
   for (const m of document.querySelectorAll('.modal')) m.hidden = true;
   const old = gameBox.querySelector('iframe'); if (old) old.remove();
   gameBox.classList.toggle('tut', tut.on); $('tut-done').hidden = true;
@@ -2079,6 +2079,8 @@ async function loadInv() {
   inv.live = false; inv.rows = localRows();
 }
 const invRows = () => inv.rows.filter(alive);
+// what the worn items add together (ATK, DEF ...): shown in the bag and handed to the game for battles
+function gearStats() { const g = {}; for (const r of invRows()) if (r.equipped) for (const [k, v] of Object.entries(r.stats || {})) g[k] = (g[k] || 0) + (+v || 0); return g; }
 const wornIn = slot => invRows().find(r => r.equipped && r.slot === slot);
 function gearArt(job) {
   const r = wornIn('weapon'), w = r && ITEMS[r.item_id], src = (w && w.art && w.art[job]) || BARE[job];
@@ -2184,7 +2186,7 @@ function renderBag() {
   $('bg-exp').title = `${cur.toLocaleString()} / ${need.toLocaleString()}`;
   // the class table is the level 1 base; this level's stats use the same formula as the game
   const c = classStats && prof.job && classStats[prof.job] && statsAt(classStats[prof.job], prof.level || 1), st = $('bg-stats'); st.textContent = '';
-  const gear = {}; for (const r of invRows()) if (r.equipped) for (const [k, v] of Object.entries(r.stats || {})) gear[k] = (gear[k] || 0) + (+v || 0);
+  const gear = gearStats();
   for (const [k, label] of [['hp', 'HP'], ['atk', 'ATK'], ['matk', 'MATK'], ['def', 'DEF'], ['mdef', 'MDEF'], ['spd', 'SPD'], ['luk', 'LUK']]) {
     const d = document.createElement('div'), a = document.createElement('span'), b = document.createElement('b');
     const add = gear[k] || 0; a.textContent = label; b.textContent = c ? c[k] + add : '-'; if (add) b.title = `อาชีพ ${c ? c[k] : 0} + ไอเทม ${add}`; d.append(a, b); st.appendChild(d);
@@ -3312,7 +3314,7 @@ async function startChat() {
     await loadProfile();
     seen(); gate();
     if (online.me && online.me.tutorial_done === false && $('m-block').hidden) startTutorial();
-    loadAdmins(); refreshMail(); loadIce();
+    loadAdmins(); refreshMail(); loadIce(); loadInv(); // the bag, so worn items count in battle before it is opened
     // no history: each visit (and each refresh) starts with an empty chat and shows only new messages
     if (!online.v2) sysLine('ตอนนี้ใช้ได้แค่ช่องโลก ต้องรัน SQL ช่องแชทใน Supabase ก่อน');
     else if (online.me.guild) sysLine(`คุณอยู่กิลด์ ${online.me.guild}`);
@@ -3609,6 +3611,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.55</div>
+<div id="ver">v0.61.56</div>
 </body>
 </html>

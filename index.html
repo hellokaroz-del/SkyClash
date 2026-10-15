@@ -665,9 +665,22 @@ function scaleClass(c, L) {
   return o;
 }
 // give a player (or a monster) its level: stats from its level-30 base, full HP and Energy
+// stats the worn items add (from the town's bag), on top of the level's stats
+const GEAR_STATS = ['hp', 'atk', 'matk', 'def', 'mdef', 'spd', 'luk'];
+function cleanGear(g) {
+  if (!g || typeof g !== 'object') return null;
+  const o = {}; for (const k of GEAR_STATS) { const v = Math.round(+g[k]); if (Number.isFinite(v) && v) o[k] = Math.max(-1e6, Math.min(1e6, v)); }
+  return Object.keys(o).length ? o : null;
+}
+function withGear(o, g) {
+  if (!g) return o;
+  for (const k of GEAR_STATS) if (g[k]) o[k] = Math.max(k === 'hp' ? 1 : 0, (+o[k] || 0) + g[k]);
+  o.maxEn = maxEnergy(o);
+  return o;
+}
 function setLevel(p, L) {
   p.level = L || null;
-  p.c = scaleClass(p.c0 || p.c, L || 1);
+  p.c = withGear(scaleClass(p.c0 || p.c, L || 1), p.gear);
   if (p.sl) setSkills(p, p.sl);
   p.hp = p.maxHp = p.c.hp; p.maxEn = p.c.maxEn; p.energy = p.maxEn;
 }
@@ -4241,13 +4254,16 @@ function myInfo() {
   // skill levels by skill id and the loadout (6 skills, ultimate, 2 passives), both from the town's Jobs tab
   if (m.skills && typeof m.skills === 'object') { o.sl = {}; for (const [k, v] of Object.entries(m.skills)) if (SKILLS[k]) o.sl[k] = Math.max(1, Math.min(SKILL_MAX, v | 0 || 1)); }
   if (m.load && typeof m.load === 'object') { o.ld = {}; for (const k of [...SLOT_IDS, 'b', 'p1', 'p2']) if (typeof m.load[k] === 'string') o.ld[k] = m.load[k].slice(0, 32); }
+  // what the worn items add (ATK, DEF ...), from the town's bag; sent to the other side online too
+  const gr = cleanGear(m.gear); if (gr) o.gr = gr;
   return o;
 }
 function applyInfo(p, m, fallback) {
   p.name = (m && m.n) || fallback;
   if (m && m.ld && !tutMode) setLoadout(p, m.ld); // the skills picked in the town's Jobs tab (the tutorial keeps its one starting skill)
   if (m && m.sl) setSkills(p, m.sl); // skill strength follows the levels picked in the town's Jobs tab
-  if (m && m.lv) setLevel(p, m.lv); // stats follow the player's level
+  p.gear = (m && cleanGear(m.gr)) || null; // worn items' stats
+  if (m && m.lv) setLevel(p, m.lv); // stats follow the player's level, plus the worn items
   p.guild = (m && m.g) || '';
 }
 function netNames() {
