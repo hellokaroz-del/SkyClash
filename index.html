@@ -469,7 +469,7 @@ const DEFAULT_DATA = {
     sw_charge: { icon: 'sw_charge', name: 'Charge Strike', cd: 3, type: 'shot', base: 'atk', dmg: 150, short: '150% ATK' },
     sw_hundred: { name: 'Hundred Blades', type: 'shot', base: 'atk', dmg: 230, size: 130, debDef: 15, debTurns: 2, short: '230% ATK และ DEF ของเป้า -15% 2 เทิร์น' },
     // Mage
-    mg_nova: { name: 'Frost Nova', cd: 5, type: 'shot', base: 'matk', dmg: 60, freeze: 2, proj: 'ice', icon: 'ice', sound: 'ice', short: '60% MATK และแช่แข็ง 2 เทิร์น', tip: 'นัดถัดไปเป็นผลึกน้ำแข็ง 60% MATK ใครโดนวงระเบิดจะแข็ง ข้ามเทิร์นของตัวเอง 2 เทิร์น หลังหายแข็งจะได้ CC Resistance 2 เทิร์น' },
+    mg_nova: { name: 'Frost Nova', cd: 5, type: 'shot', base: 'matk', dmg: 60, freeze: 2, proj: 'ice', icon: 'ice', sound: 'ice', short: '60% MATK และแช่แข็ง 2 เทิร์น', tip: 'นัดถัดไปเป็นผลึกน้ำแข็ง 60% MATK ใครโดนวงระเบิดจะแข็ง ข้ามเทิร์นของตัวเอง 2 เทิร์น แต่ถ้าโดนศัตรูตีระหว่างแข็ง น้ำแข็งจะแตกและหลุดทันที หลังหายแข็งจะได้ CC Resistance 2 เทิร์น' },
     mg_meteor: { name: 'Meteor Storm', cd: 3, type: 'shot', base: 'matk', dmg: 55, count: 3, powSpread: 7, size: 75, proj: 'fireball', icon: 'meteor', sound: 'meteor', short: 'ลูกไฟ 3 ลูก ลูกละ 55% MATK (รวมสูงสุด 165%)' },
     mg_firebolt: { name: 'Fire Bolt', cd: 2, type: 'shot', base: 'matk', dmg: 140, short: '140% MATK' },
     mg_heaven: { name: "Heaven's Drive", cd: 2, type: 'shot', base: 'matk', dmg: 115, size: 150, dig: 170, proj: 'orb', short: '115% MATK วงกว้าง และขุดพื้นมากกว่าปกติ' },
@@ -793,6 +793,15 @@ function applyCC(t, kind, turns, o) {
   t.frozen = turns; t.cck = kind; t.ccLen = turns;
   if (o) stAdd(o.i, 'cc', 1);
   say(t, kind === 'stun' ? 'มึน!' : 'แข็ง!', kind === 'stun' ? '#ffe14a' : '#bfeaff');
+}
+// a frozen player who is hit by an enemy: the ice shatters and they are free at once (Karoz 2026-10-15). Stun stays.
+// It counts as thawing, so a 2-turn freeze still leaves CC Resistance behind
+function shatter(t) {
+  if (!(t.frozen > 0) || t.cck !== 'freeze' || !t.alive) return;
+  if (t.ccLen >= 2) t.ccRes = CC_RES_TURNS;
+  t.frozen = 0; t.thawNext = false; t.ccTurn = false;
+  say(t, 'น้ำแข็งแตก!', '#bfeaff', 80, 96);
+  for (let k = 0; k < 10; k++) { const a = Math.random() * Math.PI * 2, v = 1.5 + Math.random() * 2.5; fx.parts.push({ x: t.x, y: t.y - 14, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, t: 30, col: '#cfefff' }); }
 }
 // Doram: the two newest marks on a target; each new mark keeps that caster's marks alive one more turn
 function addMark(t, e, o) {
@@ -1493,7 +1502,7 @@ function explode(q) {
       if (ST) { const m = ST.p[owner.i].skDmg; m[skk] = (m[skk] || 0) + dmg + soak; }
       stAdd(owner.i, 'causedAbs', soak); stAdd(owner.i, 'eff', dmg + soak); stAdd(owner.i, 'preShield', shown + soak); stAdd(owner.i, 'raw', Math.round((shown + soak) * defR)); }
     if (pct > 0 || dmg > 0) fx.texts.push({ x: pl.x, y: pl.y - 50, s: (crit ? 'คริติคอล! -' : '-') + (shown != null ? shown : dmg) + (soak ? ` (โล่ ${soak})` : ''), col: crit ? '#ffe066' : '#ff5a4a', t: 70 });
-    if (foe && (dmg > 0 || soak > 0)) unhide(pl, S.turn === pl.i); // getting hit breaks Hiding
+    if (foe && (dmg > 0 || soak > 0)) { unhide(pl, S.turn === pl.i); shatter(pl); } // getting hit breaks Hiding, and the ice
     const sh = S.shot || (S.shot = { hit: new Set(), hurt: new Set() });
     pl.lossAcc += dmg / pl.maxHp * 10; addRage(pl, 4 * Math.floor(pl.lossAcc)); pl.lossAcc %= 1;
     if (foe) {
@@ -1510,7 +1519,7 @@ function explode(q) {
     }
     // Counter Stance: the first hit taken while it lasts is answered at once
     const cb = foe && dmg + soak > 0 && pl.alive && pl.buffs.find(b => b.counter > 0);
-    if (cb && owner.alive && owner !== pl) { const v = cb.counter; cb.counter = 0; say(pl, 'Counter!', '#ffd36a', 80, 104); hurtRaw(owner, hitDamage(pl, owner, 'atk', v) * botSoft(pl), 'สวนกลับ', '#ffb070', pl.i); }
+    if (cb && owner.alive && owner !== pl) { const v = cb.counter; cb.counter = 0; say(pl, 'Counter!', '#ffd36a', 80, 104); hurtRaw(owner, hitDamage(pl, owner, 'atk', v) * botSoft(pl), 'สวนกลับ', '#ffb070', pl.i); shatter(owner); }
     if (foe) hitFoes.push(pl);
     if (pl.hp <= 0) { pl.alive = false; continue; }
     if (foe && sk) { // what the skill leaves on the target
@@ -1531,7 +1540,7 @@ function explode(q) {
       const near = S.players.filter(x => x.alive && !done.has(x.i) && teamOf(x.i) !== teamOf(owner.i) && Math.abs(x.x - from.x) <= SLOT_PX * 4).sort((a, b) => Math.abs(a.x - from.x) - Math.abs(b.x - from.x)).slice(0, sk.chain);
       for (const t of near) {
         done.add(t.i); fx.bolts.push({ x: t.x, y: t.y - 14, gy: t.y, t: 6 });
-        hurtRaw(t, hitDamage(owner, t, base, pct, 0, q.up) * botSoft(owner), 'ชิ่ง', '#ffe14a', owner.i);
+        hurtRaw(t, hitDamage(owner, t, base, pct, 0, q.up) * botSoft(owner), 'ชิ่ง', '#ffe14a', owner.i); shatter(t);
         if (t.alive && sk.mark && ELEM[sk.mark]) addMark(t, sk.mark, owner);
       }
     }
