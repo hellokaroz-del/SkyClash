@@ -745,7 +745,6 @@ img { -webkit-user-drag: none; user-drag: none; }
 .jb-card h3 { margin: 4px 0 0; font-size: 24px; color: #1d3f73; } .jb-card h3 small { font-size: 15px; color: #3f6fb0; margin-left: 8px; }
 .jb-card p { margin: 0; color: #1d3f73; font-size: 15px; }
 .jb-diff { color: #3f6fb0; font-size: 14px; font-weight: 700; } .jb-diff i { font-style: normal; color: #b9c9de; } .jb-diff i.on { color: #f5b82a; }
-.jb-stats { margin-top: 2px; }
 .jb-go { margin-top: 4px; border: 2px solid #f2d27a; border-radius: 12px; background: linear-gradient(#ffd45a, #e09a1a); color: #4a2a00; font: inherit; font-weight: 800; font-size: 17px; padding: 10px; cursor: pointer; }
 .jb-go:hover:not(:disabled) { filter: brightness(1.08); }
 .jb-go:disabled { background: #cfdcec; border-color: #9fb6d6; color: #3f6fb0; cursor: default; }
@@ -757,6 +756,17 @@ img { -webkit-user-drag: none; user-drag: none; }
 .jb-pts button { padding: 4px 12px; } .jb-pts button:disabled, .jb-lv button:disabled { opacity: .4; cursor: default; }
 .jb-note { margin: 0; font-size: 13px; color: #3f6fb0; }
 .jb-skills h4 { margin: 4px 0 0; color: #1d3f73; font-size: 16px; }
+.jb-skills { position: relative; }
+.jb-h { display: flex; align-items: baseline; gap: 8px; padding: 4px 10px; border-radius: 8px; background: linear-gradient(90deg, #2a7fe0, #2a7fe000); color: #fff !important; }
+.jb-h.ult { background: linear-gradient(90deg, #e09a1a, #e09a1a00); } .jb-h.pas { background: linear-gradient(90deg, #3f9b5a, #3f9b5a00); }
+.jb-h small { color: #eaf4ff !important; }
+.jb-caps { color: #ffe08a; font-size: 12px; font-weight: 800; letter-spacing: .3px; }
+.jb-caps.two { display: grid; grid-template-columns: 1fr 2fr; gap: 6px; } .jb-caps .pas { color: #9fe8b0; }
+/* another job: its skills blurred under a note */
+.jb-veil { display: none; }
+.jb-skills.other > :not(.jb-veil) { filter: blur(3px); opacity: .55; pointer-events: none; user-select: none; }
+.jb-skills.other .jb-veil { display: block; position: sticky; top: 40%; z-index: 2; margin: 0 auto -44px; width: max-content; max-width: 90%; text-align: center;
+  background: #1d3f73; color: #ffe08a; font-weight: 800; border: 2px solid #f2d27a; border-radius: 12px; padding: 10px 16px; box-shadow: 0 4px 14px rgba(0, 0, 0, .3); }
 .jb-sk { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
 .jb-sk li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 8px; background: rgba(255, 255, 255, .75); border: 2px solid #cfe2f7; border-radius: 12px; padding: 5px 8px; }
 .jb-sk li.ult { border-color: #f2d27a; background: linear-gradient(90deg, #fff7e0, #ffffffc0); }
@@ -778,7 +788,7 @@ img { -webkit-user-drag: none; user-drag: none; }
 .jb-load { display: flex; flex-direction: column; gap: 6px; background: #1d3f73; border-radius: 12px; padding: 8px; }
 .jb-load[hidden] { display: none; }
 .jb-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
-.jb-row + .jb-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.jb-row.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .jb-slot { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; border: 2px solid #4f7fc0; border-radius: 10px; background: #2a5596; color: #fff; padding: 4px 2px; font: inherit; cursor: pointer; }
 .jb-slot span { font-size: 11px; line-height: 1.15; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .jb-slot .jb-ico { width: 36px; height: 36px; background-color: #0d2142; }
@@ -989,18 +999,18 @@ img { -webkit-user-drag: none; user-drag: none; }
         <h3 id="jb-name"></h3>
         <p id="jb-desc"></p>
         <div class="jb-diff" id="jb-diff"></div>
-        <div class="bg-stats jb-stats" id="jb-stats"></div>
         <button type="button" class="jb-go" id="jb-go"></button>
       </div>
-      <div class="bg-pane jb-skills">
+      <div class="bg-pane jb-skills" id="jb-skills">
+        <div class="jb-veil" id="jb-veil">ไม่ใช่อาชีพปัจจุบันของคุณ</div>
         <div class="jb-pts"><span>แต้มสกิล <b id="jb-pts">0</b></span><button type="button" id="jb-reset">รีเซ็ต</button></div>
         <p class="jb-note" id="jb-note"></p>
         <div class="jb-load" id="jb-load" aria-label="สกิลที่ใช้ในสนาม"></div>
-        <h4>สกิล <small>(ใส่ลงสนามได้ 6)</small></h4>
+        <h4 class="jb-h">Active Skill <small>สกิลกดใช้ · ใส่ลงสนามได้ 6</small></h4>
         <ul class="jb-sk" id="jb-sk"></ul>
-        <h4>ท่าไม้ตาย <small>(เลือก 1)</small></h4>
+        <h4 class="jb-h ult">Ultimate <small>ท่าไม้ตาย · เลือก 1</small></h4>
         <ul class="jb-sk" id="jb-ult"></ul>
-        <h4>พาสซีฟ <small>(เลือก 2)</small></h4>
+        <h4 class="jb-h pas">Passive Skill <small>พาสซีฟ · เลือก 2</small></h4>
         <ul class="jb-sk" id="jb-pas"></ul>
       </div>
     </div>
@@ -1997,10 +2007,8 @@ function renderJobs() {
   $('jb-name').textContent = j.th; $('jb-name').appendChild(jEl('small', '', j.name));
   $('jb-desc').textContent = j.desc;
   $('jb-diff').innerHTML = 'ความยาก ' + [1, 2, 3, 4, 5].map(n => `<i class="${n <= j.diff ? 'on' : ''}">★</i>`).join('');
-  // the job's stats at the player's level, before items
-  const st = $('jb-stats'); st.textContent = '';
-  const c = classStats && classStats[j.k] && statsAt(classStats[j.k], prof.level || 1);
-  for (const [k, label] of Object.entries(STAT_NAMES)) { const d = jEl('div'); d.append(jEl('span', '', label), jEl('b', '', c ? c[k] : '-')); st.appendChild(d); }
+  // another job's skills are only a preview: blurred under a note (Karoz 2026-10-15)
+  $('jb-skills').classList.toggle('other', !mine);
   // changing job: on screen, locked for now (Karoz 2026-10-15)
   const go = $('jb-go'); go.disabled = true; go.textContent = mine ? 'อาชีพปัจจุบันของคุณ' : `🔒 เปลี่ยนเป็น ${j.th} (ยังไม่เปิด)`;
   const pool = poolOf(j.k), o = mine && pool ? skillsOf(j.k) : null;
@@ -2021,10 +2029,13 @@ function renderJobs() {
     };
     const row1 = jEl('div', 'jb-row');
     LOAD_SLOTS.forEach((x, n) => row1.appendChild(slotBox(x, o.load[x], String(n + 1), jb.slot === x, () => { jb.slot = x; renderJobs(); })));
-    const row2 = jEl('div', 'jb-row');
+    const row2 = jEl('div', 'jb-row three');
     row2.appendChild(slotBox('b', o.load.b, 'B', false, null));
     for (const x of ['p1', 'p2']) row2.appendChild(slotBox(x, o.load[x], 'P', jb.pslot === x, () => { jb.pslot = x; renderJobs(); }));
-    load.append(row1, row2);
+    // captions: which row is which (Karoz 2026-10-15)
+    const cap1 = jEl('div', 'jb-caps'); cap1.appendChild(jEl('span', '', 'Active Skill'));
+    const cap2 = jEl('div', 'jb-caps two'); cap2.append(jEl('span', 'ult', 'Ultimate'), jEl('span', 'pas', 'Passive Skill'));
+    load.append(cap1, row1, cap2, row2);
   }
   // actives: the six first skills, each followed by the tier 2 skill it opens, then the new free skills
   const d = jobData(j.k), first = LOAD_SLOTS.map(x => d[x]).filter(id => pool.act.includes(id));
@@ -2840,6 +2851,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.32</div>
+<div id="ver">v0.61.33</div>
 </body>
 </html>
