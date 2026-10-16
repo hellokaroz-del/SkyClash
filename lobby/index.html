@@ -1702,8 +1702,8 @@ function watchGameRoom(fr) {
 $('back').onclick = () => {
   if (rush.ticket && rush.ending && gameBox.querySelector('iframe')) { rushReward(); return; } // the bot match is over: straight to the reward
   if (rush.ticket && !rush.ending) rush.ticket = null;
-  if (dgRun.ticket && dgRun.ending && gameBox.querySelector('iframe')) { dgReward(); return; } // the run is over: straight to the reward
-  if (dgRun.ticket && !dgRun.ending) dgRun.ticket = null; // left mid-run: nothing to pay
+  if (dgRun.ending && dgRun.result && gameBox.querySelector('iframe')) { dgAfter(); return; } // the phase or run is over: straight on
+  if (dgRun.ticket && !dgRun.ending) dgReset(); // left mid-run: nothing to pay, the next run starts from phase 1
   backToTown();
 };
 const backToTown = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; $('g-cover').hidden = true; if (co.room) { co.ready = false; co.game = null; if (co.host && co.mode === 'rush') { Object.assign(co, { map: null, lastGame: null }); stopMatch(); } matchStarted = null; sharePresence(); openModal('m-room'); renderRoom(); } };
@@ -1719,7 +1719,7 @@ const MAPS = [{ k: 'jungle', name: 'อารยธรรมโบราณ', im
 const MODES = { duel: 'ดวล', rush: 'ลุย', dungeon: 'ดันเจี้ยน' }; // ลุย (Karoz): the map is always picked at random
 const co = { hall: 'colo', page: 0, room: null, host: false, max: 2, shut: [2, 3], mode: 'duel', map: MAPS[0].k, game: null, lastGame: null, ch: null, live: false, seek: 0, vs: null };
 const myKey = () => co.live ? online.user.id : 'me';
-const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, exp: prof.exp | 0, admin: isAdmin(), room: co.room, host: co.host, max: co.max, shut: co.shut, mode: co.mode, map: co.map, game: co.game, seek: co.seek || 0, vs: co.vs || null, ready: !!co.ready, wpn: myWpn(), at: co.at || 0 });
+const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, exp: prof.exp | 0, admin: isAdmin(), room: co.room, host: co.host, max: co.max, shut: co.shut, mode: co.mode, map: co.map, dlv: co.dlv || null, dph: co.dph || 1, game: co.game, seek: co.seek || 0, vs: co.vs || null, ready: !!co.ready, wpn: myWpn(), at: co.at || 0 });
 // everyone in town; this player's own entry is always the local state, so it never lags behind a sync
 function townPeople() {
   const me = Object.assign({ key: myKey() }, myPresence());
@@ -1746,7 +1746,7 @@ function setShut(i, shut) {
 function townRooms() {
   const ppl = townPeople(), rooms = [];
   for (const p of ppl) if (p.host && p.room) rooms.push({ code: p.room, host: p.name, hostAdm: !!p.admin, mine: p.key === myKey(), mode: MODES[p.mode] ? p.mode : 'duel',
-    max: Math.max(1, Math.min(SLOTS, p.max | 0 || 2)), shut: shutOf(p), map: p.map, game: p.game || null, n: ppl.filter(q => q.room === p.room).length,
+    max: Math.max(1, Math.min(SLOTS, p.max | 0 || 2)), shut: shutOf(p), map: p.map, dlv: p.dlv || null, dph: +p.dph || 1, game: p.game || null, n: ppl.filter(q => q.room === p.room).length,
     seek: +p.seek || 0, vs: p.vs || null, at: +p.at || 0 });
   return rooms.sort((x, y) => (x.n >= x.max) - (y.n >= y.max) || x.code.localeCompare(y.code));
 }
@@ -1806,7 +1806,7 @@ function renderRoomList() {
 // room with their class emblem. A grey gate is full or already inside. No parties, nothing shown (Karoz 2026-10-16).
 // The row scrolls sideways, and the mouse wheel moves it right.
 // the hall's dungeon filter: rooms of the picked dungeon only (older rooms without one show under every dungeon)
-const dgRooms = () => { const k = $('dg-story').value; return townRooms().filter(r => r.mode === 'dungeon' && (!k || !dgOf(r.map) || r.map === k)); };
+const dgRooms = () => { const k = $('dg-story').value, lv = $('dg-lv').value; return townRooms().filter(r => r.mode === 'dungeon' && (!k || !dgOf(r.map) || r.map === k) && (!lv || !r.dlv || r.dlv === lv)); };
 function renderDungeon() {
   if (!renderDungeon.pre) { renderDungeon.pre = new Image(); renderDungeon.pre.src = 'img/dg-portal-anim.webp?v=2'; } // no blank first hover
   const box = $('dg-strip'); box.textContent = '';
@@ -1818,7 +1818,7 @@ function renderDungeon() {
     if (off) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = r.game ? 'กำลังลุย' : 'เต็ม'; b.querySelector('.pt').appendChild(t); }
     b.querySelector('.hd b').textContent = `${r.n}/${r.max}`;
     b.querySelector('.hd span').textContent = 'ห้อง ' + r.code;
-    const dd = dgOf(r.map); if (dd) { const n = document.createElement('em'); n.className = 'dn'; n.textContent = dd.name; b.querySelector('.hd').after(n); }
+    const dd = dgOf(r.map); if (dd) { const n = document.createElement('em'); n.className = 'dn'; n.textContent = `${dd.name} · ${dgLvName(r.dlv)}`; b.querySelector('.hd').after(n); }
     const ul = b.querySelector('ul');
     for (const p of mem) {
       const li = document.createElement('li'), pj = jobOf(p.job);
@@ -1841,19 +1841,28 @@ function quickDungeon() {
   if (r) enterRoom(r.code); else coErr('ยังไม่มีห้องดันเจี้ยนที่เข้าได้ กดสร้างห้องเพื่อเปิดห้องเอง');
 }
 // the dungeons a party can pick. Only the slime field exists so far (the game's ทุ่งสไลม์: 15 slimes, 3 at a time);
-// the game holds each level's slime stats (DG_MOB in index.html)
+// the game holds each level's slime stats (DG_MOB in index.html). lvls: what a level changes (picture, level, text,
+// prizes, phases); a level not listed there is the dungeon as it is
 const DUNGEONS = [
   { k: 'slime', name: 'ทุ่งสไลม์', img: 'img/dg-slime.webp?v=1', lv: '8-12',
     desc: 'สไลม์หลากสีออกมาเต็มทุ่ง ต้องปราบให้ครบ 15 ตัว',
     // what its eggs hold (Karoz 2026-10-16); the amounts and chances are set in the admin panel
-    prizes: ['item:slime_part', 'item:slime_ring', 'gold', 'item:stone_up', 'coupon', 'item:slime_hat'] },
+    prizes: ['item:slime_part', 'item:slime_ring', 'gold', 'item:stone_up', 'coupon', 'item:slime_hat'],
+    // ยาก (Karoz 2026-10-16): 2 phases, the slime field then King สไลม์ in its throne hall; the party goes back to the room
+    // between them and is ready again; the king's hat is among its prizes
+    lvls: { hard: { img: 'img/dg-slime-hard.webp?v=1', lv: '12-15', phases: 2, boss: 'King สไลม์',
+      desc: 'มี 2 เฟส: ปราบสไลม์ให้ครบ 15 ตัว แล้วกลับห้องไปสู้กับ King สไลม์ในท้องพระโรง',
+      prizes: ['item:slime_part', 'item:slime_ring', 'gold', 'item:stone_up', 'coupon', 'item:slime_hat', 'item:king_slime_hat'] } } },
 ];
-const DG_LEVELS = [{ k: 'normal', name: 'ปกติ' }];
+const DG_LEVELS = [{ k: 'normal', name: 'ปกติ' }, { k: 'hard', name: 'ยาก' }];
 const dgOf = k => DUNGEONS.find(d => d.k === k);
+// a dungeon at one of its levels
+const dgAt = (d, lv) => d && Object.assign({ phases: 1 }, d, (d.lvls || {})[lv] || {});
+const dgLvName = lv => (DG_LEVELS.find(l => l.k === lv) || DG_LEVELS[0]).name;
 const dgp = { dg: DUNGEONS[0].k, lv: DG_LEVELS[0].k, change: false };
 // opens before a dungeon room is made; the host can open it again from the room to change the dungeon
 function openDgPick(change) {
-  dgp.change = !!change; if (change && dgOf(co.map)) dgp.dg = co.map;
+  dgp.change = !!change; if (change && dgOf(co.map)) { dgp.dg = co.map; dgp.lv = co.dlv || DG_LEVELS[0].k; }
   $('dgp-ok').textContent = change ? 'เปลี่ยน' : 'ยืนยัน';
   renderDgPick(); openModal('m-dgpick');
 }
@@ -1865,7 +1874,7 @@ function renderDgPick() {
     b.querySelector('span').textContent = d.name; b.querySelector('small').textContent = 'Lv ' + d.lv;
     b.onclick = () => { dgp.dg = d.k; renderDgPick(); }; list.appendChild(b);
   }
-  const d = dgOf(dgp.dg);
+  const d = dgAt(dgOf(dgp.dg), dgp.lv);
   $('dgp-im').style.backgroundImage = `url('${d.img}')`;
   $('dgp-name').textContent = d.name; $('dgp-lv').textContent = `เหมาะกับ Lv ${d.lv}`; $('dgp-desc').textContent = d.desc;
   const diff = $('dgp-diff'); diff.textContent = '';
@@ -1879,7 +1888,7 @@ for (const l of DG_LEVELS) $('dg-lv').add(new Option(l.name, l.k));
 $('dg-story').onchange = $('dg-lv').onchange = () => { coErr(''); renderDungeon(); };
 $('dgp-ok').onclick = () => {
   closeModal($('m-dgpick'));
-  if (dgp.change) { if (co.room && co.host) { co.map = dgp.dg; co.dlv = dgp.lv; sharePresence(); renderRoom(); } return; }
+  if (dgp.change) { if (co.room && co.host) { co.map = dgp.dg; co.dlv = dgp.lv; dgReset(); sharePresence(); renderRoom(); } return; }
   co.dlv = dgp.lv; makeRoom('dungeon', dgp.dg);
 };
 function renderSide() {
@@ -1932,6 +1941,7 @@ function makeRoom(mode, dgk) {
   const used = new Set(townRooms().map(r => r.code));
   let code; do code = String(1000 + Math.floor(Math.random() * 9000)); while (used.has(code));
   const dg = mode === 'dungeon'; // a dungeon party takes 4
+  dgReset();
   Object.assign(co, { ready: false, hostKey: null, room: code, host: true, max: dg ? SLOTS : 2, shut: dg ? [] : [2, 3], mode, map: dg ? dgk || DUNGEONS[0].k : mode === 'rush' ? null : MAPS[0].k, game: null, lastGame: null, seek: 0, vs: null });
   sharePresence(); setRoom(code); showRoom();
 }
@@ -2019,16 +2029,17 @@ function renderRoom() {
     slots.appendChild(b);
   }
   const dgn = r.mode === 'dungeon';
-  const dgd = dgn && dgOf(r.map);
+  const dgd = dgn && dgAt(dgOf(r.map), r.dlv), ph = dgn && dgd && dgd.phases > 1 ? Math.min(dgd.phases, r.dph || 1) : 0;
   $('rm-map').classList.toggle('dg', dgn); $('rm-card').classList.toggle('dg', dgn);
   $('rm-map').classList.toggle('dgx', !!dgd); $('rm-map').classList.toggle('pick', !!dgd && co.host && !r.game);
   if (dgn) { // the dungeon's stages aren't made yet: the party can gather, the gate stays shut for now
     $('rm-map').style.backgroundImage = dgd ? `url('${dgd.img}')` : ''; $('rm-map').classList.remove('rnd', 'seek');
-    $('rm-mapname').textContent = dgd ? dgd.name : 'ดันเจี้ยน'; $('rm-mapsub').textContent = dgd ? `เหมาะกับ Lv ${dgd.lv} · ปาร์ตี้สูงสุด 4 คน` : 'ปาร์ตี้สูงสุด 4 คน';
-    $('rm-tip').innerHTML = ''; if (dgd) { const b = document.createElement('b'); b.textContent = `แนะนำ Lv ${dgd.lv}`; $('rm-tip').append(b, dgd.desc); }
+    $('rm-mapname').textContent = dgd ? `${dgd.name} · ${dgLvName(r.dlv)}` : 'ดันเจี้ยน';
+    $('rm-mapsub').textContent = !dgd ? 'ปาร์ตี้สูงสุด 4 คน' : ph ? `เฟส ${ph}/${dgd.phases}${ph === dgd.phases ? ' · ' + dgd.boss : ''} · เหมาะกับ Lv ${dgd.lv}` : `เหมาะกับ Lv ${dgd.lv} · ปาร์ตี้สูงสุด 4 คน`;
+    $('rm-tip').innerHTML = ''; if (dgd) { const b = document.createElement('b'); b.textContent = ph > 1 ? `เฟส ${ph}: ${dgd.boss}` : `แนะนำ Lv ${dgd.lv}`; $('rm-tip').append(b, ph > 1 ? `ผ่านเฟส ${ph - 1} แล้ว กดลุยเพื่อไปสู้กับ ${dgd.boss}` : dgd.desc); }
     $('rm-rules').innerHTML = '<li>รวมปาร์ตี้ได้สูงสุด 4 คน</li><li>หัวห้องกดลุยเพื่อเข้าดันเจี้ยน</li><li>ตอนนี้เข้าเล่นได้ทีละ 1 คน</li>';
-    $('rm-go').disabled = !co.host; $('rm-go').textContent = !co.host ? 'รอหัวห้อง' : 'ลุย';
-    $('rm-state').textContent = r.game ? 'กำลังเล่นอยู่' : !co.host ? 'รอหัวห้องกดลุย' : mem.length > 1 ? 'ตอนนี้ดันเจี้ยนเล่นได้ทีละ 1 คน' : 'กดลุยเพื่อเข้าดันเจี้ยน';
+    $('rm-go').disabled = !co.host; $('rm-go').textContent = !co.host ? 'รอหัวห้อง' : ph > 1 ? `ลุยเฟส ${ph}` : 'ลุย';
+    $('rm-state').textContent = r.game ? 'กำลังเล่นอยู่' : !co.host ? 'รอหัวห้องกดลุย' : mem.length > 1 ? 'ตอนนี้ดันเจี้ยนเล่นได้ทีละ 1 คน' : ph > 1 ? `กดลุยเพื่อไปสู้กับ ${dgd.boss}` : 'กดลุยเพื่อเข้าดันเจี้ยน';
     readyGo(r, mem); return;
   }
   // map panel: ลุย always rolls a random map
@@ -2081,17 +2092,23 @@ function startRoom() {
   if (co.mode === 'dungeon') { // the game plays the dungeon one hero at a time for now: the party's host goes in
     if (mem.length > 1) { msg.textContent = 'ตอนนี้ดันเจี้ยนเล่นได้ทีละ 1 คน เล่นพร้อมกันหลายคนจะตามมา'; return; }
     msg.textContent = '';
-    const run = { k: dgOf(co.map) ? co.map : DUNGEONS[0].k, lv: co.dlv || DG_LEVELS[0].k };
+    const run = { k: dgOf(co.map) ? co.map : DUNGEONS[0].k, lv: co.dlv || DG_LEVELS[0].k, ph: co.dph || 1 };
+    const play = () => launch(d => { press(d, '#mode-slime'); press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#start'); }, false, null, run);
+    // a later phase goes on with the run's ticket (the server moved it on when the phase before was cleared)
+    if (run.ph > 1) {
+      if (serverOn() && !dgRun.ticket) { dgReset(); renderRoom(); msg.textContent = 'รอบนี้จบไปแล้ว เริ่มใหม่จากเฟส 1'; return; }
+      Object.assign(dgRun, { ending: false, result: null }); play(); return;
+    }
     // signed in: a ticket from the server first, so a cleared run can be paid (dungeon_end); the preview plays without one
     if (serverOn()) {
       online.sb.rpc('dungeon_start', { p_dungeon: run.k, p_lv: run.lv }).then(({ data, error }) => {
         if (error) { msg.textContent = /dungeon_start|schema cache|function/.test(error.message || '') ? 'ต้องรัน supabase-dungeon.sql ใน Supabase ก่อน' : why(error); return; }
         Object.assign(dgRun, { ticket: data.ticket, ending: false, result: null });
-        launch(d => { press(d, '#mode-slime'); press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#start'); }, false, null, run);
+        play();
       });
       return;
     }
-    launch(d => { press(d, '#mode-slime'); press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#start'); }, false, null, run);
+    play();
     return;
   }
   if (mem.length < 2) { msg.textContent = 'ต้องมีผู้เล่นอย่างน้อย 2 คน'; return; }
@@ -2179,12 +2196,37 @@ addEventListener('message', e => {
   clearTimeout(rush.timer); rush.timer = setTimeout(rushReward, 4500);
 });
 // the dungeon run ended: wait for the game's Victory/Defeat, then the reward
+// A cleared phase that is not the last goes back to the room for the next one (dgNext); the preview has no ticket
+// but still moves on to the next phase
 addEventListener('message', e => {
   const d = e.data;
-  if (e.origin !== location.origin || !d || d.type !== 'aoa-dungeon-end' || !dgRun.ticket || dgRun.ending) return;
-  dgRun.ending = true; dgRun.result = { result: d.result === 'win' ? 'win' : 'loss', kills: Math.max(0, d.kills | 0) };
-  clearTimeout(dgRun.timer); dgRun.timer = setTimeout(dgReward, 4500);
+  if (e.origin !== location.origin || !d || d.type !== 'aoa-dungeon-end' || dgRun.ending) return;
+  const r = { result: d.result === 'win' ? 'win' : 'loss', kills: Math.max(0, d.kills | 0), phase: Math.max(1, d.phase | 0 || 1), phases: Math.max(1, d.phases | 0 || 1) };
+  if (!dgRun.ticket && !(r.result === 'win' && r.phase < r.phases)) { co.dph = 1; return; } // the preview's run is over
+  dgRun.ending = true; dgRun.result = r;
+  clearTimeout(dgRun.timer); dgRun.timer = setTimeout(dgAfter, 4500);
 });
+const dgNextDue = () => !!(dgRun.result && dgRun.result.result === 'win' && dgRun.result.phase < dgRun.result.phases);
+const dgAfter = () => dgNextDue() ? dgNext() : dgReward();
+// a dungeon's run starts again from phase 1 (another dungeon or level picked, a new room, or the run was left)
+function dgReset() { co.dph = 1; Object.assign(dgRun, { ticket: null, ending: false, result: null }); clearTimeout(dgRun.timer); }
+// the phase was cleared: the server moves the ticket on (nothing is paid yet), and the party is back in the room to be ready again
+async function dgNext() {
+  clearTimeout(dgRun.timer);
+  const r = dgRun.result; if (!r) return;
+  const fr = gameBox.querySelector('iframe'); if (fr) fr.remove();
+  if (dgRun.ticket) {
+    const { error } = await online.sb.rpc('dungeon_end', { p_ticket: dgRun.ticket, p_result: 'win', p_kills: r.kills });
+    if (error) {
+      const em = error.message || ''; dgReset(); backToTown();
+      $('rm-msg').textContent = /too_fast/.test(em) ? 'จบเฟสเร็วผิดปกติ เริ่มใหม่จากเฟส 1' : /dungeon_end|schema cache|function/.test(em) ? 'ต้องรัน supabase-dungeon.sql ใน Supabase ใหม่ก่อน' : 'ไปเฟสต่อไปไม่สำเร็จ: ' + why(error);
+      return;
+    }
+  }
+  co.dph = r.phase + 1; Object.assign(dgRun, { ending: false, result: null });
+  backToTown();
+  $('rm-msg').textContent = `ผ่านเฟส ${r.phase} แล้ว กดลุยเพื่อไปเฟส ${co.dph}`;
+}
 async function dgReward() {
   clearTimeout(dgRun.timer);
   if (!dgRun.ticket || !dgRun.result) return;
@@ -2264,7 +2306,7 @@ function showEggs(ticket, n, fn = 'egg_pick') {
 // back to the room the player made
 function rushDone() {
   Object.assign(rush, { ticket: null, ending: false, result: null }); clearTimeout(rush.timer);
-  Object.assign(dgRun, { ticket: null, ending: false, result: null }); clearTimeout(dgRun.timer);
+  dgReset();
   $('eggs').hidden = true; $('tut-done').hidden = true; $('back').hidden = false;
   $('back').click();
   if (!$('m-bag').hidden) renderBag();
@@ -2406,6 +2448,8 @@ const ITEMS = {
   slime_ring: { name: 'วงแหวนวิญญาณสไลม์', cat: 'material', img: 'img/it-slime-ring.webp' },
   stone_up: { name: 'หินตีบวก', cat: 'material', img: 'img/it-stone-up.webp' },
   slime_hat: { name: 'หมวกสไลม์', cat: 'armor', slot: 'head', stats: { hp: 100, def: 15 }, bound: false, img: 'img/it-slime-hat.webp' },
+  // King สไลม์'s crown from the hard level's eggs (Karoz 2026-10-16), public and permanent like the slime hat
+  king_slime_hat: { name: 'หมวก King สไลม์', cat: 'armor', slot: 'head', stats: { hp: 120, def: 25, mdef: 10 }, bound: false, img: 'img/it-king-slime-hat.webp' },
 };
 // ---------- the player's items ----------
 // With supabase-items.sql run, items live in public.player_items (inv.live). Before that, or on the preview page,
@@ -3368,7 +3412,7 @@ function apSettings() {
 // from (settings.egg_pool[key] = [{ t, id, slot, stats, bound, min, max, w }]); every item in ITEMS can be a prize
 function eggPools() {
   const out = EGG_MODES.filter(m => m.k !== 'dungeon').map(m => ({ k: m.k, th: m.th, live: !!m.live, note: m.note }));
-  for (const d of DUNGEONS) for (const l of DG_LEVELS) out.push({ k: `dg:${d.k}:${l.k}`, th: `ดันเจี้ยน · ${d.name} · ${l.name}`, live: true, note: 'ผ่านด่านแล้วได้ทุบไข่ 1 ฟอง', dg: d });
+  for (const d of DUNGEONS) for (const l of DG_LEVELS) { const at = dgAt(d, l.k); out.push({ k: `dg:${d.k}:${l.k}`, th: `ดันเจี้ยน · ${d.name} · ${l.name}`, live: true, note: at.phases > 1 ? `ผ่านครบ ${at.phases} เฟสแล้วได้ทุบไข่ 1 ฟอง` : 'ผ่านด่านแล้วได้ทุบไข่ 1 ฟอง', dg: at }); }
   return out;
 }
 // what a pool starts as before it is saved: ลุย against the bot keeps its old coupon range; a dungeon lists its prizes
@@ -4050,6 +4094,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.69</div>
+<div id="ver">v0.61.70</div>
 </body>
 </html>

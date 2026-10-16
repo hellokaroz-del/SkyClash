@@ -387,7 +387,7 @@ let botAccOv = null; // a ลุย bot's own accuracy, set by the town (window.
 let botLv = 'normal'; try { const v = localStorage.getItem('sky-botlv'); if (BOT_ACC[v]) botLv = v; } catch (_) {}
 // a character's hit box: the crawling body, centred on its feet point (x) and standing on the ground (y)
 const HB = { w: 56, h: 36 };
-const hitBox = pl => ({ l: pl.x - HB.w / 2, r: pl.x + HB.w / 2, t: pl.y - HB.h, b: pl.y });
+const hitBox = pl => { const w = pl.hbW || HB.w, h = pl.hbH || HB.h; return { l: pl.x - w / 2, r: pl.x + w / 2, t: pl.y - h, b: pl.y }; }; // King สไลม์ has its own
 // distance from a point to the box (0 when inside it)
 function boxDist(pl, x, y) { const b = hitBox(pl), nx = Math.max(b.l, Math.min(b.r, x)), ny = Math.max(b.t, Math.min(b.b, y)); return Math.hypot(x - nx, y - ny); }
 // Karoz's Ultimate button: 10 frames, 10%..100% of the POW gauge
@@ -826,6 +826,7 @@ function applyReaction(o, t, rx) {
 }
 // knockback: slide along the ground (climbing small steps like walking) until a wall stops it; gravity does the rest
 function pushPlayer(pl, dx) {
+  if (pl.boss) return; // King สไลม์ never leaves its place
   const dir = Math.sign(dx);
   for (let n = Math.abs(Math.round(dx)); n > 0; n--) {
     const nx = pl.x + dir; let ny = pl.y, k = 0;
@@ -1147,8 +1148,8 @@ JUNGLE.col.src = "assets/a096.png";
 JUNGLE.bg.src = "assets/a097.webp";
 const BUILTIN_IMG = { 'jungle-bg': JUNGLE.bg, 'jungle-fg': JUNGLE.fg, 'jungle-col': JUNGLE.col };
 // the meadow (Karoz 2026-10-07, the tutorial's field): pixel sky and grass-and-dirt ground, loaded only when the stage is used
-const MEADOW_SRC = { 'meadow-bg': 'assets/a221.webp', 'meadow-fg': 'assets/a222.webp' };
-function refImage(ref) { if (!ref) return null; if (MEADOW_SRC[ref] && !BUILTIN_IMG[ref]) { const im = new Image(); im.src = MEADOW_SRC[ref]; BUILTIN_IMG[ref] = im; } if (ref === 'hills' && !BUILTIN_IMG.hills) BUILTIN_IMG.hills = makeHills(); if (ref === 'flat' && !BUILTIN_IMG.flat) BUILTIN_IMG.flat = makeFlat(); if (ref === 'flatcol' && !BUILTIN_IMG.flatcol) BUILTIN_IMG.flatcol = makeFlatCol(); return ref.startsWith('a:') ? assetImage(ref) : BUILTIN_IMG[ref] || null; }
+const MEADOW_SRC = { 'meadow-bg': 'assets/a221.webp', 'meadow-fg': 'assets/a222.webp', 'hall-bg': 'assets/boss-hall-bg.webp', 'hall-fg': 'assets/boss-hall-floor.webp' };
+function refImage(ref) { if (!ref) return null; if (MEADOW_SRC[ref] && !BUILTIN_IMG[ref]) { const im = new Image(); im.src = MEADOW_SRC[ref]; BUILTIN_IMG[ref] = im; } if (ref === 'hills' && !BUILTIN_IMG.hills) BUILTIN_IMG.hills = makeHills(); if (ref === 'flat' && !BUILTIN_IMG.flat) BUILTIN_IMG.flat = makeFlat(); if (ref === 'flatcol' && !BUILTIN_IMG.flatcol) BUILTIN_IMG.flatcol = makeFlatCol(); if (ref === 'hallcol' && !BUILTIN_IMG.hallcol) BUILTIN_IMG.hallcol = makeFlatCol(HALL_Y); return ref.startsWith('a:') ? assetImage(ref) : BUILTIN_IMG[ref] || null; }
 // a plain grassy hill ground (diggable) for stages without their own ground picture
 function makeHills() {
   const c = document.createElement('canvas'); c.width = WW; c.height = WH; const x = c.getContext('2d');
@@ -1163,6 +1164,11 @@ function makeHills() {
 // the slime test stage: dead flat ground of old stone blocks with grass on top; it can't be dug or broken (Karoz)
 const FLAT_Y = WH - 190;
 const SLIME_STAGE = { name: 'ทุ่งสไลม์', hard: true, spawn: [380, 1300], scanFrom: 0, music: 'sounds/SM_Stage_01.mp3', bg: 'meadow-bg', fg: 'meadow-fg', col: 'flatcol', fx: 'meadow' };
+// King สไลม์'s throne hall (Karoz 2026-10-16): Karoz's hall painting behind and marble floor; everyone walks a little way into
+// the marble (its top edge is at y 597), dead flat and unbreakable like the slime field
+const HALL_Y = 612;
+const HALL_STAGE = { name: 'ท้องพระโรงสไลม์', hard: true, spawn: [300, 1660], scanFrom: 0, music: 'sounds/SM_Stage_01.mp3', bg: 'hall-bg', fg: 'hall-fg', col: 'hallcol', fx: 'hall' };
+const mobStage = () => bossPhase(townDungeon()) ? HALL_STAGE : SLIME_STAGE;
 function makeFlat() {
   const c = document.createElement('canvas'); c.width = WW; c.height = WH; const x = c.getContext('2d');
   const g = x.createLinearGradient(0, FLAT_Y, 0, WH); g.addColorStop(0, '#8d7b62'); g.addColorStop(1, '#4a3f33');
@@ -1180,9 +1186,9 @@ function makeFlat() {
 }
 // collision for the flat stage: one dead-flat line a little below the top of the grass, so the grass is only decoration
 // (the tufts no longer make tiny steps that catch the characters' feet)
-function makeFlatCol() {
+function makeFlatCol(top = FLAT_Y + 6) {
   const c = document.createElement('canvas'); c.width = WW; c.height = WH; const x = c.getContext('2d');
-  x.fillStyle = '#fff'; x.fillRect(0, FLAT_Y + 6, WW, WH - FLAT_Y - 6);
+  x.fillStyle = '#fff'; x.fillRect(0, top, WW, WH - top);
   const im = new Image(); im.src = c.toDataURL('image/png'); return im;
 }
 function stageReady(st) { return Promise.all([st.bg, st.fg, st.col].map(refImage).filter(Boolean).map(im => im.decode().catch(() => {}))); }
@@ -1209,14 +1215,14 @@ let S = null; // match state
 const input = { left: false, right: false, up: false, down: false, fire: false };
 let cam = { x: 0, y: WH - VH, manual: false };
 let ruler = false;
-const fx = { booms: [], parts: [], texts: [], warps: [], bolts: [], gfx: [] };
+const fx = { booms: [], parts: [], texts: [], warps: [], bolts: [], gfx: [], bf: [] };
 const NET = { on: false, mode: false, role: null, me: 0, rin: {}, acts: [], ev: [] };
 
 // power marks the player pins on the bar (display only, kept on this screen); PBAR is the bar's track for clicks
 const MARKS = {}; let PBAR = null;
 function newMatch(demo) {
   for (const k in MARKS) delete MARKS[k];
-  STAGE = mobMode && !demo ? SLIME_STAGE : STAGES[stageKey] || Object.values(STAGES)[0];
+  STAGE = mobMode && !demo ? (tutMode ? SLIME_STAGE : mobStage()) : STAGES[stageKey] || Object.values(STAGES)[0];
   loadStage();
   const mk = (i, k, x, bot) => {
     let c = CLASSES[k];
@@ -1235,8 +1241,9 @@ function newMatch(demo) {
     S = { demo, players: [hero], mob: { total: tutMode ? TUT.slimes : SLIME.total, spawned: 0, corpses: [] }, turn: 0, state: 'aim', power: 0, timer: TURN_TIME, wind: 0, projs: [], settle: 0, zones: [],
       banner: 0, bot: null, frame: 0, turnCount: 0, dg: tutMode ? null : townDungeon() };
     if (tutMode) S.tut = { step: 0, x0: hero.x, a0: hero.angle, shot: false, skill: false, spawned: false, flash: 0 };
+    else if (bossPhase(S.dg)) { S.boss = true; S.mob.total = 1; S.players.push(makeBoss(1)); S.mob.spawned = 1; } // phase 2: King สไลม์ alone, it calls its own slimes
     else for (let i = 1; i <= SLIME.field; i++) { S.players.push(makeSlimeAt(i)); S.mob.spawned++; }
-    fx.booms.length = fx.parts.length = fx.texts.length = fx.gfx.length = 0;
+    fx.booms.length = fx.parts.length = fx.texts.length = fx.gfx.length = fx.bf.length = 0;
     S.golem = null; S.golemDone = false;
     startTurn(true);
     return;
@@ -1260,7 +1267,7 @@ function newMatch(demo) {
     turn: e0 === e1 ? (Math.random() < 0.5 ? 0 : 1) : e0 > e1 ? 0 : 1, state: 'aim', power: 0, timer: TURN_TIME, wind: 0, projs: [], settle: 0, zones: [],
     banner: 0, bot: null, frame: 0, turnCount: 0, dealt: {},
   };
-  fx.booms.length = fx.parts.length = fx.texts.length = fx.gfx.length = 0;
+  fx.booms.length = fx.parts.length = fx.texts.length = fx.gfx.length = fx.bf.length = 0;
   S.golem = null; S.golemDone = false;
   startTurn(true);
 }
@@ -1289,7 +1296,7 @@ function startTurn(first) {
   if (!first) S.turn = nextTurn(S.turn);
   const p = cur();
   if (!p.alive) { S.turn = nextTurn(S.turn); }
-  if (!first && S.mob && !S.tut && S.turn === 0) mobWave(); // a round is over
+  if (!first && S.mob && !S.tut && !S.boss && S.turn === 0) mobWave(); // a round is over (the boss brings its own)
   const q = cur();
   q.maxEn = Math.round(235 + statOf(q, 'spd') * 0.25); // SPD after passives (Ranger Training, Cat Reflex) and debuffs (Ice Lance, Blizzard)
   q.iron = false; q.energy = Math.max(0, q.maxEn - (q.debs || []).reduce((a, d) => a + (d.enPen || 0), 0)); q.armed = null; q.boost = false; q.ccTurn = false;
@@ -1324,7 +1331,8 @@ function startTurn(first) {
       fx.texts.push({ x: q.x, y: q.y - 60, s: q.frozen > 1 ? word + ' ข้ามเทิร์น (อีก ' + q.frozen + ')' : word + ' ข้ามเทิร์น', col: q.cck === 'stun' ? '#ffe14a' : '#bfeaff', t: 90 });
     }
   }
-  if (q.mob && S.state === 'aim') { S.state = 'mob'; S.mp = { phase: 'think', t: 16, hops: 0 }; }
+  if (q.boss && S.state === 'aim' && q.scd > 0) q.scd--;
+  if (q.mob && S.state === 'aim') { S.state = 'mob'; S.mp = { phase: 'think', t: q.boss ? 34 : 16, hops: 0 }; }
   updatePad();
 }
 
@@ -1486,6 +1494,7 @@ function explode(q) {
     if (pl.nineNext && dmg > 0) { dmg *= 1 - (pl.c.pv.nineLives || 30) / 100; pl.nineNext = false; }
     if (ADMIN.god && !NET.on && !pl.bot) { fx.texts.push({ x: pl.x, y: pl.y - 50, s: 'อมตะ', col: '#9fe0ff', t: 60 }); continue; }
     dmg = Math.round(dmg);
+    if (foe && pl.boss && dmg > 0 && Math.random() < BOSS.swallow) { dmg = 0; bossSwallow(pl, q); } // กลืนกิน: this hit does 0
     if (foe && dmg > 0) {
       const ob = pl.buffs.find(b => b.once); if (ob) pl.buffs = pl.buffs.filter(b => b !== ob); // Smoke Bomb soaks one hit
       if (crit && owner.c.pv.critShield && owner.gtTurn !== S.turnCount) { owner.gtTurn = S.turnCount; const g = addShield(owner, Math.round(owner.maxHp * owner.c.pv.critShield / 100), owner.i); say(owner, 'Golden Touch โล่ +' + g, '#ffe066', 80, 104); }
@@ -2114,11 +2123,13 @@ function makeSlime(i) {
     name: 'สไลม์ ' + n, guild: 'ทุ่งสไลม์', level: 1, anim: { k: 'idle', t: 0 } };
 }
 // dungeon levels (the town sets window.__dungeon = { k, lv } when a party enters): a level's slimes take every stat as
-// pct% of a class at a level. ทุ่งสไลม์ normal (Karoz 2026-10-16): 80% of a level 10 Merchant
-const DG_MOB = { slime: { normal: { base: 'merchant', level: 10, pct: 80 } } };
+// pct% of a class at a level. ทุ่งสไลม์ normal (Karoz 2026-10-16): 80% of a level 10 Merchant. ทุ่งสไลม์ hard (Karoz 2026-10-16):
+// 80% of a level 13 Merchant, in 2 phases: the 15 slimes, then (the town's ph: 2, after the party is ready again) King สไลม์
+const DG_MOB = { slime: { normal: { base: 'merchant', level: 10, pct: 80 }, hard: { base: 'merchant', level: 13, pct: 80, phases: 2 } } };
 function townDungeon() {
   let d = null; try { d = window.parent !== window && window.parent.__dungeon; } catch (_) {}
-  return d && DG_MOB[d.k] && DG_MOB[d.k][d.lv] && CLASSES[DG_MOB[d.k][d.lv].base] ? DG_MOB[d.k][d.lv] : null;
+  const m = d && DG_MOB[d.k] && DG_MOB[d.k][d.lv];
+  return m && CLASSES[m.base] ? Object.assign({ phases: 1 }, m, { k: d.k, lv: d.lv, ph: Math.max(1, Math.min(m.phases || 1, d.ph | 0 || 1)) }) : null;
 }
 // the slime template (SLIME) is its level 1 base; stats grow like a player's. In a dungeon the level's stats replace it
 const makeSlimeAt = i => { const sl = makeSlime(i), L = slimeLevel(S.mob.spawned + 1), m = levelGrow(L);
@@ -2130,6 +2141,247 @@ const makeSlimeAt = i => { const sl = makeSlime(i), L = slimeLevel(S.mob.spawned
   }
   for (const k of ['hp', 'atk', 'def', 'mdef']) sl.c[k] = Math.round(SLIME[k] * m);
   sl.hp = sl.maxHp = sl.c.hp; sl.level = L; return sl; };
+// ---------- King สไลม์ (Karoz 2026-10-16): ทุ่งสไลม์ ยาก, phase 2 ----------
+// The boss stands at the far right of the throne hall and never walks. Its turn picks one of:
+//   กระโดดทับ: anyone right up against its hit box is jumped on and dies at once (damage Infinity)
+//   เรียกลูกน้อง: 2 slimes of the level drop in beside it, every 3 of its turns
+//   บ้วนพลัง: a bubble spat at the player with the least HP, 150% ATK
+//   ฟันคลื่นดาบ: a sword wave at 2 random players, 120% ATK each
+// and whenever a player's shot hits it, 15% of the time it swallows the hit (กลืนกิน): that hit does 0.
+// Its stats are the level's slime stats with BOSS.hpMul times the HP (Claude's default until Karoz sets them).
+const BOSS = { name: 'King สไลม์', hpMul: 4, summonCd: 3, summonN: 2, swallow: 0.15, spitPct: 150, wavePct: 120, waveN: 2, reach: 6, draw: 0.62, w: 170, h: 120, x: WW - 200 };
+// Karoz's sheets: 8 frames each, laid side by side in cells w x h with the boss's feet at (ax, ay); facing left
+const BOSS_SHEET = {
+  stomp: { src: 'assets/boss-slime-stomp.webp', w: 372, h: 254, ax: 190, ay: 250 },
+  swallow: { src: 'assets/boss-slime-swallow.webp', w: 295, h: 207, ax: 156, ay: 204 },
+  summon: { src: 'assets/boss-slime-summon.webp', w: 314, h: 222, ax: 154, ay: 219 },
+  spit: { src: 'assets/boss-slime-spit.webp', w: 264, h: 325, ax: 128, ay: 283 },
+  wave: { src: 'assets/boss-slime-wave.webp', w: 389, h: 246, ax: 180, ay: 243 },
+};
+for (const s of Object.values(BOSS_SHEET)) { s.img = new Image(); s.img.src = s.src; }
+const BOSS_FACE = new Image(); BOSS_FACE.src = 'assets/boss-slime-face.webp';
+// how long each move plays (ticks) and on which tick it strikes
+const BOSS_ACT = { stomp: { len: 70, hit: 34 }, summon: { len: 56, hit: 34 }, spit: { len: 50, hit: 27 }, wave: { len: 50, hit: 24 } };
+const bossPhase = dg => !!(dg && dg.phases > 1 && dg.ph >= dg.phases);
+function makeBoss(i) {
+  const b = makeSlimeAt(i);
+  Object.assign(b, { k: 'boss', boss: true, name: BOSS.name, guild: 'ท้องพระโรงสไลม์', x: BOSS.x, face: -1, hbW: BOSS.w, hbH: BOSS.h, scd: 0, act: null, swT: 0 });
+  b.c = Object.assign({}, b.c, { name: 'บอส', r: 60 });
+  b.hp = b.maxHp = b.c.hp = Math.round(b.c.hp * BOSS.hpMul);
+  b.y = surfaceY(b.x);
+  return b;
+}
+const bossHeroes = () => S.players.filter(x => x.alive && teamOf(x.i) === 0);
+// the boss's turn: think a moment, then play one move
+function bossTick(p) {
+  const mp = S.mp;
+  if (!p.alive) { S.state = 'settle'; S.settle = 10; return; }
+  if (mp.phase === 'think') {
+    if (--mp.t > 0) return;
+    const hs = bossHeroes(); if (!hs.length) { S.state = 'settle'; S.settle = 10; return; }
+    const box = hitBox(p), close = hs.filter(h => !(h.hidden > 0) && hitBox(h).r >= box.l - BOSS.reach);
+    let k, tg;
+    if (close.length) { k = 'stomp'; tg = close; }
+    else if (p.scd <= 0) { k = 'summon'; tg = []; }
+    else if (Math.random() < 0.5) { k = 'spit'; tg = [hs.slice().sort((a, b) => a.hp - b.hp)[0]]; }
+    else { k = 'wave'; tg = hs.slice().sort(() => Math.random() - 0.5).slice(0, BOSS.waveN); }
+    p.act = { k, t: 0, tg, dx: k === 'stomp' ? Math.min(0, tg[0].x + 30 - p.x) : 0 };
+    mp.phase = 'act';
+    say(p, { stomp: 'กระโดดทับ!', summon: 'เรียกลูกน้อง!', spit: 'บ้วนพลัง!', wave: 'ฟันคลื่นดาบ!' }[k], '#ffe066', 70, 150);
+    if (k === 'summon') p.scd = BOSS.summonCd;
+    sfx(k === 'stomp' ? 'slime_jump' : 'slime_attack');
+    return;
+  }
+  const a = p.act; a.t++;
+  const A = BOSS_ACT[a.k];
+  if (a.t === A.hit) {
+    if (a.k === 'stomp') bossStompLand(p, a);
+    else if (a.k === 'summon') bossSummon(p);
+    else if (a.k === 'spit') for (const t of a.tg) fx.bf.push({ k: 'orb', x0: p.x - 70, y0: p.y - 120, t: 0, dur: Math.max(34, Math.min(80, Math.abs(t.x - p.x) / 14)), tg: t, by: p });
+    else for (const t of a.tg) fx.bf.push({ k: 'wave', x: p.x - 80, y: p.y - 34, sp: 13, tg: t, by: p, t: 0 });
+  }
+  if (a.t >= A.len && !fx.bf.some(e => e.by === p && !e.done && (e.k === 'orb' || e.k === 'wave'))) {
+    p.act = null; S.state = 'settle'; S.settle = 30;
+  }
+}
+// the jump lands: whoever it lands on dies at once
+function bossStompLand(p, a) {
+  cam.shake = Math.max(cam.shake, 20); sfx('slime_attack');
+  const lx = p.x + a.dx;
+  fx.bf.push({ k: 'ring', x: lx, y: p.y, t: 0, dur: 30, r: 150, col: '255,236,190' });
+  for (let n = 0; n < 40; n++) { const s = n % 2 ? 1 : -1; fx.bf.push({ k: 'dust', x: lx + s * Math.random() * 90, y: p.y - 4, vx: s * (1 + Math.random() * 4), vy: -Math.random() * 3, t: 0, dur: 40 + Math.random() * 30, r: 8 + Math.random() * 12 }); }
+  for (const h of a.tg) {
+    if (!h.alive) continue;
+    if (ADMIN.god && !NET.on && !h.bot) { fx.texts.push({ x: h.x, y: h.y - 50, s: 'อมตะ', col: '#9fe0ff', t: 60 }); continue; }
+    const d = h.hp; h.shield = 0; h.hp = 0; h.alive = false;
+    stAdd(p.i, 'dmg', d); stAdd(h.i, 'taken', d);
+    fx.texts.push({ x: h.x, y: h.y - 50, s: '-∞', col: '#ff3a3a', t: 90 });
+    say(h, 'ถูกทับ!', '#ff9a9a', 90, 96);
+  }
+}
+// 2 slimes drop in beside the boss under a column of golden light; a fallen slime's place is used first
+function bossSummon(p) {
+  for (let k = 0; k < BOSS.summonN; k++) {
+    let i = S.players.findIndex((x, j) => j > 1 && !x.alive && !x.boss && (x.dieT || 0) >= dieTime());
+    if (i < 0) i = S.players.length;
+    const s = makeSlimeAt(i); s.x = Math.round(p.x - 150 - k * 70 - Math.random() * 30); s.y = surfaceY(s.x) - 260; s.face = -1;
+    s.name = 'ลูกน้อง'; S.players[i] = s;
+    fx.bf.push({ k: 'pillar', x: s.x, y: surfaceY(s.x), t: 0, dur: 60 });
+    say(s, 'ลูกน้องมาแล้ว!', '#ffe066', 80, -150);
+  }
+}
+// a bubble or a wave reaches its target
+function bossStrike(e, pct) {
+  const t = e.tg; if (!t.alive) return;
+  mobHit(e.by, t, pct, true);
+  if (t.alive) shatter(t);
+}
+// the boss's effects: bubbles, sword waves, light columns, the stomp's dust and shock ring, the swallow's gulp
+function bossFxTick() {
+  for (const e of fx.bf) {
+    e.t++;
+    if (e.k === 'orb') {
+      const u = Math.min(1, e.t / e.dur), tx = e.tg.x, ty = e.tg.y - 18;
+      e.x = e.x0 + (tx - e.x0) * u; e.y = e.y0 + (ty - e.y0) * u - Math.sin(u * Math.PI) * 170;
+      if (e.t % 2 === 0) fx.bf.push({ k: 'spark', x: e.x + (Math.random() - 0.5) * 16, y: e.y + (Math.random() - 0.5) * 16, vx: (Math.random() - 0.5), vy: (Math.random() - 0.5), t: 0, dur: 26, hue: (S.frame * 9) % 360 });
+      if (u >= 1 && !e.done) {
+        e.done = true; bossStrike(e, BOSS.spitPct); cam.shake = Math.max(cam.shake, 10); sfx('slime_hurt');
+        fx.bf.push({ k: 'ring', x: tx, y: ty, t: 0, dur: 24, r: 70, col: '255,255,255' });
+        for (let n = 0; n < 28; n++) { const a = Math.random() * Math.PI * 2, v = 2 + Math.random() * 5; fx.bf.push({ k: 'drop', x: tx, y: ty, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 3, t: 0, dur: 40, hue: n * 37 % 360 }); }
+      }
+    } else if (e.k === 'wave') {
+      if (!e.done) {
+        e.x -= e.sp;
+        if (e.t % 2 === 0) fx.bf.push({ k: 'spark', x: e.x + 20, y: e.y + (Math.random() - 0.5) * 50, vx: 1.5, vy: (Math.random() - 0.5), t: 0, dur: 22, hue: (e.t * 15) % 360 });
+        if (e.x <= e.tg.x + 10 || e.x < 0) {
+          e.done = true; e.fade = 0; bossStrike(e, BOSS.wavePct); cam.shake = Math.max(cam.shake, 8);
+          for (let n = 0; n < 20; n++) fx.bf.push({ k: 'spark', x: e.tg.x, y: e.tg.y - 20 + (Math.random() - 0.5) * 30, vx: -Math.random() * 6, vy: (Math.random() - 0.5) * 4, t: 0, dur: 30, hue: n * 18 % 360 });
+        }
+      } else e.fade++;
+    } else if (e.k === 'dust' || e.k === 'drop' || e.k === 'spark') {
+      e.x += e.vx; e.y += e.vy; if (e.k === 'drop') e.vy += 0.25; else { e.vx *= 0.94; e.vy = e.vy * 0.94 - (e.k === 'dust' ? 0.05 : 0); }
+    }
+  }
+  fx.bf = fx.bf.filter(e => e.k === 'orb' ? !e.done : e.k === 'wave' ? !(e.done && e.fade > 12) : e.t < (e.dur || 40));
+}
+const rainbow = (h, a) => `hsla(${h % 360},95%,68%,${a})`;
+function drawBossFx() {
+  if (!fx.bf.length) return;
+  ctx.save();
+  for (const e of fx.bf) {
+    const x = e.x - cam.x, y = e.y - cam.y, u = e.dur ? e.t / e.dur : 0;
+    if (e.k === 'dust') {
+      ctx.globalAlpha = 0.55 * (1 - u); ctx.fillStyle = '#e8dcc2'; ctx.beginPath(); ctx.arc(x, y, e.r * (1 + u), 0, 7); ctx.fill();
+    } else if (e.k === 'ring') {
+      ctx.globalAlpha = 1 - u; ctx.strokeStyle = `rgba(${e.col},1)`; ctx.lineWidth = 6 * (1 - u) + 1;
+      ctx.beginPath(); ctx.ellipse(x, y, e.r * u, e.r * u * 0.32, 0, 0, 7); ctx.stroke();
+    } else if (e.k === 'pillar') {
+      const a = u < 0.2 ? u / 0.2 : 1 - (u - 0.2) / 0.8, w = 46 + 20 * Math.sin(u * Math.PI);
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a;
+      const g = ctx.createLinearGradient(x - w, 0, x + w, 0); g.addColorStop(0, 'rgba(255,214,90,0)'); g.addColorStop(0.5, 'rgba(255,236,160,.85)'); g.addColorStop(1, 'rgba(255,214,90,0)');
+      ctx.fillStyle = g; ctx.fillRect(x - w, y - 420, w * 2, 424);
+      ctx.strokeStyle = 'rgba(255,230,140,.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y, w * 1.2 * Math.min(1, u * 3), 12, 0, 0, 7); ctx.stroke();
+      for (let k = 0; k < 6; k++) { const sy = y - ((e.t * 6 + k * 70) % 400); ctx.fillStyle = 'rgba(255,250,210,.9)'; ctx.fillRect(x - w * 0.6 + (k * 37 % (w * 1.2)), sy, 3, 10); }
+      ctx.globalCompositeOperation = 'source-over';
+    } else if (e.k === 'orb') {
+      const r = 22, h = S.frame * 6;
+      ctx.globalAlpha = 1;
+      const g = ctx.createRadialGradient(x - 7, y - 7, 2, x, y, r);
+      g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, rainbow(h, 0.9)); g.addColorStop(0.7, rainbow(h + 120, 0.75)); g.addColorStop(1, rainbow(h + 240, 0.25));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.ellipse(x - 8, y - 9, 5, 3, -0.6, 0, 7); ctx.fill();
+    } else if (e.k === 'wave') {
+      const a = e.done ? Math.max(0, 1 - e.fade / 12) : 1;
+      ctx.globalCompositeOperation = 'lighter';
+      for (let k = 0; k < 6; k++) { // a crescent of rainbow bands, the front edge bright
+        ctx.globalAlpha = a * (0.9 - k * 0.12); ctx.strokeStyle = rainbow(k * 55 + e.t * 8, 1); ctx.lineWidth = 7 - k;
+        ctx.beginPath(); ctx.arc(x + 40 + k * 7, y, 52 - k * 3, Math.PI * 0.6, Math.PI * 1.4); ctx.stroke();
+      }
+      ctx.globalAlpha = a * 0.5; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(x + 40, y, 50, Math.PI * 0.75, Math.PI * 1.25); ctx.lineTo(x + 52, y); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    } else if (e.k === 'spark' || e.k === 'drop') {
+      ctx.globalAlpha = 1 - u; ctx.fillStyle = rainbow(e.hue, 1);
+      const s = e.k === 'drop' ? 5 : 3; ctx.fillRect(x - s / 2, y - s / 2, s, s);
+    } else if (e.k === 'gulp') {
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - u;
+      for (let k = 0; k < 3; k++) { ctx.strokeStyle = rainbow(k * 120 + e.t * 10, 1); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 60 * (1 - u) + k * 10, 0, 7); ctx.stroke(); }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+  ctx.restore();
+}
+// a player's hit that the boss swallows: the shot vanishes into its mouth and does 0
+function bossSwallow(b, q) {
+  b.swT = 1; sfx('slime_hurt');
+  say(b, 'กลืนกิน!', '#ffb0e0', 90, 160);
+  fx.bf.push({ k: 'gulp', x: b.x - 40, y: b.y - 60, t: 0, dur: 28 });
+  for (let n = 0; n < 14; n++) fx.bf.push({ k: 'spark', x: q.x + (Math.random() - 0.5) * 40, y: q.y + (Math.random() - 0.5) * 40, vx: (b.x - 40 - q.x) / 18, vy: (b.y - 60 - q.y) / 18, t: 0, dur: 18, hue: n * 25 % 360 });
+}
+function bossFrame(k, f, sc, sx, sy) {
+  const s = BOSS_SHEET[k]; if (!ready(s.img)) return false;
+  ctx.save(); ctx.scale(sc * (sx || 1), sc * (sy || 1));
+  ctx.drawImage(s.img, Math.max(0, Math.min(7, f)) * s.w, 0, s.w, s.h, -s.ax, -s.ay, s.w, s.h);
+  ctx.restore(); return true;
+}
+function drawBoss(p, active) {
+  const x = Math.round(p.x - cam.x), y = Math.round(p.y - cam.y), sc = BOSS.draw;
+  if (x < -300 || x > VW + 300) return;
+  if (!p.alive) { p.dieT = (p.dieT || 0) + 1; if (p.dieT > 90) return; }
+  if (p.alive && p.prevHp != null && p.hp < p.prevHp) p.hurtT = 1;
+  p.prevHp = p.hp;
+  let k = 'stomp', f = 7, ox = 0, lift = 0, sx = 1, sy = 1, shake = 0, alpha = 1, flash = 0;
+  const a = S.state === 'mob' && S.turn === p.i ? p.act : null;
+  if (!p.alive) { const u = Math.min(1, p.dieT / 80); f = 4; sy = 1 - 0.6 * u; sx = 1 + 0.3 * u; alpha = 1 - u; flash = u < 0.3 ? 1 - u / 0.3 : 0;
+    if (p.dieT % 3 === 0 && p.dieT < 70) fx.bf.push({ k: 'drop', x: p.x + (Math.random() - 0.5) * 140, y: p.y - Math.random() * 110, vx: (Math.random() - 0.5) * 4, vy: -2 - Math.random() * 4, t: 0, dur: 40, hue: Math.random() * 360 }); }
+  else if (a) {
+    const A = BOSS_ACT[a.k], t = a.t;
+    if (a.k === 'stomp') { // crouch, leap onto the target, land (frames 6-7), then hop back to its place
+      const up0 = 8, land = A.hit, back0 = 48;
+      if (t < up0) f = Math.min(1, Math.floor(t / 4));
+      else if (t < land) { const u = (t - up0) / (land - up0); f = 2 + Math.min(3, Math.floor(u * 4)); ox = a.dx * u; lift = Math.sin(u * Math.PI) * 130; }
+      else if (t < back0) { ox = a.dx; f = t < land + 6 ? 6 : 7; sy = t < land + 6 ? 0.9 : 1; sx = t < land + 6 ? 1.08 : 1; }
+      else { const u = Math.min(1, (t - back0) / (A.len - back0)); ox = a.dx * (1 - u); lift = Math.sin(u * Math.PI) * 50; f = u < 1 ? 3 : 7; }
+    } else { k = a.k; f = Math.floor(t / (A.len / 8)); }
+  } else if (p.swT > 0) { k = 'swallow'; f = Math.floor(p.swT / 5); if (++p.swT > 40) p.swT = 0; }
+  else { const b = Math.sin(S.frame * 0.06); sy = 1 + 0.025 * b; sx = 1 - 0.02 * b; }
+  if (p.alive && p.hurtT > 0) { shake = p.hurtT < 14 ? (p.hurtT % 4 < 2 ? -4 : 4) : 0; flash = p.hurtT < 8 ? 0.7 : 0; if (++p.hurtT > 16) p.hurtT = 0; }
+  ctx.save(); ctx.translate(x + ox + shake, y);
+  // a soft shadow that shrinks while it is in the air, and a golden glow at its feet
+  const g = 1 - Math.min(0.7, lift / 160);
+  ctx.fillStyle = `rgba(0,0,0,${0.28 * g * alpha})`; ctx.beginPath(); ctx.ellipse(0, 0, 80 * g, 12 * g, 0, 0, 7); ctx.fill();
+  if (p.alive) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.18 + 0.08 * Math.sin(S.frame * 0.05);
+    const gl = ctx.createRadialGradient(0, -50, 10, 0, -50, 140); gl.addColorStop(0, 'rgba(255,230,150,.8)'); gl.addColorStop(1, 'rgba(255,230,150,0)');
+    ctx.fillStyle = gl; ctx.fillRect(-140, -190, 280, 200); ctx.restore(); }
+  ctx.translate(0, -lift); ctx.globalAlpha = alpha;
+  if (!bossFrame(k, f, sc, sx, sy)) { ctx.fillStyle = '#ff9ae0'; ctx.beginPath(); ctx.ellipse(0, -50, 80, 50, 0, 0, 7); ctx.fill(); }
+  if (flash > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = flash * 0.6 * alpha; bossFrame(k, f, sc, sx, sy); }
+  ctx.restore();
+  if (!p.alive) return;
+  const w = 120, hy = y - 196; // its HP bar and name above the crown (the HUD covers the floor under it)
+  ctx.fillStyle = 'rgba(10,24,48,.75)'; ctx.fillRect(x - w / 2 - 1, hy, w + 2, 8);
+  ctx.fillStyle = p.hp / p.maxHp > 0.35 ? '#ffcf4a' : '#ff5a4a'; ctx.fillRect(x - w / 2, hy + 1, w * p.hp / p.maxHp, 6);
+  ctx.font = `700 13px ${FONT}`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,24,48,.85)';
+  ctx.strokeText(p.name, x, hy - 6); ctx.fillStyle = '#ffe066'; ctx.fillText(p.name, x, hy - 6);
+  drawStatus(p, x, hy + 12);
+  if (active) { const by = y - 232 + Math.sin(S.frame * 0.12) * 3; ctx.fillStyle = '#ffd36a'; ctx.beginPath(); ctx.moveTo(x - 9, by); ctx.lineTo(x + 9, by); ctx.lineTo(x, by + 11); ctx.fill(); }
+}
+// the boss's HP across the top of the field
+function drawBossBar() {
+  const b = S.players.find(x => x.boss); if (!b) return;
+  const w = 300, x = VW - w - 18, y = 112;
+  panel(x - 8, y - 8, w + 16, 46, 12);
+  if (ready(BOSS_FACE)) { const s = 40 / BOSS_FACE.height; ctx.drawImage(BOSS_FACE, x - 4, y - 6, BOSS_FACE.width * s, 40); }
+  const bx = x + 58, bw = w - 62, hp = Math.max(0, b.hp) / b.maxHp;
+  ctx.font = `700 13px ${FONT}`; ctx.textAlign = 'left'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,24,48,.85)';
+  ctx.strokeText(BOSS.name, bx, y + 8); ctx.fillStyle = '#ffe066'; ctx.fillText(BOSS.name, bx, y + 8);
+  const s = `${Math.max(0, Math.round(b.hp)).toLocaleString('th-TH')}/${b.maxHp.toLocaleString('th-TH')}`;
+  ctx.textAlign = 'right'; ctx.font = `600 11px ${FONT}`; ctx.strokeText(s, bx + bw, y + 8); ctx.fillStyle = '#fff'; ctx.fillText(s, bx + bw, y + 8);
+  ctx.fillStyle = 'rgba(10,24,48,.8)'; ctx.fillRect(bx, y + 14, bw, 12);
+  const gr = ctx.createLinearGradient(bx, 0, bx + bw, 0); gr.addColorStop(0, '#ff5aa8'); gr.addColorStop(0.5, '#ffd84a'); gr.addColorStop(1, '#5ad8ff');
+  ctx.fillStyle = gr; ctx.fillRect(bx + 1, y + 15, (bw - 2) * hp, 10);
+  ctx.textAlign = 'left';
+}
 // ---------- tutorial ----------
 const TUT = { lv: 1, slimes: 3, walk: 60, angle: 10, minPower: 20 };
 const TUT_STEPS = [
@@ -2175,6 +2427,7 @@ function drawTut() {
 }
 // after each turn: a dead slime's place goes to the next one (until all of them have come out)
 function mobRespawn() {
+  if (S.boss) return; // King สไลม์'s slimes only come when it calls them
   for (let i = 1; i < S.players.length; i++) {
     const pl = S.players[i];
     if (pl.alive || S.mob.spawned >= S.mob.total) continue;
@@ -2195,15 +2448,16 @@ function mobWave() {
 // the match ends when the hero falls or all 15 slimes are beaten
 function mobOver() {
   const h = S.players[0];
+  if (S.boss) { const b = S.players.find(x => x.boss); if (!h.alive) { endMatch(b); return true; } if (!b.alive) { endMatch(h); return true; } return false; }
   if (!h.alive) { endMatch(S.players.find(x => x.mob && x.alive) || S.players[1]); return true; }
   if (mobKilled() >= S.mob.total) { endMatch(h); return true; }
   return false;
 }
-// a slime's slam on the hero
-function mobHit(m, pl) {
+// a slime's slam on the hero (King สไลม์'s bubble and sword wave too: their own % of ATK, and they never miss)
+function mobHit(m, pl, pct = 100, sure = false) {
   if (!pl.alive) return;
-  if (Math.random() >= SLIME.acc) { say(pl, 'หลบได้!', '#c8d0e0', 60, 90); return; }
-  let dmg = hitDamage(m, pl, 'atk', 100); const crit = Math.random() < critChance(m); if (crit) dmg *= critMul(m);
+  if (!sure && Math.random() >= SLIME.acc) { say(pl, 'หลบได้!', '#c8d0e0', 60, 90); return; }
+  let dmg = hitDamage(m, pl, 'atk', pct); const crit = Math.random() < critChance(m); if (crit) dmg *= critMul(m);
   if (pl.iron) dmg *= 1 - (pl.guard != null ? pl.guard : 50) / 100;
   if (pl.nineNext && dmg > 0) { dmg *= 1 - (pl.c.pv.nineLives || 30) / 100; pl.nineNext = false; }
   if (ADMIN.god && !NET.on && !pl.bot) { fx.texts.push({ x: pl.x, y: pl.y - 50, s: 'อมตะ', col: '#9fe0ff', t: 60 }); return; }
@@ -2245,6 +2499,7 @@ function mobTick(p) {
   }
 }
 function drawMob(p, active) {
+  if (p.boss) { drawBoss(p, active); return; }
   const x = Math.round(p.x - cam.x), y = Math.round(p.y - cam.y), sc = SLIME.scale;
   if (!p.alive) { p.dieT = (p.dieT || 0) + 1; if (p.dieT >= dieTime() || x < -80 || x > VW + 80) return; }
   if (x < -80 || x > VW + 80) return;
@@ -2506,7 +2761,7 @@ function update() {
   } else if (S.state === 'golem') {
     golemTick();
   } else if (S.state === 'mob') {
-    mobTick(p);
+    if (p.boss) bossTick(p); else mobTick(p);
   } else if (S.state === 'settle') {
     if (!settling && --S.settle <= 0) {
       const living = S.players.filter(x => x.alive);
@@ -2544,6 +2799,7 @@ function tickFx(p) {
   for (const w of fx.warps) w.t++;
   fx.warps = fx.warps.filter(w => w.t < 36);
   for (const q of fx.parts) { q.vy += 0.25; q.x += q.vx; q.y += q.vy; q.t--; }
+  bossFxTick();
   fx.parts = fx.parts.filter(q => q.t > 0);
   for (const t of fx.texts) { t.y -= 0.6; t.t--; }
   fx.texts = fx.texts.filter(t => t.t > 0);
@@ -2557,6 +2813,8 @@ function tickFx(p) {
   if (S.state === 'flying' && fly) { tx = fly.x; ty = fly.y; }
   const stk = S.projs.find(q => q.strike && !q.done);
   if (S.state === 'flying' && stk) { tx = stk.x; ty = stk.y; }
+  const bfe = S.state === 'mob' && fx.bf.find(e => (e.k === 'orb' || e.k === 'wave') && !e.done);
+  if (bfe) { tx = bfe.x; ty = bfe.y; }
   const gx = Math.max(0, Math.min(WW - VW, tx - VW / 2)), gy = Math.max(0, Math.min(WH - VH, ty - VH * 0.55));
   cam.x += (gx - cam.x) * 0.08; cam.y += (gy - cam.y) * 0.08;
 }
@@ -2576,7 +2834,9 @@ function endMatch(winner, why) {
     sub: !winner ? 'ทั้งสองฝ่ายล้มพร้อมกัน' : human ? (winner === human ? 'คุณชนะการต่อสู้!' : vsBot ? 'บอทชนะ ลองใหม่อีกครั้ง' : 'เพื่อนชนะ ลองใหม่อีกครั้ง') : `${winner.name} ชนะ!`,
     sparks: [] };
   let txt = !winner ? 'เสมอ! ทั้งสองฝ่ายล้มพร้อมกัน' : `${winner.name} (${winner.c.name}) ชนะ! เลือกอาชีพแล้วเริ่มรอบใหม่ได้เลย`;
-  if (S.mob) { const won = winner === S.players[0]; R.kind = won ? 'victory' : 'defeat'; txt = R.sub = won ? `กำจัดสไลม์ครบ ${S.mob.total} ตัว!` : `สไลม์ชนะ (กำจัดได้ ${mobKilled()}/${S.mob.total} ตัว) ลองใหม่อีกครั้ง`; }
+  if (S.mob) { const won = winner === S.players[0]; R.kind = won ? 'victory' : 'defeat'; txt = R.sub = won ? `กำจัดสไลม์ครบ ${S.mob.total} ตัว!` : `สไลม์ชนะ (กำจัดได้ ${mobKilled()}/${S.mob.total} ตัว) ลองใหม่อีกครั้ง`;
+    if (S.boss) txt = R.sub = won ? `ปราบ ${BOSS.name} ได้แล้ว!` : `${BOSS.name} ชนะ ลองใหม่อีกครั้ง`;
+    else if (won && S.dg && S.dg.ph < S.dg.phases) txt = R.sub = `ผ่านเฟส ${S.dg.ph}! กลับห้องเพื่อไปสู้กับ ${BOSS.name}`; }
   const tutWon = S.tut && winner === S.players[0];
   if (S.tut) txt = R.sub = tutWon ? 'จบบทสอนแล้ว! คุณพร้อมออกผจญภัยแล้ว' : 'สไลม์ชนะ ลองบทสอนใหม่อีกครั้งนะ';
   if (why) R.sub = why;
@@ -2591,7 +2851,7 @@ function endMatch(winner, why) {
   } catch (_) {}
   // a dungeon run (the town set window.__dungeon): tell the town whether the field was cleared, for the reward
   if (S.mob && S.dg && human && window.parent !== window) try {
-    parent.postMessage({ type: 'aoa-dungeon-end', result: winner === human ? 'win' : 'loss', kills: mobKilled() }, location.origin);
+    parent.postMessage({ type: 'aoa-dungeon-end', result: winner === human ? 'win' : 'loss', kills: S.boss ? S.players.filter(x => x.mob && !x.alive).length : mobKilled(), phase: S.dg.ph, phases: S.dg.phases }, location.origin);
   } catch (_) {}
   // tell the lobby (which opens the game in a frame for new characters) that the tutorial is won; it shows the EXP summary
   if (tutWon && window.parent !== window) setTimeout(() => {
@@ -2609,6 +2869,7 @@ function drawJungleSky() {
   if (im && ready(im)) ctx.drawImage(im, -VW * ex * kx, -VH * ex * ky, w, h); else { ctx.fillStyle = '#6fb0d8'; ctx.fillRect(0, 0, VW, VH); }
   const t = S ? S.frame : 0;
   if (STAGE && STAGE.fx === 'meadow') return drawMeadowSky(t, -VW * ex * kx, -VH * ex * ky, w, h);
+  if (STAGE && STAGE.fx === 'hall') return drawHallSky(t, -VW * ex * kx, -VH * ex * ky, w, h);
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   for (let k = 0; k < 3; k++) { // slow sun shafts from the top right
     const x0 = VW * (0.55 + k * 0.17) - cam.x * 0.05, a = 0.05 + 0.03 * Math.sin(t * 0.01 + k * 2);
@@ -2700,6 +2961,49 @@ function drawMeadowFront() {
   }
   ctx.globalAlpha = 1;
 }
+// ---------- the throne hall's living light (Karoz 2026-10-16: "ใส่เอฟเฟคไปด้วย") ----------
+// sun through the stained glass breathing in slow golden shafts, candle flames flickering in the sconces, gold dust
+// drifting through the light, and in front a few glints rising off the marble
+const HALL_FX = (() => {
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  return {
+    // the sconces in the painting (fractions of its width and height)
+    candles: [[0.046, 0.355], [0.226, 0.355], [0.4, 0.355], [0.573, 0.355], [0.747, 0.355], [0.873, 0.43]],
+    motes: Array.from({ length: 46 }, () => ({ x: rnd(), y: rnd(), v: 0.0002 + rnd() * 0.0004, p: rnd() * 7, s: 1 + Math.floor(rnd() * 2) })),
+    glints: Array.from({ length: 14 }, () => ({ x: rnd() * WW, p: rnd() * 400, v: 0.3 + rnd() * 0.4 })),
+  };
+})();
+function drawHallSky(t, bx, by, bw, bh) {
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let k = 0; k < 4; k++) { // shafts from the two tall windows, falling down to the right
+    const wx = bx + bw * (k < 2 ? 0.14 : 0.48) + (k % 2) * bw * 0.05, a = 0.05 + 0.04 * Math.sin(t * 0.011 + k * 1.7);
+    const g = ctx.createLinearGradient(wx, by + bh * 0.1, wx + bw * 0.16, by + bh * 0.85);
+    g.addColorStop(0, `rgba(255,232,170,${a * 1.6})`); g.addColorStop(1, 'rgba(255,232,170,0)');
+    ctx.fillStyle = g; ctx.beginPath();
+    ctx.moveTo(wx - 18, by + bh * 0.08); ctx.lineTo(wx + 26, by + bh * 0.08); ctx.lineTo(wx + bw * 0.22, by + bh * 0.86); ctx.lineTo(wx + bw * 0.12, by + bh * 0.86); ctx.fill();
+  }
+  for (const [fx_, fy] of HALL_FX.candles) { // flickering candle light
+    const x = bx + bw * fx_, y = by + bh * fy, fl = 0.75 + 0.25 * Math.sin(t * 0.21 + fx_ * 40) * Math.sin(t * 0.13 + fy * 17);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, 34 * fl);
+    g.addColorStop(0, `rgba(255,214,130,${0.38 * fl})`); g.addColorStop(1, 'rgba(255,190,90,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 34 * fl, 0, 7); ctx.fill();
+  }
+  for (const q of HALL_FX.motes) { // gold dust drifting through the light
+    const x = bx + bw * ((q.x + Math.sin(t * 0.004 + q.p) * 0.01) % 1), y = by + bh * (((q.y - t * q.v) % 1 + 1) % 1), a = 0.35 + 0.35 * Math.sin(t * 0.05 + q.p);
+    ctx.fillStyle = `rgba(255,236,170,${a})`; ctx.fillRect(Math.round(x), Math.round(y), q.s, q.s);
+  }
+  ctx.restore();
+}
+function drawHallFront() {
+  const t = S ? S.frame : 0, gy = HALL_Y - cam.y;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (const q of HALL_FX.glints) { // glints rising off the polished floor
+    const x = q.x - cam.x; if (x < -10 || x > VW + 10) continue;
+    const u = ((t * q.v + q.p) % 120) / 120, y = gy - u * 60, a = Math.sin(u * Math.PI) * 0.8;
+    ctx.fillStyle = `rgba(255,246,200,${a})`; ctx.fillRect(Math.round(x), Math.round(y), 2, 2); ctx.fillRect(Math.round(x) - 2, Math.round(y) + 1, 6, 1);
+  }
+  ctx.restore();
+}
 function drawMist() {
   const y0 = WH - 70 - cam.y;
   const g = ctx.createLinearGradient(0, y0, 0, y0 + 70);
@@ -2707,6 +3011,11 @@ function drawMist() {
   ctx.fillStyle = g; ctx.fillRect(0, y0, VW, 80);
 }
 function drawAvatar(p, pose) {
+  if (p.boss) { // King สไลม์'s portrait: Karoz's picture of it
+    if (!p.alive) ctx.globalAlpha = 0.35;
+    if (ready(BOSS_FACE)) { const h = pose === 'stand' ? 54 : 40, w = BOSS_FACE.width * h / BOSS_FACE.height; ctx.drawImage(BOSS_FACE, -w / 2, -h - (pose === 'stand' ? 0 : 4), w, h); }
+    ctx.globalAlpha = 1; return;
+  }
   if (p.mob) { // portraits: the slime's idle bounce, lifted into the frame
     if (!p.alive) ctx.globalAlpha = 0.35;
     ctx.save(); ctx.translate(0, pose === 'stand' ? -6 : -19);
@@ -3177,7 +3486,8 @@ function drawHUD() {
     drawTeamPlate(edge, 31, tm === 0 ? -1 : 1, tm === myTeam(), teamOf(S.turn) === tm);
   }
   if (S.tut) drawTut();
-  if (S.mob && (!S.tut || S.tut.spawned)) { // slimes still to beat, under the minimap
+  if (S.boss) drawBossBar();
+  else if (S.mob && (!S.tut || S.tut.spawned)) { // slimes still to beat, under the minimap
     const s = `สไลม์เหลือ ${S.mob.total - mobKilled()}/${S.mob.total} ตัว`, sx = VW - 120, sy = 132;
     panel(sx - 82, sy - 17, 164, 26, 13);
     ctx.textAlign = 'center'; ctx.font = `600 15px ${FONT}`; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(10,24,48,.85)';
@@ -3782,7 +4092,7 @@ function draw() {
   const shk = cam.shake > 0 ? (Math.random() - 0.5) * cam.shake : 0;
   ctx.save(); ctx.translate(shk, shk * 0.6);
   ctx.drawImage(terr, cam.x, cam.y, VW, VH, 0, 0, VW, VH);
-  if (STAGE && STAGE.fx === 'meadow') drawMeadowFront(); else drawMist();
+  if (STAGE && STAGE.fx === 'meadow') drawMeadowFront(); else if (STAGE && STAGE.fx === 'hall') drawHallFront(); else drawMist();
   if (!S) return;
   drawZones();
   drawGolem();
@@ -3793,10 +4103,11 @@ function draw() {
     if (h && teamOf(p.i) !== myTeam()) return;
     ctx.globalAlpha = h ? 0.45 : 1; drawHero(p, p.i === S.turn && !S.demo); ctx.globalAlpha = 1;
   });
-  if (ADMIN.hitbox) for (const p of S.players) if (p.alive) { const b = hitBox(p); ctx.strokeStyle = 'rgba(255,60,60,.9)'; ctx.lineWidth = 1.5; ctx.strokeRect(b.l - cam.x, b.t - cam.y, HB.w, HB.h); }
+  if (ADMIN.hitbox) for (const p of S.players) if (p.alive) { const b = hitBox(p); ctx.strokeStyle = 'rgba(255,60,60,.9)'; ctx.lineWidth = 1.5; ctx.strokeRect(b.l - cam.x, b.t - cam.y, b.r - b.l, b.b - b.t); }
   S.projs.forEach(drawProj);
   drawGfx();
   drawFx();
+  drawBossFx();
   ctx.restore();
   if (!S.demo && ruler) drawRuler();
   if (!S.demo) { drawHUD(); drawTip(); drawSlotTip(); }
@@ -4185,7 +4496,7 @@ document.getElementById('start').onclick = () => {
   document.getElementById('setup').hidden = true;
   document.getElementById('result').hidden = true;
   for (const k in input) input[k] = false;
-  const st = mobMode && !NET.mode ? SLIME_STAGE : STAGES[stageKey] || Object.values(STAGES)[0];
+  const st = mobMode && !NET.mode ? (tutMode ? SLIME_STAGE : mobStage()) : STAGES[stageKey] || Object.values(STAGES)[0];
   playBgm(assetURL(st.music));
   stageReady(st).then(() => { newMatch(false); if (NET.on) netHostBegin(); else NET.inMatch = false; });
   document.querySelector('.stage').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -5124,7 +5435,7 @@ loadSavedData();
 cam.x = 0;
 fitCanvas(); drawStripResize();
 requestAnimationFrame(loop);
-window.__game = { NET, get S() { return S; }, get cam() { return cam; }, input, fire, useSkill, botPlan, useUlt, useSlot, runSim, simPairs, simSummary, simCSV, statOf, hitDamage, critChance, get SKILLS() { return SKILLS; }, explode, selfSkill, foeSkill, turnStartEffects, setLoadout, botLoadout, get CLASSES() { return CLASSES; }, get botAccOv() { return botAccOv; } };
+window.__game = { NET, get S() { return S; }, get BOSS() { return BOSS; }, get cam() { return cam; }, input, fire, useSkill, botPlan, useUlt, useSlot, runSim, simPairs, simSummary, simCSV, statOf, hitDamage, critChance, get SKILLS() { return SKILLS; }, explode, selfSkill, foeSkill, turnStartEffects, setLoadout, botLoadout, get CLASSES() { return CLASSES; }, get botAccOv() { return botAccOv; } };
 })();
 </script>
 
