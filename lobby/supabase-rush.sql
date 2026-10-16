@@ -10,6 +10,10 @@
 -- and fills 12 eggs with a random number of coupons each (between egg.rush_bot.min and .max from the admin panel's settings),
 -- new for every match. egg_pick breaks the egg the player picked and adds its coupons. A ticket pays once.
 -- Teams are one player for now (the game plays 1 against 1), so the lowest level in the team is the player's own.
+-- Egg prizes (Karoz 2026-10-16): once the admin panel has set a prize list for ลุย against the bot (game_settings
+-- egg_pool, see supabase-admin.sql), each egg holds one prize from it (gold, coupons or an item) instead of coupons
+-- only. egg_fill and egg_give here are shared with the dungeon's eggs (supabase-dungeon.sql).
+-- Run after supabase-items.sql too (prizes that are items go into player_items).
 
 create table if not exists public.rush_bot (
   id uuid primary key default gen_random_uuid(),
@@ -24,6 +28,7 @@ create table if not exists public.rush_bot (
   eggs int[],
   egg_pick int
 );
+alter table public.rush_bot add column if not exists prizes jsonb; -- the 12 eggs when they hold prizes from egg_pool
 create index if not exists rush_bot_user_idx on public.rush_bot (user_id, created_at desc);
 alter table public.rush_bot enable row level security;
 revoke all on public.rush_bot from anon, authenticated;
@@ -42,6 +47,51 @@ begin
   update public.profiles set level = lv, exp = ex::int where id = p_id returning * into p;
   insert into public.exp_log (user_id, source, exp, level_after, exp_after) values (p_id, p_source, p_exp, p.level, p.exp);
   return p;
+end $$;
+
+-- 12 eggs from a prize list in game_settings egg_pool (p_key: 'rush_bot', 'dg:slime:normal' ...): each egg one prize
+-- picked by its chance weight, with an amount between its min and max. Null when that list is not set or is empty.
+create or replace function public.egg_fill(p_key text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare pool jsonb; tot numeric; r numeric; x jsonb; out jsonb := '[]'::jsonb; i int; n int;
+begin
+  select value->p_key into pool from public.game_settings where key = 'egg_pool';
+  if pool is null or jsonb_typeof(pool) <> 'array' or jsonb_array_length(pool) = 0 then return null; end if;
+  select sum((e->>'w')::numeric) into tot from jsonb_array_elements(pool) e;
+  if coalesce(tot, 0) <= 0 then return null; end if;
+  for i in 1..12 loop
+    r := random() * tot;
+    for x in select e from jsonb_array_elements(pool) e loop
+      r := r - (x->>'w')::numeric;
+      exit when r < 0;
+    end loop;
+    n := (x->>'min')::int + floor(random() * ((x->>'max')::int - (x->>'min')::int + 1))::int;
+    out := out || jsonb_build_array(jsonb_strip_nulls(jsonb_build_object('t', x->>'t', 'n', n, 'id', x->>'id', 'slot', nullif(x->>'slot', ''),
+      'stats', case when x->>'t' = 'item' then coalesce(x->'stats', '{}'::jsonb) end, 'bound', case when x->>'t' = 'item' then coalesce((x->>'bound')::boolean, true) end)));
+  end loop;
+  return out;
+end $$;
+-- hand one prize to a player: gold and coupons onto the profile; an item into the bag. Items with no slot and no stats
+-- (materials) stack onto a pile of the same kind; gear comes one piece per row
+create or replace function public.egg_give(p_id uuid, p jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare n int := greatest(1, coalesce((p->>'n')::int, 1)); k int; pile bigint;
+begin
+  if p->>'t' = 'gold' then update public.profiles set gold = gold + n where id = p_id;
+  elsif p->>'t' = 'coupon' then update public.profiles set coupon = coupon + n where id = p_id;
+  elsif p->>'t' = 'item' then
+    if p->>'slot' is null and coalesce(p->'stats', '{}'::jsonb) = '{}'::jsonb then
+      select id into pile from public.player_items where owner = p_id and item_id = p->>'id' and mail_id is null and expires_at is null
+        and bound = coalesce((p->>'bound')::boolean, true) and stats = '{}'::jsonb and slot is null and qty + n <= 9999 limit 1 for update;
+      if pile is not null then update public.player_items set qty = qty + n where id = pile; return; end if;
+      insert into public.player_items (owner, item_id, qty, bound, stats) values (p_id, p->>'id', n, coalesce((p->>'bound')::boolean, true), '{}'::jsonb);
+    else
+      for k in 1..least(n, 50) loop
+        insert into public.player_items (owner, item_id, slot, qty, bound, stats)
+        values (p_id, p->>'id', p->>'slot', 1, coalesce((p->>'bound')::boolean, true), coalesce(p->'stats', '{}'::jsonb));
+      end loop;
+    end if;
+  end if;
 end $$;
 
 -- after 30 s of ลุย with nobody found: a bot match instead (or the match, if a player turned up just now)
@@ -68,7 +118,7 @@ create or replace function public.rush_end(p_ticket uuid, p_result text, p_dmg i
 language plpgsql security definer set search_path = public as $$
 declare
   t public.rush_bot; p public.profiles; eg jsonb; mn int; mx int; arr int[]; g int := 0; e int := 0;
-  share numeric;
+  share numeric; pz jsonb;
 begin
   select * into t from public.rush_bot where id = p_ticket and user_id = auth.uid() for update;
   if not found then raise exception 'no_ticket'; end if;
@@ -82,7 +132,8 @@ begin
   share := case when coalesce(p_dmg, 0) <= 0 then 0 when p_result = 'win' then 1 else 0.25 end;
   g := round(10 * t.level * share); -- 100 x level / 10
   e := round(20 * t.level * share); -- 200 x level / 10
-  if share > 0 then
+  if share > 0 then pz := public.egg_fill('rush_bot'); end if;
+  if share > 0 and pz is null then
     -- this mode's range; before per-mode ranges the setting was one { min, max } for this mode
     select coalesce(value->'rush_bot', case when value ? 'min' then value end) into eg from public.game_settings where key = 'egg';
     if eg is not null and jsonb_typeof(eg->'min') = 'number' and jsonb_typeof(eg->'max') = 'number' then
@@ -92,21 +143,28 @@ begin
   end if;
   if g > 0 then update public.profiles set gold = gold + g where id = auth.uid(); end if;
   if e > 0 then perform public.gain_exp(auth.uid(), e, 'rush_bot'); end if;
-  update public.rush_bot set result = p_result, ended_at = now(), gold = g, exp = e, eggs = arr where id = t.id;
+  update public.rush_bot set result = p_result, ended_at = now(), gold = g, exp = e, eggs = arr, prizes = pz where id = t.id;
   select * into p from public.profiles where id = auth.uid();
-  return jsonb_build_object('result', p_result, 'level', t.level, 'dmg', greatest(0, coalesce(p_dmg, 0)), 'gold', g, 'exp', e, 'eggs', coalesce(array_length(arr, 1), 0),
+  return jsonb_build_object('result', p_result, 'level', t.level, 'dmg', greatest(0, coalesce(p_dmg, 0)), 'gold', g, 'exp', e, 'eggs', coalesce(jsonb_array_length(pz), array_length(arr, 1), 0),
     'me', jsonb_build_object('level', p.level, 'exp', p.exp, 'gold', p.gold, 'gem', p.gem, 'coupon', p.coupon));
 end $$;
 
--- break one of the 12 eggs (0-11): its coupons go to the player, and all 12 are shown
+-- break one of the 12 eggs (0-11): its coupons (or prize) go to the player, and all 12 are shown
 create or replace function public.egg_pick(p_ticket uuid, p_index int) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare t public.rush_bot; n int; p public.profiles;
 begin
   select * into t from public.rush_bot where id = p_ticket and user_id = auth.uid() for update;
   if not found then raise exception 'no_ticket'; end if;
-  if t.eggs is null then raise exception 'no_eggs'; end if;
+  if t.eggs is null and t.prizes is null then raise exception 'no_eggs'; end if;
   if t.egg_pick is not null then raise exception 'already_picked'; end if;
+  if t.prizes is not null then
+    if p_index is null or p_index < 0 or p_index >= jsonb_array_length(t.prizes) then raise exception 'bad_egg'; end if;
+    update public.rush_bot set egg_pick = p_index where id = t.id;
+    perform public.egg_give(auth.uid(), t.prizes->p_index);
+    select * into p from public.profiles where id = auth.uid();
+    return jsonb_build_object('pick', p_index, 'won', t.prizes->p_index, 'eggs', t.prizes, 'coupon', p.coupon, 'gold', p.gold);
+  end if;
   if p_index is null or p_index < 0 or p_index >= array_length(t.eggs, 1) then raise exception 'bad_egg'; end if;
   n := t.eggs[p_index + 1];
   update public.rush_bot set egg_pick = p_index where id = t.id;
@@ -115,5 +173,6 @@ begin
 end $$;
 
 revoke all on function public.gain_exp(uuid, int, text) from public, anon, authenticated;
+revoke all on function public.egg_fill(text), public.egg_give(uuid, jsonb) from public, anon, authenticated;
 revoke all on function public.match_bot(), public.rush_end(uuid, text, int), public.egg_pick(uuid, int) from public;
 grant execute on function public.match_bot(), public.rush_end(uuid, text, int), public.egg_pick(uuid, int) to authenticated;

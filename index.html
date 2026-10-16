@@ -1289,6 +1289,7 @@ function startTurn(first) {
   if (!first) S.turn = nextTurn(S.turn);
   const p = cur();
   if (!p.alive) { S.turn = nextTurn(S.turn); }
+  if (!first && S.mob && !S.tut && S.turn === 0) mobWave(); // a round is over
   const q = cur();
   q.maxEn = Math.round(235 + statOf(q, 'spd') * 0.25); // SPD after passives (Ranger Training, Cat Reflex) and debuffs (Ice Lance, Blizzard)
   q.iron = false; q.energy = Math.max(0, q.maxEn - (q.debs || []).reduce((a, d) => a + (d.enPen || 0), 0)); q.armed = null; q.boost = false; q.ccTurn = false;
@@ -2182,6 +2183,15 @@ function mobRespawn() {
     say(S.players[i], 'สไลม์ตัวใหม่!', '#c8ff9a', 80, -150);
   }
 }
+// Karoz 2026-10-16: besides one new slime for each that dies, every round (back to the hero's turn) 2 more drop in
+// even when none died, until all 15 have come
+const MOB_WAVE = 2;
+function mobWave() {
+  for (let k = 0; k < MOB_WAVE && S.mob.spawned < S.mob.total; k++) {
+    const i = S.players.length; S.players.push(makeSlimeAt(i)); S.mob.spawned++;
+    say(S.players[i], 'สไลม์ตัวใหม่!', '#c8ff9a', 80, -150);
+  }
+}
 // the match ends when the hero falls or all 15 slimes are beaten
 function mobOver() {
   const h = S.players[0];
@@ -2578,6 +2588,10 @@ function endMatch(winner, why) {
   // tell the town how this screen's player did (the admin panel's job win rates); not the tutorial or the slime stage
   if (human && !S.tut && !S.mob && window.parent !== window) try {
     parent.postMessage({ type: 'aoa-match-end', vs: vsBot ? 'bot' : 'pvp', result: !winner ? 'draw' : winner === human ? 'win' : 'loss', dmg: Math.round((S.dealt || {})[human.i] || 0) }, location.origin);
+  } catch (_) {}
+  // a dungeon run (the town set window.__dungeon): tell the town whether the field was cleared, for the reward
+  if (S.mob && S.dg && human && window.parent !== window) try {
+    parent.postMessage({ type: 'aoa-dungeon-end', result: winner === human ? 'win' : 'loss', kills: mobKilled() }, location.origin);
   } catch (_) {}
   // tell the lobby (which opens the game in a frame for new characters) that the tutorial is won; it shows the EXP summary
   if (tutWon && window.parent !== window) setTimeout(() => {

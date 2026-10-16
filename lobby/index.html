@@ -866,6 +866,19 @@ img.jb { pointer-events: auto; } /* the small job badge keeps its name tooltip *
 .ap-egg .mm label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
 .ap .ap-egg input[type=number] { width: 100%; height: 36px; }
 .ap-egg > .btn { margin-top: auto; }
+/* egg prizes per mode and per dungeon level (Karoz 2026-10-16) */
+.ap-pools { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(440px, 100%), 1fr)); gap: 10px; margin-top: 10px; }
+.ap-pz { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ap-pz th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; padding: 0 4px 4px; }
+.ap-pz td { padding: 3px 4px; vertical-align: middle; }
+.ap .ap-pz select, .ap .ap-pz input[type=number] { width: 100%; height: 32px; min-width: 0; padding: 0 6px; }
+.ap-pz td:first-child { width: 42%; }
+.ap-pz td:nth-child(2), .ap-pz td:nth-child(3), .ap-pz td:nth-child(4) { width: 15%; }
+.ap-pz td.pc { color: #ffe08a; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+.ap-pz td.pb { white-space: nowrap; font-size: 12px; }
+.ap-pz .x { border: 0; background: none; color: #ff8a8a; font-size: 16px; cursor: pointer; padding: 2px 6px; }
+.ap-egg .row { display: flex; gap: 8px; }
+.ap-egg .row .btn { flex: 1; }
 #log .del { border: 0; background: none; color: #ff8a80; cursor: pointer; font-size: 14px; padding: 0 4px; margin-left: 6px; opacity: .7; }
 #log .del:hover { opacity: 1; }
 /* banned, or the game is closed for maintenance: a screen in front of the town */
@@ -1316,9 +1329,9 @@ img.jb { pointer-events: auto; } /* the small job badge keeps its name tooltip *
         <div class="ap-row"><input type="text" class="grow" id="ap-mt-msg" maxlength="200" placeholder="ข้อความที่ผู้เล่นจะเห็น" aria-label="ข้อความปิดปรับปรุง"><button type="button" class="btn go" id="ap-mt-save">บันทึก</button></div>
       </div>
       <div class="ap-card">
-        <h3>ไข่คูปองหลังจบเกม แยกตามโหมด</h3>
-        <p class="gm-note">ไข่ 12 ฟองสุ่มจำนวนคูปองในช่วงที่ตั้งใหม่ทุกเกม ยังไม่ตั้งค่าหรือสูงสุดเป็น 0 โหมดนั้นจะไม่มีทุบไข่</p>
-        <div class="ap-eggs" id="ap-eggs"></div>
+        <h3>ไข่รางวัลหลังจบเกม แยกตามโหมดและด่าน</h3>
+        <p class="gm-note">ไข่ 12 ฟอง แต่ละฟองสุ่มของรางวัล 1 อย่างจากรายการ ตามโอกาสที่ตั้ง แล้วสุ่มจำนวนในช่วงต่ำสุด-สูงสุด ของรางวัลเลือกได้ทั้งทอง คูปอง และไอเทมทุกชิ้นในเกม ไอเทมหรือด่านที่เพิ่มใหม่จะขึ้นในหน้านี้เอง โหมดหรือด่านที่ไม่มีรายการจะไม่มีทุบไข่</p>
+        <div class="ap-pools" id="ap-eggs"></div>
       </div>
       <div class="ap-card">
         <h3>อาชีพที่ยังเปิดเฉพาะแอดมิน</h3>
@@ -1681,6 +1694,8 @@ function watchGameRoom(fr) {
 $('back').onclick = () => {
   if (rush.ticket && rush.ending && gameBox.querySelector('iframe')) { rushReward(); return; } // the bot match is over: straight to the reward
   if (rush.ticket && !rush.ending) rush.ticket = null;
+  if (dgRun.ticket && dgRun.ending && gameBox.querySelector('iframe')) { dgReward(); return; } // the run is over: straight to the reward
+  if (dgRun.ticket && !dgRun.ending) dgRun.ticket = null; // left mid-run: nothing to pay
   backToTown();
 };
 const backToTown = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; $('g-cover').hidden = true; if (co.room) { co.ready = false; co.game = null; if (co.host && co.mode === 'rush') { Object.assign(co, { map: null, lastGame: null }); stopMatch(); } matchStarted = null; sharePresence(); openModal('m-room'); renderRoom(); } };
@@ -1821,7 +1836,9 @@ function quickDungeon() {
 // the game holds each level's slime stats (DG_MOB in index.html)
 const DUNGEONS = [
   { k: 'slime', name: 'ทุ่งสไลม์', img: 'img/dg-slime.webp?v=1', lv: '8-12',
-    desc: 'สไลม์หลากสีออกมาเต็มทุ่ง ต้องปราบให้ครบ 15 ตัว' },
+    desc: 'สไลม์หลากสีออกมาเต็มทุ่ง ต้องปราบให้ครบ 15 ตัว',
+    // what its eggs hold (Karoz 2026-10-16); the amounts and chances are set in the admin panel
+    prizes: ['item:slime_part', 'item:slime_ring', 'gold', 'item:stone_up', 'coupon', 'item:slime_hat'] },
 ];
 const DG_LEVELS = [{ k: 'normal', name: 'ปกติ' }];
 const dgOf = k => DUNGEONS.find(d => d.k === k);
@@ -2056,7 +2073,17 @@ function startRoom() {
   if (co.mode === 'dungeon') { // the game plays the dungeon one hero at a time for now: the party's host goes in
     if (mem.length > 1) { msg.textContent = 'ตอนนี้ดันเจี้ยนเล่นได้ทีละ 1 คน เล่นพร้อมกันหลายคนจะตามมา'; return; }
     msg.textContent = '';
-    launch(d => { press(d, '#mode-slime'); press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#start'); }, false, null, { k: dgOf(co.map) ? co.map : DUNGEONS[0].k, lv: co.dlv || DG_LEVELS[0].k });
+    const run = { k: dgOf(co.map) ? co.map : DUNGEONS[0].k, lv: co.dlv || DG_LEVELS[0].k };
+    // signed in: a ticket from the server first, so a cleared run can be paid (dungeon_end); the preview plays without one
+    if (serverOn()) {
+      online.sb.rpc('dungeon_start', { p_dungeon: run.k, p_lv: run.lv }).then(({ data, error }) => {
+        if (error) { msg.textContent = /dungeon_start|schema cache|function/.test(error.message || '') ? 'ต้องรัน supabase-dungeon.sql ใน Supabase ก่อน' : why(error); return; }
+        Object.assign(dgRun, { ticket: data.ticket, ending: false, result: null });
+        launch(d => { press(d, '#mode-slime'); press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#start'); }, false, null, run);
+      });
+      return;
+    }
+    launch(d => { press(d, '#mode-slime'); press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#start'); }, false, null, run);
     return;
   }
   if (mem.length < 2) { msg.textContent = 'ต้องมีผู้เล่นอย่างน้อย 2 คน'; return; }
@@ -2075,6 +2102,8 @@ const mm = { on: false, busy: false };
 // Karoz 2026-10-15: nobody found in 30 s -> a hard bot one level up with every skill slot and 67% accuracy (lobby/supabase-rush.sql)
 const RUSH_BOT_AFTER = 30000, RUSH_BOT_ACC = 0.67;
 const rush = { ticket: null, level: 1, ending: false, result: null, timer: 0 };
+// a dungeon run: its ticket from dungeon_start, and how it ended (the game's aoa-dungeon-end)
+const dgRun = { ticket: null, ending: false, result: null, timer: 0 };
 async function seekMatch() {
   const msg = $('rm-msg'), n = membersOf(co.room).length;
   if (co.seek) { stopMatch(); msg.textContent = ''; return; } // ยกเลิก
@@ -2141,6 +2170,36 @@ addEventListener('message', e => {
   rush.ending = true; rush.result = { result: ['win', 'loss', 'draw'].includes(d.result) ? d.result : 'loss', dmg: Math.max(0, d.dmg | 0) };
   clearTimeout(rush.timer); rush.timer = setTimeout(rushReward, 4500);
 });
+// the dungeon run ended: wait for the game's Victory/Defeat, then the reward
+addEventListener('message', e => {
+  const d = e.data;
+  if (e.origin !== location.origin || !d || d.type !== 'aoa-dungeon-end' || !dgRun.ticket || dgRun.ending) return;
+  dgRun.ending = true; dgRun.result = { result: d.result === 'win' ? 'win' : 'loss', kills: Math.max(0, d.kills | 0) };
+  clearTimeout(dgRun.timer); dgRun.timer = setTimeout(dgReward, 4500);
+});
+async function dgReward() {
+  clearTimeout(dgRun.timer);
+  if (!dgRun.ticket || !dgRun.result) return;
+  const ticket = dgRun.ticket, r = dgRun.result, lv0 = prof.level || 1;
+  const fr = gameBox.querySelector('iframe'); if (fr) fr.remove();
+  gameBox.hidden = false; $('g-cover').hidden = true; $('back').hidden = true;
+  const { data, error } = await online.sb.rpc('dungeon_end', { p_ticket: ticket, p_result: r.result, p_kills: r.kills });
+  const go = $('td-go');
+  if (error) {
+    const em = error.message || '';
+    showResult([['ทอง', 0], ['EXP', 0]], 0, 'ของรางวัล', 'EXP ที่ได้');
+    $('td-msg').textContent = /too_fast/.test(em) ? 'จบด่านเร็วผิดปกติ ไม่ได้รับของรางวัล' : /already_ended/.test(em) ? 'รับของรางวัลของรอบนี้ไปแล้ว' : 'รับของรางวัลไม่สำเร็จ: ' + why(error);
+    go.textContent = 'กลับห้อง'; go.disabled = false; go.onclick = rushDone; go.focus(); return;
+  }
+  const me = data.me || {};
+  online.me = Object.assign(online.me || {}, me); Object.assign(prof, { level: me.level || prof.level, exp: me.exp != null ? me.exp : prof.exp }); saveProf(); renderProf(); sharePresence();
+  showResult([['ทอง', data.gold | 0], ['EXP', data.exp | 0]], data.exp | 0, r.result === 'win' ? 'ของรางวัล (ผ่านด่าน)' : 'ของรางวัล (ไม่ผ่านด่าน)', 'EXP ที่ได้');
+  $('td-up').hidden = !(prof.level > lv0);
+  $('td-msg').textContent = r.result === 'win' ? (data.eggs > 0 ? 'ผ่านด่านแล้ว ทุบไข่ได้ 1 ฟอง' : 'ผ่านด่านแล้ว') : `ไม่ผ่านด่าน (กำจัดได้ ${r.kills} ตัว) ไม่ได้รับของรางวัล`;
+  if (data.eggs > 0) { go.textContent = 'ทุบไข่'; go.onclick = () => { $('tut-done').hidden = true; showEggs(ticket, data.eggs, 'dungeon_egg_pick'); }; }
+  else { go.textContent = 'กลับห้อง'; go.onclick = rushDone; }
+  go.disabled = false; go.focus();
+}
 async function rushReward() {
   clearTimeout(rush.timer);
   if (!rush.ticket || !rush.result) return;
@@ -2166,21 +2225,26 @@ async function rushReward() {
   else { go.textContent = 'กลับห้อง'; go.onclick = rushDone; }
   go.disabled = false; go.focus();
 }
-function showEggs(ticket, n) {
+// what an egg held: a number of coupons (the older eggs), or a prize { t: gold | coupon | item, n, id }
+const eggLabel = v => typeof v === 'number' ? `คูปอง ${v.toLocaleString('th-TH')}` : !v ? '' : v.t === 'item' ? `${(ITEMS[v.id] || {}).name || v.id} x${(+v.n).toLocaleString('th-TH')}`
+  : `${v.t === 'gold' ? 'ทอง' : 'คูปอง'} ${(+v.n).toLocaleString('th-TH')}`;
+function showEggs(ticket, n, fn = 'egg_pick') {
   const grid = $('egg-grid'), msg = $('egg-msg'), out = $('egg-go'); grid.textContent = ''; out.hidden = true;
-  msg.textContent = 'เลือกไข่ 1 ฟอง ในแต่ละฟองมีคูปองไม่เท่ากัน';
+  $('egg-h').textContent = fn === 'egg_pick' ? 'ทุบไข่ลุ้นรางวัล' : 'ทุบไข่ลุ้นรางวัลดันเจี้ยน';
+  msg.textContent = 'เลือกไข่ 1 ฟอง ในแต่ละฟองมีของรางวัลไม่เหมือนกัน';
   for (let i = 0; i < n; i++) {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'egg'; b.setAttribute('aria-label', `ไข่ฟองที่ ${i + 1}`);
     b.onclick = async () => {
       for (const x of grid.children) x.disabled = true;
       b.classList.add('shake');
-      const [{ data, error }] = await Promise.all([online.sb.rpc('egg_pick', { p_ticket: ticket, p_index: i }), new Promise(r => setTimeout(r, 1000))]);
+      const [{ data, error }] = await Promise.all([online.sb.rpc(fn, { p_ticket: ticket, p_index: i }), new Promise(r => setTimeout(r, 1000))]);
       b.classList.remove('shake');
       if (error) { msg.textContent = /already_picked/.test(error.message || '') ? 'ทุบไข่ของเกมนี้ไปแล้ว' : 'ทุบไข่ไม่สำเร็จ: ' + why(error); for (const x of grid.children) x.disabled = false; out.hidden = false; return; }
-      const label = (el, v) => { const w = document.createElement('span'); w.className = 'won'; w.textContent = `คูปอง ${(+v).toLocaleString('th-TH')}`; el.appendChild(w); };
+      const label = (el, v) => { const w = document.createElement('span'); w.className = 'won'; w.textContent = eggLabel(v); el.appendChild(w); };
       b.classList.add('open'); label(b, data.won);
-      msg.textContent = `ได้คูปอง ${(+data.won).toLocaleString('th-TH')} ใบ`;
-      if (online.me) online.me.coupon = data.coupon;
+      msg.textContent = `ได้ ${eggLabel(data.won)}`;
+      if (online.me) { online.me.coupon = data.coupon; if (data.gold != null) online.me.gold = data.gold; }
+      if (data.won && data.won.t === 'item') loadInv();
       // then what was in the other eggs
       setTimeout(() => { [...grid.children].forEach((x, k) => { if (k !== i && data.eggs) { x.classList.add('dim'); label(x, data.eggs[k]); } }); out.hidden = false; out.focus(); }, 700);
     };
@@ -2192,6 +2256,7 @@ function showEggs(ticket, n) {
 // back to the room the player made
 function rushDone() {
   Object.assign(rush, { ticket: null, ending: false, result: null }); clearTimeout(rush.timer);
+  Object.assign(dgRun, { ticket: null, ending: false, result: null }); clearTimeout(dgRun.timer);
   $('eggs').hidden = true; $('tut-done').hidden = true; $('back').hidden = false;
   $('back').click();
   if (!$('m-bag').hidden) renderBag();
@@ -2308,8 +2373,14 @@ function statsAt(c, L) {
 }
 function bagSlots(id, names, numbered) {
   const box = $(id); if (box.childElementCount) return;
-  names.forEach((n, i) => { const d = document.createElement('div'); d.className = 'bg-slot'; if (numbered) d.dataset.n = i + 1; d.textContent = n; if (n === 'อาวุธ') d.id = 'bg-weapon'; box.appendChild(d); });
+  names.forEach((n, i) => {
+    const d = document.createElement('div'); d.className = 'bg-slot'; if (numbered) d.dataset.n = i + 1; d.textContent = n;
+    const k = Object.keys(WEAR).find(x => WEAR[x] === n); if (k) { d.id = 'bg-' + k; d.dataset.slot = k; }
+    box.appendChild(d);
+  });
 }
+// the slots that can be worn so far: item slot -> the bag's slot label (the hat from the slime dungeon, Karoz 2026-10-16)
+const WEAR = { weapon: 'อาวุธ', head: 'หมวก' };
 // ---------- gear on the character (Karoz 2026-10-08) ----------
 // Each job has its art drawn empty-handed, and each weapon has the job's art drawn holding it: wearing a weapon swaps
 // the picture. (Laying a weapon over the empty-handed art never looked held, so every weapon/job pair is drawn whole.)
@@ -2322,6 +2393,11 @@ let bagTab = 'gear';
 const STAT_NAMES = { hp: 'HP', atk: 'ATK', matk: 'MATK', def: 'DEF', mdef: 'MDEF', spd: 'SPD', luk: 'LUK' };
 const ITEMS = {
   dagger_wood: { name: 'มีดไม้', cat: 'weapon', slot: 'weapon', jobs: ['thief'], stats: { atk: 10 }, img: 'img/wpn-dagger-wood.webp', art: { thief: 'img/cls-thief-dagger-wood.webp' } },
+  // the slime dungeon's egg prizes (Karoz 2026-10-16); the hat is public (สาธารณะ) and permanent
+  slime_part: { name: 'ชิ้นส่วนสไลม์', cat: 'material', img: 'img/it-slime-part.webp' },
+  slime_ring: { name: 'วงแหวนวิญญาณสไลม์', cat: 'material', img: 'img/it-slime-ring.webp' },
+  stone_up: { name: 'หินตีบวก', cat: 'material', img: 'img/it-stone-up.webp' },
+  slime_hat: { name: 'หมวกสไลม์', cat: 'armor', slot: 'head', stats: { hp: 100, def: 15 }, bound: false, img: 'img/it-slime-hat.webp' },
 };
 // ---------- the player's items ----------
 // With supabase-items.sql run, items live in public.player_items (inv.live). Before that, or on the preview page,
@@ -2431,12 +2507,14 @@ function renderBag() {
   for (const k of ['gold', 'gem', 'coupon']) $('bg-' + k).textContent = (+(online.me && online.me[k]) || 0).toLocaleString('th-TH');
   $('bg-name').textContent = prof.name || 'ผู้เล่น'; $('bg-job').textContent = j ? `${j.th} · ${j.name}` : 'ยังไม่มีอาชีพ'; $('bg-lv').textContent = lv;
   const art = $('bg-art'); art.textContent = ''; const im = gearArt(prof.job); if (im) art.appendChild(im);
-  // the weapon slot shows what is worn (click to take it off); the grid shows the rest (click to wear)
-  const ws = $('bg-weapon'), worn = wornIn('weapon');
+  // each wearable slot shows what is worn (click to take it off); the grid shows the rest (click to wear)
   hideTip();
-  ws.textContent = 'อาวุธ'; ws.classList.toggle('has', !!worn); ws.onclick = null; ws.classList.add('tipped'); setTip(ws, null);
-  ws.onpointerdown = null;
-  if (worn) { ws.textContent = ''; fillItem(ws, worn); setTip(ws, worn, ['คลิกเพื่อถอด', 'ลากออกนอกกระเป๋าเพื่อทำลาย']); ws.onclick = () => drag.justDropped || setWorn(worn, false); ws.onpointerdown = e => dragStart(e, worn, ws); }
+  for (const [k, label] of Object.entries(WEAR)) {
+    const ws = $('bg-' + k), worn = wornIn(k);
+    ws.textContent = label; ws.classList.toggle('has', !!worn); ws.onclick = null; ws.classList.add('tipped'); setTip(ws, null);
+    ws.onpointerdown = null;
+    if (worn) { ws.textContent = ''; fillItem(ws, worn); setTip(ws, worn, ['คลิกเพื่อถอด', 'ลากออกนอกกระเป๋าเพื่อทำลาย']); ws.onclick = () => drag.justDropped || setWorn(worn, false); ws.onpointerdown = e => dragStart(e, worn, ws); }
+  }
   const items = invRows().filter(r => !r.equipped && BAG_TABS[bagTab].includes(ITEMS[r.item_id].cat));
   [...grid.children].forEach((c, i) => {
     c.textContent = ''; c.className = 'cell tipped'; c.onclick = null; c.onpointerdown = null; setTip(c, null);
@@ -2783,8 +2861,8 @@ function dragStart(e, r, el) {
 function dragTarget(x, y, r = drag.r) {
   const t = document.elementFromPoint(x, y);
   if (!t || !t.closest('#m-bag .bag')) return { out: true };
-  const slot = t.closest('#bg-weapon'), grid = t.closest('#bg-grid');
-  return { slot: slot && ITEMS[r.item_id].slot === 'weapon' ? slot : null, grid };
+  const slot = t.closest('.bg-slot[data-slot]'), grid = t.closest('#bg-grid');
+  return { slot: slot && ITEMS[r.item_id].slot === slot.dataset.slot ? slot : null, grid };
 }
 addEventListener('pointermove', e => {
   if (!drag.r) return;
@@ -2796,7 +2874,7 @@ addEventListener('pointermove', e => {
   drag.ghost.style.left = e.clientX + 'px'; drag.ghost.style.top = e.clientY + 'px';
   const t = dragTarget(e.clientX, e.clientY);
   drag.ghost.classList.toggle('out', !!t.out);
-  $('bg-weapon').classList.toggle('fit', !!t.slot && !drag.r.equipped);
+  for (const k in WEAR) $('bg-' + k).classList.toggle('fit', t.slot === $('bg-' + k) && !drag.r.equipped);
   $('bg-grid').classList.toggle('fit', !!t.grid && !!drag.r.equipped);
 });
 function dragEnd(e) {
@@ -2804,7 +2882,7 @@ function dragEnd(e) {
   const r = drag.r, was = drag.on;
   if (drag.ghost) drag.ghost.remove();
   if (drag.el) drag.el.classList.remove('dragging');
-  $('bg-weapon').classList.remove('fit'); $('bg-grid').classList.remove('fit');
+  for (const k in WEAR) $('bg-' + k).classList.remove('fit'); $('bg-grid').classList.remove('fit');
   Object.assign(drag, { r: null, el: null, ghost: null, on: false });
   if (!was) return; // a plain click: the element's own click does the rest
   drag.justDropped = true; setTimeout(() => { drag.justDropped = false; }, 0);
@@ -3224,7 +3302,7 @@ function apWhat(r) {
     case 'delete_chat': return `"${d.body}"`;
     case 'money': return `${d.players === 'all' ? 'ทุกคน' : apNum(d.players) + ' คน'}: ทอง ${apNum(d.gold)} เพชร ${apNum(d.gem)} คูปอง ${apNum(d.coupon)}${why}`;
     case 'item': return `${(ITEMS[d.item] || {}).name || d.item} x${d.qty} ให้ ${apNum(d.players)} คน ${d.via === 'mail' ? 'ทางจดหมาย' : 'เข้ากระเป๋า'}`;
-    case 'setting': return d.key === 'egg' ? 'ไข่คูปอง ' + Object.entries(eggModes(d.value)).map(([k, r]) => `${EGG_TH[k]} ${apNum(r.min)} - ${apNum(r.max)}`).join(', ') : d.key === 'maintenance' ? (d.value.on ? `เปิดโหมดปิดปรับปรุง${d.value.msg ? ': ' + d.value.msg : ''}` : 'ปิดโหมดปิดปรับปรุง')
+    case 'setting': return d.key === 'egg_pool' ? 'ไข่รางวัล ' + Object.entries(d.value).map(([k, r]) => `${(eggPools().find(m => m.k === k) || {}).th || k} ${r.length} รายการ`).join(', ') : d.key === 'egg' ? 'ไข่คูปอง ' + Object.entries(eggModes(d.value)).map(([k, r]) => `${EGG_TH[k]} ${apNum(r.min)} - ${apNum(r.max)}`).join(', ') : d.key === 'maintenance' ? (d.value.on ? `เปิดโหมดปิดปรับปรุง${d.value.msg ? ': ' + d.value.msg : ''}` : 'ปิดโหมดปิดปรับปรุง')
       : 'อาชีพที่เปิดให้ทุกคน: ' + (Object.keys(d.value).filter(k => d.value[k]).map(k => (jobOf(k) || {}).th || k).join(', ') || 'ไม่มี');
     default: return why;
   }
@@ -3242,7 +3320,7 @@ async function apLog() {
 $('ap-log-re').onclick = apLog;
 
 // game settings: maintenance and admin-only jobs
-const settings = { maintenance: { on: false, msg: '' }, jobs_open: {}, egg: {} };
+const settings = { maintenance: { on: false, msg: '' }, jobs_open: {}, egg: {}, egg_pool: {} };
 // coupon eggs, one range per mode: settings.egg = { rush_bot: { min, max }, ... }. Only ลุย against the bot hands out eggs
 // so far; the others keep their range for when they do (Karoz 2026-10-15)
 const EGG_MODES = [
@@ -3278,25 +3356,74 @@ function apSettings() {
   }
   if (!box.childElementCount) box.appendChild(apEl('p', '', 'ไม่มีอาชีพที่เปิดเฉพาะแอดมิน'));
 }
+// egg prizes (Karoz 2026-10-16): one card per mode and per dungeon level, each a list of prizes the 12 eggs are filled
+// from (settings.egg_pool[key] = [{ t, id, slot, stats, bound, min, max, w }]); every item in ITEMS can be a prize
+function eggPools() {
+  const out = EGG_MODES.filter(m => m.k !== 'dungeon').map(m => ({ k: m.k, th: m.th, live: !!m.live, note: m.note }));
+  for (const d of DUNGEONS) for (const l of DG_LEVELS) out.push({ k: `dg:${d.k}:${l.k}`, th: `ดันเจี้ยน · ${d.name} · ${l.name}`, live: true, note: 'ผ่านด่านแล้วได้ทุบไข่ 1 ฟอง', dg: d });
+  return out;
+}
+// what a pool starts as before it is saved: ลุย against the bot keeps its old coupon range; a dungeon lists its prizes
+// with the amounts left blank for the admin to fill in
+function poolStart(m) {
+  const old = eggModes(settings.egg)[m.k];
+  if (m.k === 'rush_bot' && old && old.max > 0) return [{ t: 'coupon', min: Math.max(1, old.min), max: old.max, w: 1 }];
+  if (m.dg && m.dg.prizes) return m.dg.prizes.map(t => t.startsWith('item:') ? { t: 'item', id: t.slice(5) } : { t });
+  return [];
+}
+const prizeName = x => x.t === 'gold' ? 'ทอง' : x.t === 'coupon' ? 'คูปอง' : (ITEMS[x.id] || {}).name || x.id;
 function apEggs() {
-  const box = $('ap-eggs'), eg = eggModes(settings.egg); box.textContent = '';
-  for (const m of EGG_MODES) {
-    const c = apEl('div', 'ap-egg' + (m.live ? ' live' : '')), h = apEl('h4', '', m.th), cur = eg[m.k];
-    h.appendChild(apEl('span', 'ap-tag' + (m.live ? ' live' : ''), m.live ? 'แจกไข่อยู่' : 'ยังไม่แจก'));
-    const now = apEl('div', 'now', cur && cur.max > 0 ? `ตอนนี้ ${apNum(cur.min)} - ${apNum(cur.max)} ใบ` : 'ตอนนี้ไม่มีไข่');
-    const mm = apEl('div', 'mm'), ins = ['ต่ำสุด', 'สูงสุด'].map((t, i) => {
-      const l = apEl('label', '', t), n = apEl('input'); n.type = 'number'; n.min = 0; n.max = 1e6; n.step = 1;
-      n.setAttribute('aria-label', `คูปอง${t}ในไข่ ${m.th}`); if (cur) n.value = i ? cur.max : cur.min; l.appendChild(n); mm.appendChild(l); return n;
-    });
+  const box = $('ap-eggs'); box.textContent = '';
+  for (const m of eggPools()) {
+    const saved = Array.isArray(settings.egg_pool[m.k]) ? settings.egg_pool[m.k] : null;
+    let rows = (saved || poolStart(m)).map(x => Object.assign({}, x));
+    const c = apEl('div', 'ap-egg' + (saved && saved.length ? ' live' : '')), h = apEl('h4', '', m.th);
+    h.appendChild(apEl('span', 'ap-tag' + (saved && saved.length ? ' live' : ''), saved && saved.length ? 'มีไข่' : m.k === 'rush_bot' && rows.length ? 'ใช้ช่วงคูปองเดิม' : 'ยังไม่มีไข่'));
+    const tb = apEl('table', 'ap-pz');
+    const draw = () => {
+      tb.textContent = '';
+      const hd = tb.insertRow(); for (const t of ['ของรางวัล', 'ต่ำสุด', 'สูงสุด', 'โอกาส', '%', 'สาธารณะ', '']) hd.appendChild(apEl('th', '', t));
+      const tot = rows.reduce((a, x) => a + (+x.w > 0 ? +x.w : 0), 0);
+      rows.forEach((x, i) => {
+        const tr = tb.insertRow(), sel = apEl('select');
+        for (const [v, n] of [['gold', 'ทอง'], ['coupon', 'คูปอง'], ...Object.entries(ITEMS).map(([k, it]) => ['item:' + k, it.name])]) sel.add(new Option(n, v));
+        sel.value = x.t === 'item' ? 'item:' + x.id : x.t; sel.setAttribute('aria-label', 'ของรางวัล');
+        sel.onchange = () => { const v = sel.value; rows[i] = Object.assign({ min: x.min, max: x.max, w: x.w }, v.startsWith('item:') ? { t: 'item', id: v.slice(5) } : { t: v }); draw(); };
+        tr.insertCell().appendChild(sel);
+        for (const [k, lab] of [['min', 'ต่ำสุด'], ['max', 'สูงสุด'], ['w', 'โอกาส']]) {
+          const n = apEl('input'); n.type = 'number'; n.min = 1; n.step = 1; n.value = x[k] != null ? x[k] : ''; n.setAttribute('aria-label', `${prizeName(x)} ${lab}`);
+          n.oninput = () => { x[k] = n.value === '' ? null : Number(n.value); };
+          if (k === 'w') n.onchange = draw; // the % column follows once the chance is entered
+          tr.insertCell().appendChild(n);
+        }
+        tr.insertCell().textContent = ''; tr.cells[4].className = 'pc'; tr.cells[4].textContent = tot && +x.w > 0 ? (x.w * 100 / tot).toFixed(1) + '%' : '-';
+        const pb = tr.insertCell(); pb.className = 'pb';
+        if (x.t === 'item') {
+          const it = ITEMS[x.id] || {}, cb = apEl('input'); cb.type = 'checkbox'; cb.checked = x.bound != null ? !x.bound : it.bound === false; cb.setAttribute('aria-label', 'สาธารณะ (เทรดได้)');
+          cb.onchange = () => { x.bound = !cb.checked; }; pb.appendChild(cb);
+        }
+        const del = apEl('button', 'x', '✕'); del.type = 'button'; del.title = 'เอาออก'; del.setAttribute('aria-label', `เอา ${prizeName(x)} ออก`);
+        del.onclick = () => { rows.splice(i, 1); draw(); }; tr.insertCell().appendChild(del);
+      });
+      if (!rows.length) { const tr = tb.insertRow(), td = tr.insertCell(); td.colSpan = 7; td.textContent = 'ยังไม่มีของรางวัล (ไม่มีทุบไข่)'; }
+    };
+    draw();
+    const add = apEl('button', 'btn', '+ เพิ่มของรางวัล'); add.type = 'button';
+    add.onclick = () => { rows.push({ t: 'gold' }); draw(); };
     const b = apEl('button', 'btn go', 'บันทึก'); b.type = 'button';
     b.onclick = async () => {
-      const [mn, mx] = ins.map(n => Number(n.value));
-      if (ins.some(n => n.value === '') || !Number.isInteger(mn) || !Number.isInteger(mx) || mn < 0 || mx < mn || mx > 1e6) { apSay('ใส่จำนวนเต็ม ต่ำสุดไม่เกินสูงสุด (0 - 1,000,000)'); return; }
-      const v = Object.assign(eggModes(settings.egg), { [m.k]: { min: mn, max: mx } }), { error } = await apRpc('admin_set_setting', { p_key: 'egg', p_value: v });
+      const bad = rows.find(x => ![x.min, x.max, x.w].every(v => Number.isInteger(v) && v >= 1) || x.max < x.min || x.max > (x.t === 'item' ? 9999 : 1e6) || x.w > 1e6);
+      if (bad) { apSay(`${prizeName(bad)}: ใส่จำนวนเต็มตั้งแต่ 1 ต่ำสุดไม่เกินสูงสุด (ไอเทมไม่เกิน 9,999 ชิ้น) และโอกาสตั้งแต่ 1`); return; }
+      const list = rows.map(x => x.t !== 'item' ? { t: x.t, min: x.min, max: x.max, w: x.w } : (() => {
+        const it = ITEMS[x.id] || {};
+        return { t: 'item', id: x.id, slot: it.slot || '', stats: it.stats || {}, bound: x.bound != null ? !!x.bound : it.bound !== false, min: x.min, max: x.max, w: x.w };
+      })());
+      const v = Object.assign({}, settings.egg_pool, { [m.k]: list }), { error } = await apRpc('admin_set_setting', { p_key: 'egg_pool', p_value: v });
       if (error) return;
-      settings.egg = v; apEggs(); $('ap-set-ok').textContent = `ไข่คูปอง ${m.th} ตั้งเป็น ${apNum(mn)} - ${apNum(mx)} ใบแล้ว`;
+      settings.egg_pool = v; apEggs(); $('ap-set-ok').textContent = list.length ? `ไข่ ${m.th} บันทึกแล้ว ${list.length} รายการ` : `ไข่ ${m.th} ไม่มีของรางวัลแล้ว`;
     };
-    c.append(h, apEl('small', '', m.note), now, mm, b); box.appendChild(c);
+    const row = apEl('div', 'row'); row.append(add, b);
+    c.append(h, apEl('small', '', m.note), tb, row); box.appendChild(c);
   }
 }
 $('ap-mt-save').onclick = async () => {
@@ -3902,6 +4029,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.67</div>
+<div id="ver">v0.61.68</div>
 </body>
 </html>
