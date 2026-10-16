@@ -1822,7 +1822,7 @@ function makeRoom(mode) {
   const used = new Set(townRooms().map(r => r.code));
   let code; do code = String(1000 + Math.floor(Math.random() * 9000)); while (used.has(code));
   const dg = mode === 'dungeon'; // a dungeon party takes 4
-  Object.assign(co, { ready: false, room: code, host: true, max: dg ? SLOTS : 2, shut: dg ? [] : [2, 3], mode, map: mode === 'rush' || dg ? null : MAPS[0].k, game: null, lastGame: null, seek: 0, vs: null });
+  Object.assign(co, { ready: false, hostKey: null, room: code, host: true, max: dg ? SLOTS : 2, shut: dg ? [] : [2, 3], mode, map: mode === 'rush' || dg ? null : MAPS[0].k, game: null, lastGame: null, seek: 0, vs: null });
   sharePresence(); setRoom(code); showRoom();
 }
 function enterRoom(code) {
@@ -1833,14 +1833,14 @@ function enterRoom(code) {
   if (r.mine) { showRoom(); return; }
   if (r.n >= r.max) { coErr(`ห้อง ${c} เต็มแล้ว`); return; }
   if (r.vs) { coErr(`ห้อง ${c} เจอคู่แข่งแล้ว`); return; }
-  Object.assign(co, { ready: false, room: c, host: false, max: 2, mode: r.mode, game: null, lastGame: r.game }); // a match already running in it is not ours to join
+  Object.assign(co, { ready: false, hostKey: null, room: c, host: false, max: 2, mode: r.mode, game: null, lastGame: r.game }); // a match already running in it is not ours to join
   sharePresence(); setRoom(c); showRoom();
 }
 function showRoom() { fitColo(); $('m-colo').hidden = true; $('rm-msg').textContent = ''; openModal('m-room'); renderRoom(); }
 function leaveRoom(why) {
   if (mm.on || co.seek) stopMatch();
   const hall = co.mode === 'dungeon' ? 'dungeon' : 'colo';
-  Object.assign(co, { ready: false, room: null, host: false, max: 2, game: null, lastGame: null, seek: 0, vs: null });
+  Object.assign(co, { ready: false, hostKey: null, room: null, host: false, max: 2, game: null, lastGame: null, seek: 0, vs: null });
   sharePresence(); $('m-room').hidden = true; openColo(hall); if (why) coErr(why);
 }
 let roomClock = 0;
@@ -1856,11 +1856,32 @@ function placeChat() {
   else if (!inRoom) for (const el of [...tray.children]) world.appendChild(el);
 }
 new MutationObserver(placeChat).observe($('m-room'), { attributes: true, attributeFilter: ['hidden'] });
+// when the host leaves, the room stays: one of the players left in it becomes host (Karoz 2026-10-16). Everyone picks
+// the same one from the same presence (a hash of the room code and the members), so only that player takes over and
+// the rest wait for its entry instead of being sent back to the hall
+function heirOf(code) {
+  const ks = townPeople().filter(p => p.room === code).map(p => p.key).sort();
+  let h = 0; for (const ch of code + ks.join()) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  return ks[Math.abs(h) % ks.length];
+}
 function renderRoom() {
-  if (!co.room || $('m-room').hidden) return;
-  const r = roomOf(co.room);
-  if (!r) { leaveRoom('หัวห้องออกจากห้องแล้ว'); return; }
-  const mem = membersOf(co.room), map = MAPS.find(m => m.k === r.map);
+  if (!co.room) return;
+  let r = roomOf(co.room);
+  if (!r) {
+    if (heirOf(co.room) !== myKey()) return; // the new host's entry is on its way
+    Object.assign(co, { host: true, ready: false, game: null, lastGame: null, seek: 0, vs: null }); sharePresence();
+    r = roomOf(co.room);
+  }
+  const mem = membersOf(co.room);
+  // two players taking over at once (presence seen a moment apart): the lower key stays host
+  if (co.host && mem.some(p => p.host && p.key !== myKey() && p.key < myKey())) { co.host = false; co.ready = false; sharePresence(); return renderRoom(); }
+  // guests keep the room's settings, so whoever takes over carries the same room on
+  if (!co.host) Object.assign(co, { mode: r.mode, max: r.max, shut: [...r.shut], map: r.map || null });
+  const hk = (mem.find(p => p.host) || {}).key;
+  if (co.hostKey && hk && hk !== co.hostKey) $('rm-msg').textContent = hk === myKey() ? 'หัวห้องออกแล้ว คุณเป็นหัวห้องแทน' : `หัวห้องออกแล้ว ${mem.find(p => p.key === hk).name} เป็นหัวห้องแทน`;
+  if (hk) co.hostKey = hk;
+  if ($('m-room').hidden) return;
+  const map = MAPS.find(m => m.k === r.map);
   // a guest follows the host into the match as soon as the host's game shows its code
   if (!co.host && r.game && r.game !== co.lastGame && gameBox.hidden) { co.lastGame = r.game; joinGame(r.game); return; }
   $('rm-no').textContent = r.code;
@@ -3787,6 +3808,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.64</div>
+<div id="ver">v0.61.65</div>
 </body>
 </html>
