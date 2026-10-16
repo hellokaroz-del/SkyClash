@@ -1233,7 +1233,7 @@ function newMatch(demo) {
     const hero = mk(0, picks[0], STAGE.spawn[0], false);
     if (!demo && myInfo()) applyInfo(hero, myInfo(), 'คุณ'); // the town's player, under their own name
     S = { demo, players: [hero], mob: { total: tutMode ? TUT.slimes : SLIME.total, spawned: 0, corpses: [] }, turn: 0, state: 'aim', power: 0, timer: TURN_TIME, wind: 0, projs: [], settle: 0, zones: [],
-      banner: 0, bot: null, frame: 0, turnCount: 0 };
+      banner: 0, bot: null, frame: 0, turnCount: 0, dg: tutMode ? null : townDungeon() };
     if (tutMode) S.tut = { step: 0, x0: hero.x, a0: hero.angle, shot: false, skill: false, spawned: false, flash: 0 };
     else for (let i = 1; i <= SLIME.field; i++) { S.players.push(makeSlimeAt(i)); S.mob.spawned++; }
     fx.booms.length = fx.parts.length = fx.texts.length = fx.gfx.length = 0;
@@ -2112,9 +2112,22 @@ function makeSlime(i) {
     walk: 0, armed: null, rage: 0, dmgAcc: 0, lossAcc: 0, iron: false, bot: true, alive: true, lastPower: null, items: 0, boost: false,
     name: 'สไลม์ ' + n, guild: 'ทุ่งสไลม์', level: 1, anim: { k: 'idle', t: 0 } };
 }
-// the slime template (SLIME) is its level 1 base; stats grow like a player's
+// dungeon levels (the town sets window.__dungeon = { k, lv } when a party enters): a level's slimes take every stat as
+// pct% of a class at a level. ทุ่งสไลม์ normal (Karoz 2026-10-16): 80% of a level 10 Merchant
+const DG_MOB = { slime: { normal: { base: 'merchant', level: 10, pct: 80 } } };
+function townDungeon() {
+  let d = null; try { d = window.parent !== window && window.parent.__dungeon; } catch (_) {}
+  return d && DG_MOB[d.k] && DG_MOB[d.k][d.lv] && CLASSES[DG_MOB[d.k][d.lv].base] ? DG_MOB[d.k][d.lv] : null;
+}
+// the slime template (SLIME) is its level 1 base; stats grow like a player's. In a dungeon the level's stats replace it
 const makeSlimeAt = i => { const sl = makeSlime(i), L = slimeLevel(S.mob.spawned + 1), m = levelGrow(L);
-  sl.c = Object.assign({}, sl.c); for (const k of ['hp', 'atk', 'def', 'mdef']) sl.c[k] = Math.round(SLIME[k] * m);
+  sl.c = Object.assign({}, sl.c);
+  if (S.dg) {
+    const b = scaleClass(CLASSES[S.dg.base], S.dg.level);
+    for (const k of ['hp', 'atk', 'matk', 'def', 'mdef', 'spd', 'luk']) sl.c[k] = Math.round((+b[k] || 0) * S.dg.pct / 100);
+    sl.hp = sl.maxHp = sl.c.hp; sl.level = S.dg.level; return sl;
+  }
+  for (const k of ['hp', 'atk', 'def', 'mdef']) sl.c[k] = Math.round(SLIME[k] * m);
   sl.hp = sl.maxHp = sl.c.hp; sl.level = L; return sl; };
 // ---------- tutorial ----------
 const TUT = { lv: 1, slimes: 3, walk: 60, angle: 10, minPower: 20 };
