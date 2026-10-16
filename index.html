@@ -1336,7 +1336,7 @@ function startTurn(first) {
     }
   }
   if (q.boss && S.state === 'aim' && q.scd > 0) q.scd--;
-  if (q.mob && S.state === 'aim') { S.state = 'mob'; S.mp = { phase: 'think', t: q.boss ? 34 : 16, hops: 0 }; S.grp = S.grpAll = null; if (!q.boss) mobGroup(q); }
+  if (q.mob && S.state === 'aim') { S.state = 'mob'; S.mp = { phase: 'think', t: q.boss ? BOSS_THINK : 16, hops: 0 }; S.grp = S.grpAll = null; if (!q.boss) mobGroup(q); }
   updatePad();
 }
 
@@ -2170,6 +2170,9 @@ for (const s of Object.values(BOSS_SHEET)) { s.img = new Image(); s.img.src = s.
 const BOSS_FACE = new Image(); BOSS_FACE.src = 'assets/boss-slime-face.webp';
 // how long each move plays (ticks) and on which tick it strikes
 const BOSS_ACT = { stomp: { len: 70, hit: 34 }, summon: { len: 56, hit: 34 }, spit: { len: 50, hit: 27 }, wave: { len: 50, hit: 24 } };
+// Karoz 2026-10-16: the moves were over before you could see them. They now play at 0.6 speed (each one about 1.4-1.9 s),
+// the camera waits on the boss through the wind-up, stays a moment on whoever was hit, and the next turn waits longer
+const BOSS_SPD = 0.6, BOSS_THINK = 60, BOSS_AFTER = 80, BOSS_LOOK = 60;
 const bossPhase = dg => !!(dg && dg.phases > 1 && dg.ph >= dg.phases);
 function makeBoss(i) {
   const b = makeSlimeAt(i);
@@ -2200,16 +2203,16 @@ function bossTick(p) {
     sfx(k === 'stomp' ? 'slime_jump' : 'slime_attack');
     return;
   }
-  const a = p.act; a.t++;
+  const a = p.act, t0 = a.t; a.t += BOSS_SPD;
   const A = BOSS_ACT[a.k];
-  if (a.t === A.hit) {
+  if (t0 < A.hit && a.t >= A.hit) {
     if (a.k === 'stomp') bossStompLand(p, a);
     else if (a.k === 'summon') bossSummon(p);
     else if (a.k === 'spit') for (const t of a.tg) bfAdd({ k: 'orb', x0: p.x - 70, y0: p.y - 120, t: 0, dur: Math.max(34, Math.min(80, Math.abs(t.x - p.x) / 14)), tg: t, by: p });
     else for (const t of a.tg) bfAdd({ k: 'wave', x: p.x - 80, y: p.y - 34, sp: 13, tg: t, by: p, t: 0 });
   }
   if (a.t >= A.len && !fx.bf.some(e => e.by === p && !e.done && (e.k === 'orb' || e.k === 'wave'))) {
-    p.act = null; S.state = 'settle'; S.settle = 30;
+    p.act = null; S.state = 'settle'; S.settle = BOSS_AFTER;
   }
 }
 // online, the boss's bubbles, waves and light columns go to the party's screens as events (the guests draw them; only the
@@ -2260,7 +2263,8 @@ function bossSummon(p) {
 }
 // a bubble or a wave reaches its target
 function bossStrike(e, pct) {
-  const t = e.tg; if (!t || !t.alive || NET.role === 'guest') return; // a guest's copy only draws: the host's hit comes in the snapshot
+  const t = e.tg; if (t) S.look = { x: t.x, y: t.y, t: BOSS_LOOK }; // the camera stays on the one who was hit
+  if (!t || !t.alive || NET.role === 'guest') return; // a guest's copy only draws: the host's hit comes in the snapshot
   mobHit(e.by, t, pct, true);
   if (t.alive) shatter(t);
 }
@@ -2906,8 +2910,10 @@ function tickFx(p) {
   if (gm && gm.length > 1) { tx = gm.reduce((a, x) => a + x.x, 0) / gm.length; ty = gm.reduce((a, x) => a + x.y, 0) / gm.length; } // the slimes moving together
   const bfe = S.state === 'mob' && fx.bf.find(e => (e.k === 'orb' || e.k === 'wave') && !e.done);
   if (bfe) { tx = bfe.x; ty = bfe.y; }
+  else if (S.look && S.look.t > 0) { S.look.t--; tx = S.look.x; ty = S.look.y; }
+  const bt = S.state === 'mob' && p.boss, ck = bt ? 0.05 : 0.08; // the boss's turn: a slower, steadier camera
   const gx = Math.max(0, Math.min(WW - VW, tx - VW / 2)), gy = Math.max(0, Math.min(WH - VH, ty - VH * 0.55));
-  cam.x += (gx - cam.x) * 0.08; cam.y += (gy - cam.y) * 0.08;
+  cam.x += (gx - cam.x) * ck; cam.y += (gy - cam.y) * ck;
 }
 
 // Karoz 2026-10-07: the last hit plays out for 3 s before Victory/Defeat shows, then the summary comes 3 s after that
@@ -4984,7 +4990,7 @@ function guestTick() {
     if (pl.nx != null && !(pl.predT > 0 && Math.abs(pl.nx - pl.x) < 40)) { const k = pl.predT > 0 ? 0.08 : pl.i === NET.me ? 0.35 : 0.5; pl.x += (pl.nx - pl.x) * k; pl.y += (pl.ny - pl.y) * k; }
     if (pl === p && S.state === 'charging') pl.castT = (pl.castT || 0) + 1;
     if (pl.releaseT > 0) pl.releaseT--;
-    if (pl.mob && (pl === p || pl.mv) && S.state === 'mob') { if (pl.anim) pl.anim.t++; if (pl.act) pl.act.t++; } // the slime's move plays on between snapshots
+    if (pl.mob && (pl === p || pl.mv) && S.state === 'mob') { if (pl.anim) pl.anim.t++; if (pl.act) pl.act.t += pl.boss ? BOSS_SPD : 1; } // the slime's move plays on between snapshots
   }
   tickFx(p);
 }
