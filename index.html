@@ -544,7 +544,7 @@ const assetImg = {};
 function assetURL(ref) { if (!ref) return ''; if (ref.startsWith('a:')) { const a = GD.assets[ref.slice(2)]; return a ? a.data || a.path || '' : ''; } return ref; }
 function assetImage(ref) {
   const id = ref.slice(2);
-  if (!assetImg[id]) { assetImg[id] = new Image(); assetImg[id].src = assetURL(ref); }
+  if (!assetImg[id]) { assetImg[id] = new Image(); const u = assetURL(ref); if (typeof retryImg === 'function' && u && !u.startsWith('data:') && !u.startsWith('blob:')) retryImg(assetImg[id], u); else assetImg[id].src = u; }
   return assetImg[id];
 }
 function iconKey(sk) {
@@ -3724,7 +3724,10 @@ function teamOf(i) { if (S && S.mob) { const p = S.players[i]; return p && p.mob
 // whose side counts as "My Team": the human's vs the bot; on a shared screen, whoever's turn it is
 function myTeam() { const h = meP(); return teamOf(h ? h.i : S.turn); }
 // skill slots Z X C inside the HUD, after the power bar (DDTank-style)
-const ICON_IMG = {}; for (const [k, src] of Object.entries(ICONS)) { const im = new Image(); im.src = src; ICON_IMG[k] = im; }
+// an icon that failed to load (a busy connection, many windows open at once) is asked for again a few times, so the
+// skill bar doesn't fall back to the skill's name for the rest of the session
+function retryImg(im, src) { let n = 0; im.onerror = () => { if (++n <= 4) setTimeout(() => { im.src = src + (src.includes('?') ? '&' : '?') + 'r=' + n; }, 1500 * n); }; im.src = src; return im; }
+const ICON_IMG = {}; for (const [k, src] of Object.entries(ICONS)) ICON_IMG[k] = retryImg(new Image(), src);
 function warpDef(p) {
   return { key: 'F', name: 'สกิลบิน', icon: 'warp', cd: p.warpCd, max: WARP_CD, on: p.armed === 'z', use: useWarp,
       desc: 'ปาลูกแก้วที่หมุนกลางอากาศ แล้ววาร์ปไปยังจุดที่ลูกแก้วตก ไม่ทำดาเมจ และใช้แทนการยิงของตานั้น' };
@@ -4394,13 +4397,23 @@ function drawResult() {
 
 // ---------- loop ----------
 let last = performance.now(), acc = 0;
+function steps(now, cap) {
+  acc += Math.max(0, Math.min(cap, now - last)); last = now;
+  while (acc >= 1000 / 60) { if (NET.role === 'guest' && NET.inMatch && S && !S.demo) guestTick(); else update(); netTick(); acc -= 1000 / 60; }
+}
 function loop(now) {
   if (SIM) { last = now; acc = 0; requestAnimationFrame(loop); return; } // the auto battle test runs the matches itself
-  acc += Math.min(100, now - last); last = now;
-  while (acc >= 1000 / 60) { if (NET.role === 'guest' && NET.inMatch && S && !S.demo) guestTick(); else update(); netTick(); acc -= 1000 / 60; }
+  steps(now, 100);
   draw();
   requestAnimationFrame(loop);
 }
+// Online, a window in the background (another tab, minimised) keeps playing: the browser stops drawing it and slows its
+// timers, so the other players' games stopped hearing from it and dropped it (Karoz 2026-10-16: a 3-player test on one
+// Chrome kept losing players). A worker's clock isn't slowed, so it runs the match on while the page is hidden.
+try {
+  const tw = new Worker(URL.createObjectURL(new Blob(['setInterval(() => postMessage(0), 50)'], { type: 'text/javascript' })));
+  tw.onmessage = () => { if (document.hidden && NET.on && !SIM) steps(performance.now(), 1000); };
+} catch (_) {}
 
 // ---------- controls ----------
 const KEY = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', ' ': 'fire', Spacebar: 'fire' };
@@ -4656,9 +4669,9 @@ function peerTransport() {
     peer.on('open', () => { if (role === 'host') finish(); else wire(peer.connect('skyclash-' + name, { reliable: true, serialization: 'json' })); });
     peer.on('connection', wire);
     addEventListener('pagehide', () => peer.destroy());
-    const beat = setInterval(() => { // a browser that vanished without closing: drop it after 8 s of silence
+    const beat = setInterval(() => { // a browser that vanished without closing: drop it after 15 s of silence
       if (peer.destroyed) { clearInterval(beat); return; }
-      for (const [id, c] of conns) if (c.open && Date.now() - c.seen > 8000) { conns.delete(id); try { c.conn.close(); } catch (_) {} fire(); }
+      for (const [id, c] of conns) if (c.open && Date.now() - c.seen > 15000) { conns.delete(id); try { c.conn.close(); } catch (_) {} fire(); }
     }, 2000);
     peer.on('error', e => finish({ code: e.type === 'unavailable-id' ? 'taken' : e.type === 'peer-unavailable' ? 'not_found' : 'upstream_error' }));
     setTimeout(() => finish({ code: 'timeout' }), 15000);
