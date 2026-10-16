@@ -429,6 +429,20 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .colo.dg .co-only, .colo:not(.dg) .dg-only, .colo.dg .co-rooms, .colo:not(.dg) .dg-strip { display: none !important; }
 .dg-only { display: contents; }
 .framed.dg .co-bar select { width: 132px; }
+/* Karoz's dungeon frame (1816x866 art drawn at 1300x620): gates walk across the corridor picture on the left,
+   own character in the upper parchment, online players in the lower one */
+.card.colo.framed.dg { width: 1300px; height: 620px; background-image: url("img/dg-frame.webp?v=1"); }
+.card.framed.dg .x { right: 22px; top: 16px; }
+.framed.dg .co-main { left: 135px; top: 124px; width: 776px; height: 402px; }
+.framed.dg .co-bar b { color: #f0dcb0; text-shadow: 0 1px 3px #000; }
+.framed.dg .co-main .err { color: #ff8a80; text-shadow: 0 1px 2px #000; }
+.framed.dg .co-foot { bottom: 4px; }
+.framed.dg .co-me { left: 962px; top: 134px; width: 202px; height: 182px; }
+.framed.dg .co-art { height: 100px; }
+.framed.dg .co-me small { bottom: 6px; }
+.framed.dg .co-online { left: 962px; top: 360px; width: 202px; height: 166px; }
+.framed.dg .co-oh { height: 2px; }
+.framed.dg #co-list { max-height: 158px; }
 .dg-strip { display: flex; gap: 14px; overflow-x: auto; overflow-y: hidden; height: 300px; padding: 4px 4px 8px; scroll-snap-type: x proximity; scrollbar-width: thin; scrollbar-color: #b8893a transparent; }
 .dg-gate { flex: 0 0 186px; scroll-snap-align: start; display: flex; flex-direction: column; align-items: center; gap: 6px; border: 0; background: none; padding: 0; cursor: pointer; font: inherit; text-align: left; }
 .dg-gate .pt { position: relative; width: 168px; height: 182px; background: url("img/dg-portal.webp?v=2") center bottom / contain no-repeat;
@@ -1940,14 +1954,15 @@ function renderSide() {
 function coErr(t) { $('co-err').textContent = t || ''; }
 // the framed window is drawn at a fixed 1060x642, so it shrinks to fit smaller screens
 function fitColo() {
-  $('co-card').style.setProperty('--k', Math.min(1, (innerWidth - 24) / 1060, (innerHeight - 24) / 642).toFixed(3));
+  const dg = $('co-card').classList.contains('dg'), w = dg ? 1300 : 1060, h = dg ? 620 : 642; // the dungeon frame is wider
+  $('co-card').style.setProperty('--k', Math.min(1, (innerWidth - 24) / w, (innerHeight - 24) / h).toFixed(3));
   $('rm-card').style.setProperty('--k', Math.min((innerWidth - 8) / 1060, (innerHeight - 8) / 642).toFixed(3)); // the waiting room fills the screen
 }
 addEventListener('resize', fitColo);
 function openColo(hall) {
   fitColo(); if (co.room) { openModal('m-room'); renderRoom(); return; }
   co.hall = hall === 'dungeon' ? 'dungeon' : 'colo'; const dg = co.hall === 'dungeon';
-  $('co-card').classList.toggle('dg', dg); $('t-colo').textContent = dg ? 'ดันเจี้ยน' : 'ห้องเล่นเกม';
+  $('co-card').classList.toggle('dg', dg); fitColo(); $('t-colo').textContent = dg ? 'ดันเจี้ยน' : 'ห้องเล่นเกม';
   $('co-refresh').textContent = dg ? 'ล้างใหม่' : '⟳ รีเฟรช'; $('co-go').textContent = dg ? 'ลุยด่วน' : 'ลุย';
   coErr(''); co.page = 0; openModal('m-colo'); renderColo(); if (dg) $('dg-strip').scrollLeft = 0;
 }
@@ -4188,6 +4203,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.83</div>
+<div id="ver">v0.61.84</div>
 </body>
 </html>
