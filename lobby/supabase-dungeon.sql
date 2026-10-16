@@ -5,6 +5,8 @@
 -- A party's host presses ลุย in a dungeon room: the town asks dungeon_start for a ticket for that dungeon and level.
 -- When the run ends the town sends the ticket and the result to dungeon_end, which pays a cleared run its reward:
 --   ทุ่งสไลม์ ปกติ: EXP 350 and gold 250 (Karoz 2026-10-16); a run that was not cleared gets nothing
+--   ทุ่งสไลม์ ยาก: 2 phases, the slime field then King สไลม์ (Karoz 2026-10-16). Clearing phase 1 only moves the ticket on to
+--   phase 2 (nothing is paid); clearing the last phase pays EXP 460 and gold 330 (Karoz 2026-10-16).
 -- and fills 12 eggs from the admin panel's prize list for that dungeon level (game_settings egg_pool 'dg:slime:normal').
 -- dungeon_egg_pick breaks the egg the player picked and hands over its prize. A ticket pays once.
 
@@ -22,16 +24,19 @@ create table if not exists public.dungeon_run (
   prizes jsonb,
   egg_pick int
 );
+alter table public.dungeon_run add column if not exists phase int not null default 1; -- the phase being played
 create index if not exists dungeon_run_user_idx on public.dungeon_run (user_id, created_at desc);
 alter table public.dungeon_run enable row level security;
 revoke all on public.dungeon_run from anon, authenticated;
 -- no direct access: the eggs' contents stay hidden until one is picked
 
--- each dungeon level's reward for a cleared run; a new dungeon or level gets a line here
+-- each dungeon level's reward for a cleared run and how many phases it has (1 when not given); a new dungeon or
+-- level gets a line here
 create or replace function public.dungeon_pay(p_dungeon text, p_lv text) returns jsonb
 language sql immutable set search_path = public as $$
   select case p_dungeon || ':' || p_lv
     when 'slime:normal' then '{"exp": 350, "gold": 250}'::jsonb
+    when 'slime:hard' then '{"exp": 460, "gold": 330, "phases": 2}'::jsonb
   end;
 $$;
 
@@ -55,9 +60,14 @@ begin
   if t.ended_at is not null then raise exception 'already_ended'; end if;
   if p_result is null or p_result not in ('win', 'loss') then raise exception 'bad_result'; end if;
   if t.created_at < now() - interval '3 hours' then raise exception 'expired'; end if;
-  -- clearing 15 slimes takes many turns: a clear sent within 30 s of the run starting pays nothing
+  -- clearing 15 slimes (or King สไลม์) takes many turns: a clear sent within 30 s of the phase starting pays nothing
   if p_result = 'win' and t.created_at > now() - interval '30 seconds' then raise exception 'too_fast'; end if;
   pay := public.dungeon_pay(t.dungeon, t.lv);
+  -- a cleared phase that is not the last: on to the next one, with its own 30 s clock; nothing is paid yet
+  if p_result = 'win' and t.phase < coalesce((pay->>'phases')::int, 1) then
+    update public.dungeon_run set phase = phase + 1, created_at = now() where id = t.id;
+    return jsonb_build_object('result', 'win', 'next', t.phase + 1);
+  end if;
   if p_result = 'win' then
     g := coalesce((pay->>'gold')::int, 0); e := coalesce((pay->>'exp')::int, 0);
     pz := public.egg_fill('dg:' || t.dungeon || ':' || t.lv);
