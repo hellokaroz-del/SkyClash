@@ -1593,7 +1593,7 @@ function launch(setup, watchRoom, bot, dungeon) {
     if (!fr.isConnected) { clearInterval(started); return; }
     try {
       const g = fr.contentWindow.__game, msg = fr.contentDocument.getElementById('net-msg');
-      if (g && g.S && !g.S.demo) { clearInterval(started); cover.hidden = true; return; }
+      if (g && g.S && !g.S.demo) { clearInterval(started); cover.hidden = true; focusGame(fr); return; }
       // online: the host's game waits for its own start button once the other player is in; the town presses it
       // a dungeon party's host starts once the party is in (or has waited long enough), the game says when
       if (g && g.NET && g.NET.on && g.NET.role === 'host' && (g.NET.party ? g.partyReady() : g.NET.gpres) && Date.now() - lastStart > 1500) { lastStart = Date.now(); press(fr.contentDocument, '#start'); }
@@ -1623,7 +1623,7 @@ function launch(setup, watchRoom, bot, dungeon) {
     };
     go();
   };
-  gameBox.insertBefore(fr, $('back')); gameBox.hidden = false; if (!tut.on) $('back').focus();
+  gameBox.insertBefore(fr, $('back')); gameBox.hidden = false;
 }
 // ---------- tutorial: a new character goes straight into the game's tutorial with the job they picked ----------
 // Karoz 2026-10-07: the player stays in the tutorial (no way back to town, a loss starts it again) until it is won;
@@ -1709,6 +1709,10 @@ $('back').onclick = () => {
   backToTown();
 };
 const backToTown = () => { const fr = gameBox.querySelector('iframe'); if (fr) fr.remove(); gameBox.hidden = true; $('g-cover').hidden = true; if (co.room) { co.ready = false; co.game = null; if (co.host && co.mode === 'rush') { Object.assign(co, { map: null, lastGame: null }); stopMatch(); } matchStarted = null; sharePresence(); openModal('m-room'); renderRoom(); } };
+// the keys go to the game once it starts (Karoz 2026-10-16: with the focus left on ← กลับเมือง, Space to shoot pressed that
+// button and the run went straight back to the room); ← กลับเมือง only answers the mouse or a tap
+function focusGame(fr) { try { if (document.activeElement && document.activeElement !== fr) document.activeElement.blur(); fr.focus(); fr.contentWindow.focus(); } catch (e) {} }
+$('back').addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); const fr = gameBox.querySelector('iframe'); if (fr) focusGame(fr); } });
 const press = (d, sel) => { const el = d.querySelector(sel); if (el) el.click(); return !!el; };
 
 // ---------- Colosseum: room list and waiting room ----------
@@ -4128,6 +4132,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.74</div>
+<div id="ver">v0.61.75</div>
 </body>
 </html>
