@@ -404,6 +404,9 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 @keyframes dgPulse { 50% { opacity: .35; transform: scale(.92); } }
 .dg-gate:not(:disabled):hover .pt, .dg-gate:not(:disabled):focus-visible .pt { transform: translateY(-5px); filter: drop-shadow(0 0 12px rgba(110, 200, 255, .9)) drop-shadow(0 6px 6px rgba(40, 20, 0, .45)); }
 .dg-gate:focus-visible { outline: none; }
+/* Karoz's 5 swirl frames play while the mouse is on an open gate */
+.dg-gate:not(:disabled):hover .pt, .dg-gate:not(:disabled):focus-visible .pt { background: url("img/dg-portal-anim.webp?v=1") 0 100% / 840px 182px no-repeat; animation: dgSwirl .6s steps(5) infinite; }
+@keyframes dgSwirl { to { background-position: -840px 100%; } }
 .dg-gate.off .pt { filter: grayscale(1) brightness(1.05) contrast(.9) drop-shadow(0 6px 6px rgba(40, 20, 0, .35)); }
 .dg-gate.off .pt::after { display: none; }
 .dg-gate:disabled { cursor: default; }
@@ -1725,10 +1728,11 @@ function renderRoomList() {
   $('co-prev').disabled = co.page === 0; $('co-next').disabled = co.page >= pages - 1;
 }
 // Dungeon hall (Karoz 2026-10-16): every party is a warp gate; click a gate to walk in. Under it, the people in the
-// room with their class emblem. A grey gate is full or already inside; the last grey gate makes a new party.
+// room with their class emblem. A grey gate is full or already inside. No parties, nothing shown (Karoz 2026-10-16).
 // The row scrolls sideways, and the mouse wheel moves it right.
 const dgRooms = () => townRooms().filter(r => r.mode === 'dungeon');
 function renderDungeon() {
+  if (!renderDungeon.pre) { renderDungeon.pre = new Image(); renderDungeon.pre.src = 'img/dg-portal-anim.webp?v=1'; } // no blank first hover
   const box = $('dg-strip'); box.textContent = '';
   for (const r of dgRooms()) {
     const full = r.n >= r.max, off = full || !!r.game, b = document.createElement('button'), mem = membersOf(r.code);
@@ -1748,10 +1752,6 @@ function renderDungeon() {
     b.onclick = () => enterRoom(r.code);
     box.appendChild(b);
   }
-  // an empty gate at the end opens a new party
-  const n = document.createElement('button'); n.type = 'button'; n.className = 'dg-gate off';
-  n.innerHTML = '<span class="pt"></span><span class="dg-card"><span class="new">ประตูว่าง<br>กดเพื่อสร้างห้อง</span></span>';
-  n.setAttribute('aria-label', 'สร้างห้องดันเจี้ยนใหม่'); n.onclick = () => makeRoom('dungeon'); box.appendChild(n);
 }
 $('dg-strip').addEventListener('wheel', e => {
   const s = $('dg-strip'), d = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : 0;
@@ -3762,6 +3762,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.61</div>
+<div id="ver">v0.61.63</div>
 </body>
 </html>
