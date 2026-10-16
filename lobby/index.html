@@ -1548,8 +1548,9 @@ async function loadIce() {
     else console.warn('turn-credentials', error || data);
   } catch (e) { console.warn('turn-credentials', e); }
 }
-function launch(setup, watchRoom, bot) {
+function launch(setup, watchRoom, bot, dungeon) {
   window.__iceReady = loadIce();
+  window.__dungeon = dungeon || null; // a dungeon party's { k, lv }: the game sets the slimes from it
   window.__bot = bot || null; // a ลุย bot (level, accuracy, full skills); the game reads it when the match starts
   // the game reads who is playing from here (name, level, guild) and shows it to both sides online
   // skills: the levels picked in the bag's Jobs tab for the current job (the game scales each skill's strength by them)
@@ -1817,10 +1818,10 @@ function quickDungeon() {
   if (r) enterRoom(r.code); else coErr('ยังไม่มีห้องดันเจี้ยนที่เข้าได้ กดสร้างห้องเพื่อเปิดห้องเอง');
 }
 // the dungeons a party can pick. Only the slime field exists so far (the game's ทุ่งสไลม์: 15 slimes, 3 at a time);
-// its one level is the stage as it is now, until Karoz sets the levels
+// the game holds each level's slime stats (DG_MOB in index.html)
 const DUNGEONS = [
   { k: 'slime', name: 'ทุ่งสไลม์', img: 'img/dg-slime.webp?v=1', lv: '8-12',
-    desc: 'สไลม์หลากสีออกมาเต็มทุ่ง ต้องปราบให้ครบ 15 ตัว บนสนามจะมีทีละ 3 ตัว ตัวไหนตายตัวใหม่จะกระโดดลงมาแทน สไลม์ชอบกระโดดเข้ามาประชิดแล้วพุ่งชน ควรยิงสกัดไว้ก่อนที่มันจะเข้าใกล้' },
+    desc: 'สไลม์หลากสีออกมาเต็มทุ่ง ต้องปราบให้ครบ 15 ตัว' },
 ];
 const DG_LEVELS = [{ k: 'normal', name: 'ปกติ' }];
 const dgOf = k => DUNGEONS.find(d => d.k === k);
@@ -1853,8 +1854,8 @@ for (const l of DG_LEVELS) $('dg-lv').add(new Option(l.name, l.k));
 $('dg-story').onchange = $('dg-lv').onchange = () => { coErr(''); renderDungeon(); };
 $('dgp-ok').onclick = () => {
   closeModal($('m-dgpick'));
-  if (dgp.change) { if (co.room && co.host) { co.map = dgp.dg; sharePresence(); renderRoom(); } return; }
-  makeRoom('dungeon', dgp.dg);
+  if (dgp.change) { if (co.room && co.host) { co.map = dgp.dg; co.dlv = dgp.lv; sharePresence(); renderRoom(); } return; }
+  co.dlv = dgp.lv; makeRoom('dungeon', dgp.dg);
 };
 function renderSide() {
   // own character
@@ -2000,9 +2001,9 @@ function renderRoom() {
     $('rm-map').style.backgroundImage = dgd ? `url('${dgd.img}')` : ''; $('rm-map').classList.remove('rnd', 'seek');
     $('rm-mapname').textContent = dgd ? dgd.name : 'ดันเจี้ยน'; $('rm-mapsub').textContent = dgd ? `เหมาะกับ Lv ${dgd.lv} · ปาร์ตี้สูงสุด 4 คน` : 'ปาร์ตี้สูงสุด 4 คน';
     $('rm-tip').innerHTML = ''; if (dgd) { const b = document.createElement('b'); b.textContent = `แนะนำ Lv ${dgd.lv}`; $('rm-tip').append(b, dgd.desc); }
-    $('rm-rules').innerHTML = '<li>รวมปาร์ตี้ได้สูงสุด 4 คน</li><li>หัวห้องกดลุยเพื่อเข้าดันเจี้ยน</li><li>ด่านในดันเจี้ยนกำลังสร้าง เข้าเล่นได้เร็วๆ นี้</li>';
+    $('rm-rules').innerHTML = '<li>รวมปาร์ตี้ได้สูงสุด 4 คน</li><li>หัวห้องกดลุยเพื่อเข้าดันเจี้ยน</li><li>ตอนนี้เข้าเล่นได้ทีละ 1 คน</li>';
     $('rm-go').disabled = !co.host; $('rm-go').textContent = !co.host ? 'รอหัวห้อง' : 'ลุย';
-    $('rm-state').textContent = 'ด่านดันเจี้ยนกำลังสร้าง ยังเข้าเล่นไม่ได้';
+    $('rm-state').textContent = r.game ? 'กำลังเล่นอยู่' : !co.host ? 'รอหัวห้องกดลุย' : mem.length > 1 ? 'ตอนนี้ดันเจี้ยนเล่นได้ทีละ 1 คน' : 'กดลุยเพื่อเข้าดันเจี้ยน';
     readyGo(r, mem); return;
   }
   // map panel: ลุย always rolls a random map
@@ -2052,7 +2053,12 @@ function startRoom() {
   if (!co.host) { co.ready = !co.ready; sharePresence(); renderRoom(); return; }
   if (!co.seek && notReady(mem).length) { msg.textContent = 'รอให้ทุกคนกดพร้อมก่อน'; return; }
   if (co.mode === 'rush') { seekMatch(); return; }
-  if (co.mode === 'dungeon') { msg.textContent = 'ด่านในดันเจี้ยนกำลังสร้าง ยังเข้าเล่นไม่ได้'; return; }
+  if (co.mode === 'dungeon') { // the game plays the dungeon one hero at a time for now: the party's host goes in
+    if (mem.length > 1) { msg.textContent = 'ตอนนี้ดันเจี้ยนเล่นได้ทีละ 1 คน เล่นพร้อมกันหลายคนจะตามมา'; return; }
+    msg.textContent = '';
+    launch(d => { press(d, '#mode-slime'); press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#start'); }, false, null, { k: dgOf(co.map) ? co.map : DUNGEONS[0].k, lv: co.dlv || DG_LEVELS[0].k });
+    return;
+  }
   if (mem.length < 2) { msg.textContent = 'ต้องมีผู้เล่นอย่างน้อย 2 คน'; return; }
   if (mem.length > GAME_MAX) { msg.textContent = `ตอนนี้เกมเล่นได้ทีละ ${GAME_MAX} คน ช่องที่ 3–4 จะใช้ได้เมื่อเกมรองรับหลายคน`; return; }
   msg.textContent = '';
@@ -3896,6 +3902,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.66</div>
+<div id="ver">v0.61.67</div>
 </body>
 </html>
