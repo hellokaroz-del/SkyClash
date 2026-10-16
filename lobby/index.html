@@ -878,6 +878,14 @@ img.jb { pointer-events: auto; } /* the small job badge keeps its name tooltip *
 .ap-pz td.pb { white-space: nowrap; font-size: 12px; }
 .ap-pz .x { border: 0; background: none; color: #ff8a8a; font-size: 16px; cursor: pointer; padding: 2px 6px; }
 .ap-egg .row { display: flex; gap: 8px; }
+/* zones (modes / each dungeon) and cards that fold up to their title (Karoz 2026-10-16) */
+.ap-zone { grid-column: 1 / -1; margin: 6px 0 -2px; font-size: 14px; color: #ffe08a; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+.ap-egg h4.fold { cursor: pointer; user-select: none; }
+.ap-egg h4.fold::before { content: "▾"; margin-right: 6px; color: var(--muted); display: inline-block; transition: transform .15s; }
+.ap-egg.shut h4.fold::before { transform: rotate(-90deg); }
+.ap-egg h4.fold .sum { margin-left: auto; margin-right: 8px; font-size: 12px; font-weight: 400; color: var(--muted); }
+.ap-egg.shut > :not(h4) { display: none; }
+.ap-egg.shut { align-self: start; }
 .ap-egg .row .btn { flex: 1; }
 #log .del { border: 0; background: none; color: #ff8a80; cursor: pointer; font-size: 14px; padding: 0 4px; margin-left: 6px; opacity: .7; }
 #log .del:hover { opacity: 1; }
@@ -3374,11 +3382,24 @@ function poolStart(m) {
 const prizeName = x => x.t === 'gold' ? 'ทอง' : x.t === 'coupon' ? 'คูปอง' : (ITEMS[x.id] || {}).name || x.id;
 function apEggs() {
   const box = $('ap-eggs'); box.textContent = '';
+  let open = {}; try { open = JSON.parse(localStorage.getItem('ap-egg-open') || '{}') || {}; } catch (_) {}
+  let zone = null;
   for (const m of eggPools()) {
+    // zones: the play modes first, then one per dungeon
+    const z = m.dg ? 'ดันเจี้ยน · ' + m.dg.name : 'โหมดเล่น';
+    if (z !== zone) { zone = z; box.appendChild(apEl('h4', 'ap-zone', z)); }
     const saved = Array.isArray(settings.egg_pool[m.k]) ? settings.egg_pool[m.k] : null;
     let rows = (saved || poolStart(m)).map(x => Object.assign({}, x));
-    const c = apEl('div', 'ap-egg' + (saved && saved.length ? ' live' : '')), h = apEl('h4', '', m.th);
-    h.appendChild(apEl('span', 'ap-tag' + (saved && saved.length ? ' live' : ''), saved && saved.length ? 'มีไข่' : m.k === 'rush_bot' && rows.length ? 'ใช้ช่วงคูปองเดิม' : 'ยังไม่มีไข่'));
+    const c = apEl('div', 'ap-egg' + (saved && saved.length ? ' live' : '') + (open[m.k] ? '' : ' shut')), h = apEl('h4', 'fold', m.dg ? m.th.split(' · ').pop() : m.th);
+    h.append(apEl('span', 'sum', saved && saved.length ? `${saved.length} รายการ` : ''),
+      apEl('span', 'ap-tag' + (saved && saved.length ? ' live' : ''), saved && saved.length ? 'มีไข่' : m.k === 'rush_bot' && rows.length ? 'ใช้ช่วงคูปองเดิม' : 'ยังไม่มีไข่'));
+    // click the title to fold or open the card; which cards are open is remembered on this browser
+    h.tabIndex = 0; h.setAttribute('role', 'button'); h.setAttribute('aria-expanded', String(!!open[m.k]));
+    const fold = () => {
+      open[m.k] = c.classList.toggle('shut') ? undefined : 1; h.setAttribute('aria-expanded', String(!!open[m.k]));
+      try { localStorage.setItem('ap-egg-open', JSON.stringify(open)); } catch (_) {}
+    };
+    h.onclick = fold; h.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fold(); } };
     const tb = apEl('table', 'ap-pz');
     const draw = () => {
       tb.textContent = '';
@@ -4029,6 +4050,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.68</div>
+<div id="ver">v0.61.69</div>
 </body>
 </html>
