@@ -878,6 +878,7 @@ img.jb { pointer-events: auto; } /* the small job badge keeps its name tooltip *
 .ap-pz td.pb { white-space: nowrap; font-size: 12px; }
 .ap-pz .x { border: 0; background: none; color: #ff8a8a; font-size: 16px; cursor: pointer; padding: 2px 6px; }
 .ap-egg .row { display: flex; gap: 8px; }
+.ap-egg .msg { margin: 0; min-height: 1.2em; font-size: 13px; color: #ff9f8f; } .ap-egg .msg.ok { color: #9be8a4; }
 /* zones (modes / each dungeon) and cards that fold up to their title (Karoz 2026-10-16) */
 .ap-zone { grid-column: 1 / -1; margin: 6px 0 -2px; font-size: 14px; color: #ffe08a; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
 .ap-egg h4.fold { cursor: pointer; user-select: none; }
@@ -3060,7 +3061,7 @@ const apOn = v => v === 'infinity' || (!!v && new Date(v).getTime() > Date.now()
 const apNum = v => (+v || 0).toLocaleString('th-TH');
 const AP_ERR = {
   not_admin: 'บัญชีนี้ไม่ใช่แอดมินในฐานข้อมูล (profiles.is_admin)', no_target: 'ไม่พบผู้เล่น', not_self: 'ทำกับบัญชีตัวเองไม่ได้',
-  target_admin: 'แบนหรือปิดแชทแอดมินด้วยกันไม่ได้', bad_amount: 'จำนวนไม่ถูกต้อง', bad_level: 'เลเวลต้องอยู่ระหว่าง 1 ถึง 100',
+  target_admin: 'แบนหรือปิดแชทแอดมินด้วยกันไม่ได้', bad_setting: 'เซิร์ฟเวอร์ยังไม่รู้จักค่านี้ ต้องรัน supabase-admin.sql ล่าสุดใน Supabase ก่อน', bad_amount: 'จำนวนไม่ถูกต้อง', bad_level: 'เลเวลต้องอยู่ระหว่าง 1 ถึง 100',
 };
 function apErr(e) {
   const s = String((e && (e.message || e.code)) || e || '');
@@ -3432,19 +3433,26 @@ function apEggs() {
     const add = apEl('button', 'btn', '+ เพิ่มของรางวัล'); add.type = 'button';
     add.onclick = () => { rows.push({ t: 'gold' }); draw(); };
     const b = apEl('button', 'btn go', 'บันทึก'); b.type = 'button';
+    // the answer shows under the card's own buttons: the panel's message line is out of sight this far down
+    const msg = apEl('p', 'msg'); msg.setAttribute('role', 'alert');
+    const say = (t, ok) => { msg.textContent = t || ''; msg.classList.toggle('ok', !!ok); };
     b.onclick = async () => {
+      say('');
+      if (rows.length > 20) { say('ใส่ของรางวัลได้ไม่เกิน 20 รายการ'); return; }
       const bad = rows.find(x => ![x.min, x.max, x.w].every(v => Number.isInteger(v) && v >= 1) || x.max < x.min || x.max > (x.t === 'item' ? 9999 : 1e6) || x.w > 1e6);
-      if (bad) { apSay(`${prizeName(bad)}: ใส่จำนวนเต็มตั้งแต่ 1 ต่ำสุดไม่เกินสูงสุด (ไอเทมไม่เกิน 9,999 ชิ้น) และโอกาสตั้งแต่ 1`); return; }
+      if (bad) { say(`${prizeName(bad)}: ใส่จำนวนเต็มตั้งแต่ 1 ต่ำสุดไม่เกินสูงสุด (ไอเทมไม่เกิน 9,999 ชิ้น) และโอกาสตั้งแต่ 1`); return; }
       const list = rows.map(x => x.t !== 'item' ? { t: x.t, min: x.min, max: x.max, w: x.w } : (() => {
         const it = ITEMS[x.id] || {};
         return { t: 'item', id: x.id, slot: it.slot || '', stats: it.stats || {}, bound: x.bound != null ? !!x.bound : it.bound !== false, min: x.min, max: x.max, w: x.w };
       })());
+      b.disabled = true;
       const v = Object.assign({}, settings.egg_pool, { [m.k]: list }), { error } = await apRpc('admin_set_setting', { p_key: 'egg_pool', p_value: v });
-      if (error) return;
+      b.disabled = false;
+      if (error) { say('บันทึกไม่ได้: ' + apErr(error)); return; }
       settings.egg_pool = v; apEggs(); $('ap-set-ok').textContent = list.length ? `ไข่ ${m.th} บันทึกแล้ว ${list.length} รายการ` : `ไข่ ${m.th} ไม่มีของรางวัลแล้ว`;
     };
     const row = apEl('div', 'row'); row.append(add, b);
-    c.append(h, apEl('small', '', m.note), tb, row); box.appendChild(c);
+    c.append(h, apEl('small', '', m.note), tb, row, msg); box.appendChild(c);
   }
 }
 $('ap-mt-save').onclick = async () => {
@@ -4050,6 +4058,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.69</div>
+<div id="ver">v0.61.70</div>
 </body>
 </html>
