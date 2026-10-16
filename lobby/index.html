@@ -2186,6 +2186,16 @@ addEventListener('message', e => {
   dgRun.ending = true; dgRun.result = { result: d.result === 'win' ? 'win' : 'loss', kills: Math.max(0, d.kills | 0) };
   clearTimeout(dgRun.timer); dgRun.timer = setTimeout(dgReward, 4500);
 });
+// a server function or column that is missing: which SQL file to run again in Supabase (the dungeon's reward uses
+// functions from several files)
+function sqlNeed(err) {
+  const s = String((err && err.message) || '');
+  if (!/does not exist|schema cache|PGRST20/i.test(s)) return '';
+  const f = /egg_fill|egg_give|gain_exp|rush_/.test(s) ? 'supabase-rush.sql' : /dungeon/.test(s) ? 'supabase-dungeon.sql'
+    : /gold|gem|coupon|game_settings|admin/.test(s) ? 'supabase-admin.sql' : 'ไฟล์ SQL ล่าสุดทุกไฟล์';
+  const what = (s.match(/(?:function|column|relation) ([\w."]+)/) || [])[1];
+  return `เซิร์ฟเวอร์ยังไม่มี ${what ? what.replace(/"/g, '') : 'ส่วนที่ต้องใช้'} ต้องรัน ${f} ใน Supabase ก่อน`;
+}
 async function dgReward() {
   clearTimeout(dgRun.timer);
   if (!dgRun.ticket || !dgRun.result) return;
@@ -2197,7 +2207,7 @@ async function dgReward() {
   if (error) {
     const em = error.message || '';
     showResult([['ทอง', 0], ['EXP', 0]], 0, 'ของรางวัล', 'EXP ที่ได้');
-    $('td-msg').textContent = /too_fast/.test(em) ? 'จบด่านเร็วผิดปกติ ไม่ได้รับของรางวัล' : /already_ended/.test(em) ? 'รับของรางวัลของรอบนี้ไปแล้ว' : 'รับของรางวัลไม่สำเร็จ: ' + why(error);
+    $('td-msg').textContent = /too_fast/.test(em) ? 'จบด่านเร็วผิดปกติ ไม่ได้รับของรางวัล' : /already_ended/.test(em) ? 'รับของรางวัลของรอบนี้ไปแล้ว' : 'รับของรางวัลไม่สำเร็จ: ' + (sqlNeed(error) || why(error));
     go.textContent = 'กลับห้อง'; go.disabled = false; go.onclick = rushDone; go.focus(); return;
   }
   const me = data.me || {};
@@ -2220,7 +2230,7 @@ async function rushReward() {
   if (error) {
     const em = error.message || '';
     showResult([['ทอง', 0], ['EXP', 0]], 0, 'ของรางวัล', 'EXP ที่ได้');
-    $('td-msg').textContent = /too_fast/.test(em) ? 'เกมจบเร็วผิดปกติ (ไม่ถึง 10 วิ) ไม่ได้รับของรางวัล' : /already_ended/.test(em) ? 'รับของรางวัลเกมนี้ไปแล้ว' : 'บันทึกของรางวัลไม่สำเร็จ: ' + why(error);
+    $('td-msg').textContent = /too_fast/.test(em) ? 'เกมจบเร็วผิดปกติ (ไม่ถึง 10 วิ) ไม่ได้รับของรางวัล' : /already_ended/.test(em) ? 'รับของรางวัลเกมนี้ไปแล้ว' : 'บันทึกของรางวัลไม่สำเร็จ: ' + (sqlNeed(error) || why(error));
     go.textContent = 'กลับห้อง'; go.disabled = false; go.onclick = rushDone; go.focus(); return;
   }
   const me = data.me || {};
@@ -2248,7 +2258,7 @@ function showEggs(ticket, n, fn = 'egg_pick') {
       b.classList.add('shake');
       const [{ data, error }] = await Promise.all([online.sb.rpc(fn, { p_ticket: ticket, p_index: i }), new Promise(r => setTimeout(r, 1000))]);
       b.classList.remove('shake');
-      if (error) { msg.textContent = /already_picked/.test(error.message || '') ? 'ทุบไข่ของเกมนี้ไปแล้ว' : 'ทุบไข่ไม่สำเร็จ: ' + why(error); for (const x of grid.children) x.disabled = false; out.hidden = false; return; }
+      if (error) { msg.textContent = /already_picked/.test(error.message || '') ? 'ทุบไข่ของเกมนี้ไปแล้ว' : 'ทุบไข่ไม่สำเร็จ: ' + (sqlNeed(error) || why(error)); for (const x of grid.children) x.disabled = false; out.hidden = false; return; }
       const label = (el, v) => { const w = document.createElement('span'); w.className = 'won'; w.textContent = eggLabel(v); el.appendChild(w); };
       b.classList.add('open'); label(b, data.won);
       msg.textContent = `ได้ ${eggLabel(data.won)}`;
@@ -4058,6 +4068,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.70</div>
+<div id="ver">v0.61.71</div>
 </body>
 </html>
