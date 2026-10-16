@@ -1235,14 +1235,17 @@ function newMatch(demo) {
       name: bot ? 'บอท' : (vsBot ? 'คุณ' : 'ผู้เล่น ' + (i + 1)),
       guild: '', level: null };
   };
-  if (mobMode && !demo) { // the slime stage: the hero always starts
-    const hero = mk(0, picks[0], STAGE.spawn[0], false);
-    if (!demo && myInfo()) applyInfo(hero, myInfo(), 'คุณ'); // the town's player, under their own name
-    S = { demo, players: [hero], mob: { total: tutMode ? TUT.slimes : SLIME.total, spawned: 0, corpses: [] }, turn: 0, state: 'aim', power: 0, timer: TURN_TIME, wind: 0, projs: [], settle: 0, zones: [],
+  if (mobMode && !demo) { // the slime stage: the heroes always start
+    // a dungeon party online (Karoz 2026-10-16: 1-4 players): one hero for each member, side by side, then the slimes
+    const pk = NET.on && NET.party && NET.party.pk ? NET.party.pk : [picks[0]];
+    const heroes = pk.map((k, s) => { const h = mk(s, CLASSES[k] ? k : picks[0], Math.max(60, STAGE.spawn[0] + PARTY_DX[s]), false); h.face = 1; return h; });
+    const hero = heroes[0];
+    if (!(NET.on && NET.party) && myInfo()) applyInfo(hero, myInfo(), 'คุณ'); // the town's player, under their own name (a party's names come in netNames)
+    S = { demo, players: heroes, mob: { total: tutMode ? TUT.slimes : SLIME.total, spawned: 0, corpses: [] }, turn: 0, state: 'aim', power: 0, timer: TURN_TIME, wind: 0, projs: [], settle: 0, zones: [],
       banner: 0, bot: null, frame: 0, turnCount: 0, dg: tutMode ? null : townDungeon() };
     if (tutMode) S.tut = { step: 0, x0: hero.x, a0: hero.angle, shot: false, skill: false, spawned: false, flash: 0 };
-    else if (bossPhase(S.dg)) { S.boss = true; S.mob.total = 1; S.players.push(makeBoss(1)); S.mob.spawned = 1; } // phase 2: King สไลม์ alone, it calls its own slimes
-    else for (let i = 1; i <= SLIME.field; i++) { S.players.push(makeSlimeAt(i)); S.mob.spawned++; }
+    else if (bossPhase(S.dg)) { S.boss = true; S.mob.total = 1; S.players.push(makeBoss(S.players.length)); S.mob.spawned = 1; } // phase 2: King สไลม์ alone, it calls its own slimes
+    else for (let k = 0; k < SLIME.field; k++) { S.players.push(makeSlimeAt(S.players.length)); S.mob.spawned++; }
     fx.booms.length = fx.parts.length = fx.texts.length = fx.gfx.length = fx.bf.length = 0;
     S.golem = null; S.golemDone = false;
     startTurn(true);
@@ -1293,10 +1296,11 @@ function startTurn(first) {
   if (!first) effFlush(cur());
   if (!first) { const pr = cur(); if (pr.passed) pr.passed = false; else addRage(pr, 5); } // finished own turn (+5), unless PASS already paid +15
   if (!first) { const prev = cur(); if (prev.thawNext) { prev.frozen = Math.max(0, prev.frozen - 1); prev.thawNext = false; prev.ccTurn = false; if (prev.frozen === 0 && prev.ccLen >= 2) prev.ccRes = CC_RES_TURNS; } }
+  const was = S.turn;
   if (!first) S.turn = nextTurn(S.turn);
   const p = cur();
   if (!p.alive) { S.turn = nextTurn(S.turn); }
-  if (!first && S.mob && !S.tut && !S.boss && S.turn === 0) mobWave(); // a round is over (the boss brings its own)
+  if (!first && S.mob && !S.tut && !S.boss && S.turn <= was) mobWave(); // a round is over: back to the party (the boss brings its own)
   const q = cur();
   q.maxEn = Math.round(235 + statOf(q, 'spd') * 0.25); // SPD after passives (Ranger Training, Cat Reflex) and debuffs (Ice Lance, Blizzard)
   q.iron = false; q.energy = Math.max(0, q.maxEn - (q.debs || []).reduce((a, d) => a + (d.enPen || 0), 0)); q.armed = null; q.boost = false; q.ccTurn = false;
@@ -1332,7 +1336,7 @@ function startTurn(first) {
     }
   }
   if (q.boss && S.state === 'aim' && q.scd > 0) q.scd--;
-  if (q.mob && S.state === 'aim') { S.state = 'mob'; S.mp = { phase: 'think', t: q.boss ? 34 : 16, hops: 0 }; }
+  if (q.mob && S.state === 'aim') { S.state = 'mob'; S.mp = { phase: 'think', t: q.boss ? 34 : 16, hops: 0 }; S.grp = S.grpAll = null; if (!q.boss) mobGroup(q); }
   updatePad();
 }
 
@@ -2107,6 +2111,8 @@ function atkPose(t) {
   const push = t < 12 ? 0 : t < ATK.hit ? 20 * (t - 12) / (ATK.hit - 12) : t < 30 ? 20 : 20 * Math.max(0, 1 - (t - 30) / 12);
   return { f, lift: 0, push, atk: true };
 }
+let MOB_UID = 0;
+const PARTY_DX = [0, -80, 80, -160]; // where each party member stands from the stage's spawn point
 const mobKilled = () => S.mob.spawned - S.players.filter(x => x.mob && x.alive).length;
 // where a new slime appears: at the spawn point SLIME.door (the spot Karoz marked), a few px either way so a stack
 // of slimes still reads as several; slimes may stand on top of each other (Karoz), so nobody queues up any more
@@ -2117,7 +2123,7 @@ function makeSlime(i) {
   const n = S.mob.spawned + 1, tint = Math.floor(Math.random() * SLIME_COL.length), x = slimeSpot(), hero = S.players[0];
   const c = { name: 'สไลม์' + SLIME_NAME[tint], hp: SLIME.hp, atk: SLIME.atk, matk: 0, def: SLIME.def, mdef: SLIME.mdef, spd: 0, luk: SLIME.luk, pv: {}, sk: {}, ult: null,
     r: 30, color: SLIME_COL[tint], nBase: 'atk', nPct: 100, maxEn: 0, vel: 1, gf: 1, shot: '' };
-  return { i, k: 'slime', mob: true, tint, c, x, y: surfaceY(x) - 240, vy: 0, hp: c.hp, maxHp: c.hp, face: x > hero.x ? -1 : 1, angle: 45, energy: 0, maxEn: 0,
+  return { i, uid: ++MOB_UID, k: 'slime', mob: true, tint, c, x, y: surfaceY(x) - 240, vy: 0, hp: c.hp, maxHp: c.hp, face: x > hero.x ? -1 : 1, angle: 45, energy: 0, maxEn: 0,
     cds: [0, 0, 0, 0, 0, 0], warpCd: 0, frozen: 0, cck: '', ccRes: 0, bind: 0, shield: 0, buffs: [], debs: [], dots: [], marks: [], hidden: 0, seenX: x, fatigue: 0, once: {},
     walk: 0, armed: null, rage: 0, dmgAcc: 0, lossAcc: 0, iron: false, bot: true, alive: true, lastPower: null, items: 0, boost: false,
     name: 'สไลม์ ' + n, guild: 'ทุ่งสไลม์', level: 1, anim: { k: 'idle', t: 0 } };
@@ -2127,7 +2133,8 @@ function makeSlime(i) {
 // 80% of a level 13 Merchant, in 2 phases: the 15 slimes, then (the town's ph: 2, after the party is ready again) King สไลม์
 const DG_MOB = { slime: { normal: { base: 'merchant', level: 10, pct: 80 }, hard: { base: 'merchant', level: 13, pct: 80, phases: 2 } } };
 function townDungeon() {
-  let d = null; try { d = window.parent !== window && window.parent.__dungeon; } catch (_) {}
+  let d = NET.dgo || null; // a party guest plays the host's run
+  if (!d) try { d = window.parent !== window && window.parent.__dungeon; } catch (_) {}
   const m = d && DG_MOB[d.k] && DG_MOB[d.k][d.lv];
   return m && CLASSES[m.base] ? Object.assign({ phases: 1 }, m, { k: d.k, lv: d.lv, ph: Math.max(1, Math.min(m.phases || 1, d.ph | 0 || 1)) }) : null;
 }
@@ -2197,19 +2204,39 @@ function bossTick(p) {
   if (a.t === A.hit) {
     if (a.k === 'stomp') bossStompLand(p, a);
     else if (a.k === 'summon') bossSummon(p);
-    else if (a.k === 'spit') for (const t of a.tg) fx.bf.push({ k: 'orb', x0: p.x - 70, y0: p.y - 120, t: 0, dur: Math.max(34, Math.min(80, Math.abs(t.x - p.x) / 14)), tg: t, by: p });
-    else for (const t of a.tg) fx.bf.push({ k: 'wave', x: p.x - 80, y: p.y - 34, sp: 13, tg: t, by: p, t: 0 });
+    else if (a.k === 'spit') for (const t of a.tg) bfAdd({ k: 'orb', x0: p.x - 70, y0: p.y - 120, t: 0, dur: Math.max(34, Math.min(80, Math.abs(t.x - p.x) / 14)), tg: t, by: p });
+    else for (const t of a.tg) bfAdd({ k: 'wave', x: p.x - 80, y: p.y - 34, sp: 13, tg: t, by: p, t: 0 });
   }
   if (a.t >= A.len && !fx.bf.some(e => e.by === p && !e.done && (e.k === 'orb' || e.k === 'wave'))) {
     p.act = null; S.state = 'settle'; S.settle = 30;
   }
 }
+// online, the boss's bubbles, waves and light columns go to the party's screens as events (the guests draw them; only the
+// host's copy does damage)
+function bfAdd(e) {
+  fx.bf.push(e);
+  if (e.k === 'orb') netEv(['f', 'orb', nr(e.x0), nr(e.y0), nr(e.dur), e.tg.i, e.by.i]);
+  else if (e.k === 'wave') netEv(['f', 'wave', nr(e.x), nr(e.y), e.sp, e.tg.i, e.by.i]);
+  else if (e.k === 'pillar') netEv(['f', 'pillar', nr(e.x), nr(e.y), e.dur]);
+}
+function bfEv(e) {
+  const P = i => S.players[i];
+  if (e[2] === 'orb' && P(e[6]) && P(e[7])) fx.bf.push({ k: 'orb', x0: e[3], y0: e[4], dur: e[5], t: 0, tg: P(e[6]), by: P(e[7]) });
+  else if (e[2] === 'wave' && P(e[6]) && P(e[7])) fx.bf.push({ k: 'wave', x: e[3], y: e[4], sp: e[5], t: 0, tg: P(e[6]), by: P(e[7]) });
+  else if (e[2] === 'pillar') fx.bf.push({ k: 'pillar', x: e[3], y: e[4], t: 0, dur: e[5] });
+  else if (e[2] === 'stomp') bossStompFx(e[3], e[4]);
+  else if (e[2] === 'gulp' && P(e[3])) bossGulpFx(P(e[3]), e[4], e[5]);
+}
+function bossStompFx(lx, y) {
+  cam.shake = Math.max(cam.shake, 20);
+  fx.bf.push({ k: 'ring', x: lx, y, t: 0, dur: 30, r: 150, col: '255,236,190' });
+  for (let n = 0; n < 40; n++) { const s = n % 2 ? 1 : -1; fx.bf.push({ k: 'dust', x: lx + s * Math.random() * 90, y: y - 4, vx: s * (1 + Math.random() * 4), vy: -Math.random() * 3, t: 0, dur: 40 + Math.random() * 30, r: 8 + Math.random() * 12 }); }
+}
 // the jump lands: whoever it lands on dies at once
 function bossStompLand(p, a) {
-  cam.shake = Math.max(cam.shake, 20); sfx('slime_attack');
+  sfx('slime_attack');
   const lx = p.x + a.dx;
-  fx.bf.push({ k: 'ring', x: lx, y: p.y, t: 0, dur: 30, r: 150, col: '255,236,190' });
-  for (let n = 0; n < 40; n++) { const s = n % 2 ? 1 : -1; fx.bf.push({ k: 'dust', x: lx + s * Math.random() * 90, y: p.y - 4, vx: s * (1 + Math.random() * 4), vy: -Math.random() * 3, t: 0, dur: 40 + Math.random() * 30, r: 8 + Math.random() * 12 }); }
+  bossStompFx(lx, p.y); netEv(['F', 'stomp', nr(lx), nr(p.y)]);
   for (const h of a.tg) {
     if (!h.alive) continue;
     if (ADMIN.god && !NET.on && !h.bot) { fx.texts.push({ x: h.x, y: h.y - 50, s: 'อมตะ', col: '#9fe0ff', t: 60 }); continue; }
@@ -2222,17 +2249,17 @@ function bossStompLand(p, a) {
 // 2 slimes drop in beside the boss under a column of golden light; a fallen slime's place is used first
 function bossSummon(p) {
   for (let k = 0; k < BOSS.summonN; k++) {
-    let i = S.players.findIndex((x, j) => j > 1 && !x.alive && !x.boss && (x.dieT || 0) >= dieTime());
+    let i = S.players.findIndex(x => x.mob && !x.alive && !x.boss && (x.dieT || 0) >= dieTime());
     if (i < 0) i = S.players.length;
     const s = makeSlimeAt(i); s.x = Math.round(p.x - 150 - k * 70 - Math.random() * 30); s.y = surfaceY(s.x) - 260; s.face = -1;
     s.name = 'ลูกน้อง'; S.players[i] = s;
-    fx.bf.push({ k: 'pillar', x: s.x, y: surfaceY(s.x), t: 0, dur: 60 });
+    bfAdd({ k: 'pillar', x: s.x, y: surfaceY(s.x), t: 0, dur: 60 });
     say(s, 'ลูกน้องมาแล้ว!', '#ffe066', 80, -150);
   }
 }
 // a bubble or a wave reaches its target
 function bossStrike(e, pct) {
-  const t = e.tg; if (!t.alive) return;
+  const t = e.tg; if (!t || !t.alive || NET.role === 'guest') return; // a guest's copy only draws: the host's hit comes in the snapshot
   mobHit(e.by, t, pct, true);
   if (t.alive) shatter(t);
 }
@@ -2241,15 +2268,17 @@ function bossFxTick() {
   for (const e of fx.bf) {
     e.t++;
     if (e.k === 'orb') {
+      if (!e.tg) { e.done = true; continue; }
       const u = Math.min(1, e.t / e.dur), tx = e.tg.x, ty = e.tg.y - 18;
       e.x = e.x0 + (tx - e.x0) * u; e.y = e.y0 + (ty - e.y0) * u - Math.sin(u * Math.PI) * 170;
       if (e.t % 2 === 0) fx.bf.push({ k: 'spark', x: e.x + (Math.random() - 0.5) * 16, y: e.y + (Math.random() - 0.5) * 16, vx: (Math.random() - 0.5), vy: (Math.random() - 0.5), t: 0, dur: 26, hue: (S.frame * 9) % 360 });
       if (u >= 1 && !e.done) {
-        e.done = true; bossStrike(e, BOSS.spitPct); cam.shake = Math.max(cam.shake, 10); sfx('slime_hurt');
+        e.done = true; bossStrike(e, BOSS.spitPct); cam.shake = Math.max(cam.shake, 10); if (NET.role !== 'guest') sfx('slime_hurt');
         fx.bf.push({ k: 'ring', x: tx, y: ty, t: 0, dur: 24, r: 70, col: '255,255,255' });
         for (let n = 0; n < 28; n++) { const a = Math.random() * Math.PI * 2, v = 2 + Math.random() * 5; fx.bf.push({ k: 'drop', x: tx, y: ty, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 3, t: 0, dur: 40, hue: n * 37 % 360 }); }
       }
     } else if (e.k === 'wave') {
+      if (!e.done && !e.tg) { e.done = true; e.fade = 0; }
       if (!e.done) {
         e.x -= e.sp;
         if (e.t % 2 === 0) fx.bf.push({ k: 'spark', x: e.x + 20, y: e.y + (Math.random() - 0.5) * 50, vx: 1.5, vy: (Math.random() - 0.5), t: 0, dur: 22, hue: (e.t * 15) % 360 });
@@ -2313,10 +2342,14 @@ function drawBossFx() {
 }
 // a player's hit that the boss swallows: the shot vanishes into its mouth and does 0
 function bossSwallow(b, q) {
-  b.swT = 1; sfx('slime_hurt');
+  sfx('slime_hurt');
   say(b, 'กลืนกิน!', '#ffb0e0', 90, 160);
+  bossGulpFx(b, q.x, q.y); netEv(['F', 'gulp', b.i, nr(q.x), nr(q.y)]);
+}
+function bossGulpFx(b, qx, qy) {
+  b.swT = 1;
   fx.bf.push({ k: 'gulp', x: b.x - 40, y: b.y - 60, t: 0, dur: 28 });
-  for (let n = 0; n < 14; n++) fx.bf.push({ k: 'spark', x: q.x + (Math.random() - 0.5) * 40, y: q.y + (Math.random() - 0.5) * 40, vx: (b.x - 40 - q.x) / 18, vy: (b.y - 60 - q.y) / 18, t: 0, dur: 18, hue: n * 25 % 360 });
+  for (let n = 0; n < 14; n++) fx.bf.push({ k: 'spark', x: qx + (Math.random() - 0.5) * 40, y: qy + (Math.random() - 0.5) * 40, vx: (b.x - 40 - qx) / 18, vy: (b.y - 60 - qy) / 18, t: 0, dur: 18, hue: n * 25 % 360 });
 }
 function bossFrame(k, f, sc, sx, sy) {
   const s = BOSS_SHEET[k]; if (!ready(s.img)) return false;
@@ -2430,7 +2463,7 @@ function mobRespawn() {
   if (S.boss) return; // King สไลม์'s slimes only come when it calls them
   for (let i = 1; i < S.players.length; i++) {
     const pl = S.players[i];
-    if (pl.alive || S.mob.spawned >= S.mob.total) continue;
+    if (!pl.mob || pl.alive || S.mob.spawned >= S.mob.total) continue;
     S.mob.corpses.push(pl);
     S.players[i] = makeSlimeAt(i); S.mob.spawned++;
     say(S.players[i], 'สไลม์ตัวใหม่!', '#c8ff9a', 80, -150);
@@ -2445,13 +2478,18 @@ function mobWave() {
     say(S.players[i], 'สไลม์ตัวใหม่!', '#c8ff9a', 80, -150);
   }
 }
-// the match ends when the hero falls or all 15 slimes are beaten
+// the match ends when every hero has fallen or all 15 slimes are beaten
 function mobOver() {
-  const h = S.players[0];
-  if (S.boss) { const b = S.players.find(x => x.boss); if (!h.alive) { endMatch(b); return true; } if (!b.alive) { endMatch(h); return true; } return false; }
-  if (!h.alive) { endMatch(S.players.find(x => x.mob && x.alive) || S.players[1]); return true; }
+  const hs = S.players.filter(x => !x.mob), up = hs.filter(x => x.alive), h = up[0] || hs[0];
+  if (S.boss) { const b = S.players.find(x => x.boss); if (!up.length) { endMatch(b); return true; } if (!b.alive) { endMatch(h); return true; } return false; }
+  if (!up.length) { endMatch(S.players.find(x => x.mob && x.alive) || S.players.find(x => x.mob)); return true; }
   if (mobKilled() >= S.mob.total) { endMatch(h); return true; }
   return false;
+}
+// the hero a slime goes for: the nearest one standing (a hidden hero only if nobody else is left)
+function mobTarget(p) {
+  const hs = S.players.filter(x => !x.mob && x.alive);
+  return hs.sort((a, b) => ((a.hidden > 0) - (b.hidden > 0)) || Math.abs(botSeeX(a) - p.x) - Math.abs(botSeeX(b) - p.x))[0] || null;
 }
 // a slime's slam on the hero (King สไลม์'s bubble and sword wave too: their own % of ATK, and they never miss)
 function mobHit(m, pl, pct = 100, sure = false) {
@@ -2470,10 +2508,60 @@ function mobHit(m, pl, pct = 100, sure = false) {
   if (!SIM) cam.shake = Math.max(cam.shake, 6);
   if (pl.hp <= 0) pl.alive = false; else lowHp(pl);
 }
+// Karoz 2026-10-16: the slimes move all at once instead of one after another. The first slime's turn takes every
+// slime after it (up to a boss): each one's turn starts (poison, freezes) as usual, then they all think, hop and slam
+// together, and the turn goes on after the last of them.
+function mobGroup(q) {
+  q.mp = S.mp; q.mv = true;
+  const all = [q], acts = [q];
+  for (let i = q.i + 1; i < S.players.length; i++) {
+    const m = S.players[i]; if (m.boss) break;
+    if (!m.mob || !m.alive) continue;
+    all.push(m);
+    if (grpStart(m)) { m.mp = { phase: 'think', t: 16 + (acts.length % 4) * 3, hops: 0 }; m.mv = true; acts.push(m); }
+  }
+  S.grp = acts; S.grpAll = all; S.grpSettle = 0;
+}
+// a slime's own turn start inside the group (what startTurn does for the slime whose turn it is)
+function grpStart(m) {
+  for (let i = 0; i < m.cds.length; i++) if (m.cds[i] > 0) m.cds[i]--;
+  if (!S.demo) turnStartEffects(m);
+  stAdd(m.i, 'myTurns', 1);
+  if (!m.alive) return false;
+  if (m.frozen > 0) {
+    stAdd(m.i, 'ccTurns', 1); m.thawNext = true;
+    const word = m.cck === 'stun' ? 'มึนอยู่!' : 'แข็งอยู่!';
+    fx.texts.push({ x: m.x, y: m.y - 60, s: m.frozen > 1 ? word + ' ข้ามเทิร์น (อีก ' + m.frozen + ')' : word + ' ข้ามเทิร์น', col: m.cck === 'stun' ? '#ffe14a' : '#bfeaff', t: 90 });
+    return false;
+  }
+  return true;
+}
+// and its turn end (startTurn does the last one's)
+function grpEnd(m) {
+  effFlush(m);
+  if (m.passed) m.passed = false; else addRage(m, 5);
+  if (m.thawNext) { m.frozen = Math.max(0, m.frozen - 1); m.thawNext = false; m.ccTurn = false; if (m.frozen === 0 && m.ccLen >= 2) m.ccRes = CC_RES_TURNS; }
+}
+function grpTick() {
+  for (const m of S.grp) if (!m.mp.done) mobTick(m);
+  if (!S.grp.every(m => m.mp.done)) return;
+  const all = S.grpAll, last = all[all.length - 1];
+  for (const m of all) { m.mv = false; m.mp = null; if (m !== last) grpEnd(m); }
+  S.turn = last.i; S.grp = S.grpAll = null;
+  S.state = 'settle'; S.settle = S.grpSettle || 16;
+}
+// a slime is done moving: alone, its turn settles; in the group, it waits for the others
+function mobDone(p, n) {
+  if (S.grp && p.mp) { p.mp.done = true; p.mv = false; S.grpSettle = Math.max(S.grpSettle || 0, n); return; }
+  S.state = 'settle'; S.settle = n;
+}
 // a slime's turn: think, hop up to twice towards the hero, then slam if it is close enough
 function mobTick(p) {
-  const mp = S.mp, h = S.players[0];
-  if (!p.alive) { S.state = 'settle'; S.settle = 10; return; }
+  const mp = p.mp || S.mp;
+  if (!p.alive) { mobDone(p, 10); return; }
+  if (!mp.tg || !mp.tg.alive) mp.tg = mobTarget(p);
+  const h = mp.tg;
+  if (!h) { mobDone(p, 10); return; }
   const tx = botSeeX(h), near = () => Math.abs(tx - p.x) <= SLIME.reach && !(h.hidden > 0); // a hidden hero can't be found, only guessed at
   if (mp.phase === 'think') {
     if (!solid(p.x, p.y)) return; // a new slime still dropping in
@@ -2481,7 +2569,7 @@ function mobTick(p) {
     p.face = tx > p.x ? 1 : -1;
     if (near()) { mp.phase = 'atk'; mp.t = 0; p.anim = { k: 'atk', t: 0 }; say(p, 'พุ่งชน!', '#c8ff9a', 50, 70); sfx('slime_attack'); }
     else if (mp.hops < SLIME.hops && !(p.bindNow)) { mp.phase = 'hop'; mp.t = 0; mp.left = SLIME.hop; p.anim = { k: 'jump', t: 0 }; sfx('slime_jump'); }
-    else { S.state = 'settle'; S.settle = 16; p.anim = { k: 'idle', t: 0 }; }
+    else { mobDone(p, 16); p.anim = { k: 'idle', t: 0 }; }
     return;
   }
   mp.t++; p.anim.t = mp.t;
@@ -2492,10 +2580,10 @@ function mobTick(p) {
       if (blocked) mp.left = 0; else { p.x = nx; p.y = surfaceY(Math.round(p.x)); mp.left -= st; }
     }
     if (mp.t >= 42) { mp.hops++; mp.phase = 'think'; mp.t = 4; p.anim = { k: 'idle', t: 0 };
-      if (!near() && (mp.hops >= SLIME.hops || mp.left > 0)) { S.state = 'settle'; S.settle = 16; } }
+      if (!near() && (mp.hops >= SLIME.hops || mp.left > 0)) { mobDone(p, 16); } }
   } else if (mp.phase === 'atk') { // the lunge lands on frame 3
     if (mp.t === ATK.hit) mobHit(p, h); // on the impact frame of the lunge
-    if (mp.t >= 42) { S.state = 'settle'; S.settle = 20; p.anim = { k: 'idle', t: 0 }; }
+    if (mp.t >= 42) { mobDone(p, 20); p.anim = { k: 'idle', t: 0 }; }
   }
 }
 function drawMob(p, active) {
@@ -2509,7 +2597,7 @@ function drawMob(p, active) {
   }
   p.prevHp = p.hp;
   let row = 'idle', f = Math.floor((S.frame + p.i * 5) / 3) % 14;
-  const moving = S.state === 'mob' && S.turn === p.i && p.anim && (p.anim.k === 'atk' || p.anim.k === 'jump');
+  const moving = S.state === 'mob' && (S.turn === p.i || p.mv) && p.anim && (p.anim.k === 'atk' || p.anim.k === 'jump');
   if (!p.alive) { row = 'die'; f = Math.floor(p.dieT / 3); }
   else if (moving) { row = p.anim.k; f = Math.floor(p.anim.t / 3); }
   else if (p.hurtT > 0) { row = 'hurt'; f = 6 + Math.floor(p.hurtT / 3); if (++p.hurtT > (ready(HURT_IMG) ? 34 : 24)) p.hurtT = 0; }
@@ -2761,7 +2849,7 @@ function update() {
   } else if (S.state === 'golem') {
     golemTick();
   } else if (S.state === 'mob') {
-    if (p.boss) bossTick(p); else mobTick(p);
+    if (p.boss) bossTick(p); else if (S.grp) grpTick(); else mobTick(p);
   } else if (S.state === 'settle') {
     if (!settling && --S.settle <= 0) {
       const living = S.players.filter(x => x.alive);
@@ -2779,7 +2867,7 @@ function update() {
   // off-turn: a human waiting for the bot (or for a shot to land) can still turn left/right in place
   if (S.state !== 'over') for (const h of S.players) {
     if (h.bot || !h.alive || h.frozen > 0) continue;
-    const src = h.remote ? NET.rin : input, lookDir = src.left ? -1 : src.right ? 1 : 0;
+    const src = h.remote ? (NET.rins && NET.rins[h.i]) || NET.rin : input, lookDir = src.left ? -1 : src.right ? 1 : 0;
     if (!lookDir || (NET.on && !h.remote && h.i !== NET.me)) continue;
     const active = h === p && (S.state === 'aim' || S.state === 'charging');
     if (!active && (vsBot || NET.on || h !== p)) h.face = lookDir;
@@ -2813,6 +2901,8 @@ function tickFx(p) {
   if (S.state === 'flying' && fly) { tx = fly.x; ty = fly.y; }
   const stk = S.projs.find(q => q.strike && !q.done);
   if (S.state === 'flying' && stk) { tx = stk.x; ty = stk.y; }
+  const gm = S.state === 'mob' && S.players.filter(x => x.mv && x.alive);
+  if (gm && gm.length > 1) { tx = gm.reduce((a, x) => a + x.x, 0) / gm.length; ty = gm.reduce((a, x) => a + x.y, 0) / gm.length; } // the slimes moving together
   const bfe = S.state === 'mob' && fx.bf.find(e => (e.k === 'orb' || e.k === 'wave') && !e.done);
   if (bfe) { tx = bfe.x; ty = bfe.y; }
   const gx = Math.max(0, Math.min(WW - VW, tx - VW / 2)), gy = Math.max(0, Math.min(WH - VH, ty - VH * 0.55));
@@ -2834,7 +2924,7 @@ function endMatch(winner, why) {
     sub: !winner ? 'ทั้งสองฝ่ายล้มพร้อมกัน' : human ? (winner === human ? 'คุณชนะการต่อสู้!' : vsBot ? 'บอทชนะ ลองใหม่อีกครั้ง' : 'เพื่อนชนะ ลองใหม่อีกครั้ง') : `${winner.name} ชนะ!`,
     sparks: [] };
   let txt = !winner ? 'เสมอ! ทั้งสองฝ่ายล้มพร้อมกัน' : `${winner.name} (${winner.c.name}) ชนะ! เลือกอาชีพแล้วเริ่มรอบใหม่ได้เลย`;
-  if (S.mob) { const won = winner === S.players[0]; R.kind = won ? 'victory' : 'defeat'; txt = R.sub = won ? `กำจัดสไลม์ครบ ${S.mob.total} ตัว!` : `สไลม์ชนะ (กำจัดได้ ${mobKilled()}/${S.mob.total} ตัว) ลองใหม่อีกครั้ง`;
+  if (S.mob) { const won = !!winner && !winner.mob; R.kind = won ? 'victory' : 'defeat'; txt = R.sub = won ? `กำจัดสไลม์ครบ ${S.mob.total} ตัว!` : `สไลม์ชนะ (กำจัดได้ ${mobKilled()}/${S.mob.total} ตัว) ลองใหม่อีกครั้ง`;
     if (S.boss) txt = R.sub = won ? `ปราบ ${BOSS.name} ได้แล้ว!` : `${BOSS.name} ชนะ ลองใหม่อีกครั้ง`;
     else if (won && S.dg && S.dg.ph < S.dg.phases) txt = R.sub = `ผ่านเฟส ${S.dg.ph}! กลับห้องเพื่อไปสู้กับ ${BOSS.name}`; }
   const tutWon = S.tut && winner === S.players[0];
@@ -2851,7 +2941,7 @@ function endMatch(winner, why) {
   } catch (_) {}
   // a dungeon run (the town set window.__dungeon): tell the town whether the field was cleared, for the reward
   if (S.mob && S.dg && human && window.parent !== window) try {
-    parent.postMessage({ type: 'aoa-dungeon-end', result: winner === human ? 'win' : 'loss', kills: S.boss ? S.players.filter(x => x.mob && !x.alive).length : mobKilled(), phase: S.dg.ph, phases: S.dg.phases }, location.origin);
+    parent.postMessage({ type: 'aoa-dungeon-end', result: winner && !winner.mob ? 'win' : 'loss', kills: S.boss ? S.players.filter(x => x.mob && !x.alive).length : mobKilled(), phase: S.dg.ph, phases: S.dg.phases }, location.origin);
   } catch (_) {}
   // tell the lobby (which opens the game in a frame for new characters) that the tutorial is won; it shows the EXP summary
   if (tutWon && window.parent !== window) setTimeout(() => {
@@ -3630,7 +3720,7 @@ function drawHUD() {
   }
 }
 // top bar: team 1 portraits | wind | team 2 portraits (player 0 is team 1, player 1 is team 2)
-function teamOf(i) { return i === 0 ? 0 : 1; }
+function teamOf(i) { if (S && S.mob) { const p = S.players[i]; return p && p.mob ? 1 : 0; } return i === 0 ? 0 : 1; }
 // whose side counts as "My Team": the human's vs the bot; on a shared screen, whoever's turn it is
 function myTeam() { const h = meP(); return teamOf(h ? h.i : S.turn); }
 // skill slots Z X C inside the HUD, after the power bar (DDTank-style)
@@ -4493,6 +4583,7 @@ sndBtn.onclick = () => {
 showSnd();
 document.getElementById('start').onclick = () => {
   if (NET.mode && !(NET.on && NET.role === 'host' && NET.gpres)) return;
+  if (NET.on && NET.party) { if (NET.role !== 'host' || !partyReady()) return; partyFreeze(); } // a dungeon party: the host starts once everyone is in
   document.getElementById('setup').hidden = true;
   document.getElementById('result').hidden = true;
   for (const k in input) input[k] = false;
@@ -4617,13 +4708,76 @@ function applyInfo(p, m, fallback) {
 }
 function netNames() {
   const mate = NET.role === 'host' ? NET.gpres : NET.hpres;
-  for (const p of S.players) { p.remote = p.i !== NET.me; applyInfo(p, p.i === NET.me ? myInfo() : mate && mate.me, p.i === NET.me ? 'คุณ' : 'เพื่อน'); }
+  for (const p of S.players) {
+    if (p.mob) continue; // the slimes are the host's
+    p.remote = p.i !== NET.me;
+    applyInfo(p, p.i === NET.me ? myInfo() : NET.party ? (NET.party.inf || [])[p.i] : mate && mate.me, p.i === NET.me ? 'คุณ' : 'เพื่อน');
+  }
   NET.inMatch = true; NET.ended = false; updatePad();
+}
+
+// ---- a dungeon party (Karoz 2026-10-16: 1-4 players) ----
+// The party's host runs the whole run, the slimes and the boss included, like a duel's host; each member's game joins it as
+// a guest and plays its own hero (slots 1-3, in the order they came in). The town tells the game it is a party with
+// window.__dungeon.party = { role, n } (n = the members in the room). The host starts once all n are in, or after
+// PARTY_WAIT with whoever made it. Guests only reach the host (PeerJS is host to guest), so the host passes everyone's
+// name and stats on in the match's opening data (mt), and the slimes it spawns in the snapshot (ro: who stands in each
+// place, mx: what each one is doing).
+const PARTY_WAIT = 45000, NO_IN = { left: false, right: false, up: false, down: false, fire: false, pw: 0 };
+function townParty() {
+  let d = null; try { d = window.parent !== window && window.parent.__dungeon; } catch (_) {}
+  return d && d.party && typeof d.party === 'object' ? d.party : null;
+}
+const partyReady = () => !!NET.party && (NET.party.slots.length >= NET.party.n - 1 || Date.now() - NET.party.t0 > PARTY_WAIT);
+function partyFreeze() {
+  const P = NET.party, g = id => NET.gps[id] || {};
+  P.gs = P.slots.slice(0, 3);
+  P.pk = [picks[0]].concat(P.gs.map(id => CLASSES[g(id).pk] ? g(id).pk : picks[0]));
+  P.inf = [myInfo()].concat(P.gs.map(id => g(id).me || null));
+}
+// a member's game closed mid-run: their hero leaves the field (the run goes on while anyone is left)
+function partyLeft(s) {
+  const p = S.players[s]; if (!p || p.mob || p.left) return;
+  p.left = true;
+  if (!p.alive) return;
+  p.alive = false; p.hp = 0; say(p, 'ออกจากเกม', '#ffffff', 90, 90);
+  if (S.turn === s && (S.state === 'aim' || S.state === 'charging')) { S.state = 'settle'; S.settle = 20; }
+}
+// the guest's copy of the field: a new slime in a place gets built from the host's row (its look, level, name, HP)
+function partyRoster(sn) {
+  if (Array.isArray(sn.mb) && S.mob) { S.mob.spawned = sn.mb[0] | 0; S.mob.total = sn.mb[1] | 0; }
+  sn.ro.forEach((r, i) => {
+    if (!Array.isArray(r) || !r[0]) return; // a hero
+    const o = S.players[i];
+    if (o && o.net && o.uid === r[0]) return;
+    if (o && o.mob && o.net && !o.alive) S.mob.corpses.push(o);
+    const m = makeSlime(i);
+    Object.assign(m, { uid: r[0], net: true, k: String(r[1]), tint: r[2] | 0, level: r[3], name: String(r[4]), maxHp: r[5], hp: r[5], x: null });
+    m.c = Object.assign({}, m.c, { name: String(r[6]), color: SLIME_COL[m.tint] || m.c.color });
+    if (m.k === 'boss') { Object.assign(m, { boss: true, hbW: BOSS.w, hbH: BOSS.h, face: -1, scd: 0, act: null, swT: 0 }); m.c.r = 60; }
+    S.players[i] = m;
+  });
+  if (S.players.length > sn.ro.length) S.players.length = sn.ro.length;
+}
+function partyMoves(sn) {
+  if (Array.isArray(sn.mx)) sn.mx.forEach((r, i) => {
+    const p = S.players[i]; if (!p || !p.mob || !Array.isArray(r)) return;
+    p.anim = { k: String(r[0]), t: +r[1] || 0 };
+    p.act = r[2] ? { k: String(r[2]), t: +r[3] || 0, dx: +r[4] || 0, tg: [] } : null;
+    if (r[5] > 0 && !p.swT) p.swT = 1;
+    p.mv = !!r[6];
+  });
 }
 
 // ---- host ----
 function netHostBegin() {
-  NET.m = Date.now() % 1e9; NET.mt = { sg: stageKey, pk: [S.players[0].k, S.players[1].k] };
+  NET.m = Date.now() % 1e9;
+  NET.mt = NET.party ? { party: 1, pk: NET.party.pk, gs: NET.party.gs, inf: NET.party.inf, dg: S.dg ? { k: S.dg.k, lv: S.dg.lv, ph: S.dg.ph } : null }
+    : { sg: stageKey, pk: [S.players[0].k, S.players[1].k] };
+  if (NET.party) { // actions a member sent before this run don't count in it
+    NET.lastActs = []; NET.rins = [];
+    NET.party.gs.forEach((id, k) => { const a = (NET.gps[id] || {}).a; NET.lastActs[k + 1] = Math.max(0, ...(Array.isArray(a) ? a.map(x => +(x && x.n) || 0) : [])); });
+  }
   NET.seq = 0; NET.ev = [];
   for (const k of ['booms', 'texts', 'bolts', 'warps']) for (const o of fx[k]) o._n = 1;
   netNames();
@@ -4654,18 +4808,37 @@ function captureFx() {
   for (const o of fx.gfx) if (!o._n) { o._n = 1; netEv(['g', o.k, nr(o.x), nr(o.y), o.dur, o.c || '', nr(o.x2 || 0), nr(o.y2 || 0), o.inw ? 1 : 0]); }
 }
 function hostReadGuest() {
+  if (NET.party) {
+    const la = NET.lastActs || (NET.lastActs = []); NET.rins = [];
+    (NET.inMatch ? NET.party.gs || [] : []).forEach((id, k) => {
+      const s = k + 1, g = NET.gps[id] || {}, i = g.in || {};
+      NET.rins[s] = { left: !!i.l, right: !!i.r, up: !!i.u, down: !!i.d, fire: !!i.f, pw: +i.pw || 0 };
+      if (S && !S.demo) for (const a of Array.isArray(g.a) ? g.a : []) if (a && a.n > (la[s] || 0)) { la[s] = a.n; if (a.tc === S.turnCount && S.turn === s) hostAct(a); }
+    });
+    NET.rin = (S && NET.rins[S.turn]) || NO_IN;
+    return;
+  }
   const g = NET.gpres || {}, i = g.in || {};
   NET.rin = { left: !!i.l, right: !!i.r, up: !!i.u, down: !!i.d, fire: !!i.f, pw: +i.pw || 0 };
   if (NET.inMatch && S && !S.demo) for (const a of Array.isArray(g.a) ? g.a : []) if (a && a.n > NET.lastAct) { NET.lastAct = a.n; if (a.tc === S.turnCount) hostAct(a); }
 }
 function hostSnap() {
-  const ea = NET.gpres && NET.gpres.ea, ack = Array.isArray(ea) && ea[0] === NET.m ? +ea[1] || 0 : 0;
+  const ea = NET.gpres && NET.gpres.ea;
+  let ack = Array.isArray(ea) && ea[0] === NET.m ? +ea[1] || 0 : 0, mt = NET.mt;
+  if (NET.party) { // every member still here has to have the events; the opening data goes until they have all begun
+    const gs = (NET.party.gs || []).map(id => NET.gps[id]).filter(Boolean), begun = g => Array.isArray(g.ea) && g.ea[0] === NET.m;
+    ack = gs.length ? Math.min(...gs.map(g => begun(g) ? +g.ea[1] || 0 : 0)) : NET.seq;
+    if (gs.every(begun)) mt = 0;
+  }
   NET.ev = NET.ev.filter(e => e[0] > ack);
-  const sn = { n: ++NET.sn, m: NET.m, mt: NET.mt, f: S.frame, st: S.state, t: S.turn, tc: S.turnCount, pw: nr(S.power), tm: nr(S.timer), w: S.wind,
+  const sn = { n: ++NET.sn, m: NET.m, mt, f: S.frame, st: S.state, t: S.turn, tc: S.turnCount, pw: nr(S.power), tm: nr(S.timer), w: S.wind,
     bn: S.banner, cs: Math.round(cam.shake || 0), wn: S.state === 'over' ? S.winIdx : -1, aa: NET.lastAct, zn: (S.zones || []).map(z => [nr(z.x), nr(z.y), nr(z.r), z.t, z.heal ? 1 : 0]),
     gm: S.golem ? [S.golem.owner, nr(S.golem.x), nr(S.golem.y), S.golem.face, Math.round(S.golem.hp), S.golem.maxHp, Math.round(S.golem.shield), S.golem.turns, S.golem.anim.k, Math.round(S.golem.anim.t), S.golem.hitT || 0] : 0,
     pl: S.players.map(p => PK.map(k => nr(p[k]))),
     pj: S.projs.filter(q => !q.done).map(q => PJK.map(k => nr(k === 'kind' ? q.src || q.kind : q[k]))), ev: [] };
+  if (NET.party) Object.assign(sn, { aa: NET.lastActs, mb: S.mob ? [S.mob.spawned, S.mob.total] : 0,
+    ro: S.players.map(p => p.mob ? [p.uid, p.k, p.tint, p.level, p.name, p.maxHp, p.c.name] : [0]),
+    mx: S.players.map(p => p.mob ? [p.anim ? p.anim.k : 'idle', p.anim ? p.anim.t : 0, p.act ? p.act.k : '', p.act ? p.act.t : 0, p.act ? nr(p.act.dx) : 0, p.swT || 0, p.mv ? 1 : 0] : 0) });
   const enc = new TextEncoder(), base = enc.encode(JSON.stringify(sn)).length + 80;
   let size = base;
   for (const e of NET.ev) { const n = enc.encode(JSON.stringify(e)).length + 1; if (size + n > 3900) break; sn.ev.push(e); size += n; }
@@ -4674,14 +4847,20 @@ function hostSnap() {
 
 // ---- guest ----
 function guestBegin(m, mt) {
+  if (NET.party && !mt.party) return;
+  if (mt.party) { // a dungeon party: this member's place in it, everyone's classes, and the host's run
+    const me = (Array.isArray(mt.gs) ? mt.gs : []).indexOf(NET.self) + 1;
+    if (!NET.party || me < 1) { netLeave('ปาร์ตี้เริ่มเล่นไปแล้ว'); return; }
+    NET.me = me; Object.assign(NET.party, { pk: mt.pk, inf: mt.inf, gs: mt.gs }); NET.dgo = mt.dg || null;
+  }
   NET.building = m;
   if (mt.sg && STAGES[mt.sg]) stageKey = mt.sg;
   const keys = Object.keys(CLASSES);
-  for (let i = 0; i < 2; i++) picks[i] = CLASSES[mt.pk[i]] ? mt.pk[i] : keys[0];
+  if (!mt.party) for (let i = 0; i < 2; i++) picks[i] = CLASSES[mt.pk[i]] ? mt.pk[i] : keys[0];
   document.getElementById('setup').hidden = true;
   document.getElementById('result').hidden = true;
   for (const k in input) input[k] = false;
-  const st = STAGES[stageKey];
+  const st = mt.party ? mobStage() : STAGES[stageKey];
   playBgm(assetURL(st.music));
   stageReady(st).then(() => {
     if (NET.building !== m || !NET.on) return;
@@ -4707,7 +4886,8 @@ function applySnap(sn) {
   if (sn.n === NET.lastSn) return;
   NET.lastSn = sn.n;
   for (const e of Array.isArray(sn.ev) ? sn.ev : []) if (Array.isArray(e) && e[0] > NET.eseq) { applyEv(e); NET.eseq = e[0]; }
-  NET.aa = sn.aa;
+  NET.aa = Array.isArray(sn.aa) ? +sn.aa[NET.me] || 0 : sn.aa;
+  if (Array.isArray(sn.ro)) partyRoster(sn);
   Object.assign(S, { turn: sn.t, turnCount: sn.tc, power: sn.pw, timer: sn.tm, wind: sn.w, banner: sn.bn, zones: (sn.zn || []).map(z => ({ x: z[0], y: z[1], r: z[2], t: z[3], heal: z[4] || 0 })) });
   if (!NET.ended) S.state = sn.st;
   if (Array.isArray(sn.gm)) { const r = sn.gm, g = S.golem && S.golem.guest ? S.golem : (S.golem = { guest: true, golem: true, born: 0, alive: true, anim: { k: 'spawn', t: 0 } });
@@ -4719,6 +4899,7 @@ function applySnap(sn) {
     PK.forEach((k, j) => { if (k === 'x' || k === 'y') p['n' + k] = row[j]; else p[k] = row[j]; });
     if (p.x == null || Math.hypot(p.nx - p.x, p.ny - p.y) > 60) { p.x = p.nx; p.y = p.ny; }
   });
+  partyMoves(sn);
   const old = S.projs;
   S.projs = (sn.pj || []).map((row, i) => {
     const q = { trail: [], done: false };
@@ -4765,6 +4946,7 @@ function guestTick() {
     if (pl.nx != null) { pl.x += (pl.nx - pl.x) * 0.4; pl.y += (pl.ny - pl.y) * 0.4; }
     if (pl === p && S.state === 'charging') pl.castT = (pl.castT || 0) + 1;
     if (pl.releaseT > 0) pl.releaseT--;
+    if (pl.mob && (pl === p || pl.mv) && S.state === 'mob') { if (pl.anim) pl.anim.t++; if (pl.act) pl.act.t++; } // the slime's move plays on between snapshots
   }
   tickFx(p);
 }
@@ -4777,6 +4959,7 @@ function netTick() {
     if (NET.inMatch && S && !S.demo) captureFx();
     if (++NET.tick % 3) return;
     const pr = { r: 'h', pk: picks[0], sg: stageKey, g: NET.mate || '', me: myInfo() };
+    if (NET.party) { pr.g = ''; pr.gs = NET.inMatch ? NET.party.gs : NET.party.slots; pr.pn = NET.party.n; }
     if (NET.inMatch && S && !S.demo) pr.sn = hostSnap();
     NET.room.presence(pr).catch(() => {});
   } else {
@@ -4784,7 +4967,7 @@ function netTick() {
     if (NET.tick++ % 3) return;
     NET.acts = NET.acts.filter(a => a.n > (NET.aa || 0));
     const i = { l: input.left ? 1 : 0, r: input.right ? 1 : 0, u: input.up ? 1 : 0, d: input.down ? 1 : 0, f: NET.gc ? 1 : 0, pw: NET.gc ? Math.round(NET.gc.pw) : 0 };
-    NET.room.presence({ r: 'g', pk: picks[1], in: i, a: NET.acts.slice(-12), ea: [NET.gm || 0, NET.eseq || 0], me: myInfo() }).catch(() => {});
+    NET.room.presence({ r: 'g', pk: picks[NET.party ? 0 : 1], in: i, a: NET.acts.slice(-12), ea: [NET.gm || 0, NET.eseq || 0], me: myInfo() }).catch(() => {});
   }
 }
 function netPeers() {
@@ -4792,6 +4975,24 @@ function netPeers() {
   const others = NET.room.peers().filter(p => !p.sameTab && p.kind === 'viewer');
   const host = others.find(p => p.presence && p.presence.r === 'h');
   const guests = others.filter(p => p.presence && p.presence.r === 'g').sort((a, b) => a.peer < b.peer ? -1 : 1);
+  if (NET.party && NET.role === 'host') {
+    const P = NET.party; NET.gps = {};
+    for (const g of guests) NET.gps[g.peer] = g.presence;
+    if (NET.inMatch && S && !S.demo) { if (S.state !== 'over') (P.gs || []).forEach((id, k) => { if (!NET.gps[id]) partyLeft(k + 1); }); }
+    else {
+      P.slots = P.slots.filter(id => NET.gps[id]);
+      for (const g of guests) if (P.slots.length < 3 && !P.slots.includes(g.peer)) P.slots.push(g.peer);
+    }
+    NET.gpres = P.slots.length ? NET.gps[P.slots[0]] : null;
+    netUI(); return;
+  }
+  if (NET.party) { // a party guest: the host's game runs it all
+    if (host) { NET.mate = host.peer; NET.seen = true; NET.hpres = host.presence; }
+    else if (NET.seen) { NET.seen = false; NET.hpres = null; netGone(); }
+    const p = NET.hpres, gs = p && Array.isArray(p.gs) ? p.gs : null;
+    if (gs && !gs.includes(NET.self) && (gs.length >= 3 || p.sn) && !NET.inMatch && !NET.full) { NET.full = true; netLeave(p.sn ? 'ปาร์ตี้เริ่มเล่นไปแล้ว' : 'ปาร์ตี้เต็มแล้ว'); return; }
+    netUI(); return;
+  }
   if (NET.role === 'host') {
     const g = guests.find(p => p.peer === NET.mate) || guests[0];
     if (g && g.peer !== NET.mate) { NET.mate = g.peer; NET.lastAct = 0; }
@@ -4809,7 +5010,7 @@ function netPeers() {
   netUI();
 }
 function netGone() {
-  if (NET.inMatch && S && !S.demo && S.state !== 'over') { NET.ended = true; endMatch(meP(), 'เพื่อนออกจากเกม'); }
+  if (NET.inMatch && S && !S.demo && S.state !== 'over') { NET.ended = true; if (NET.party) endMatch(S.players.find(x => x.mob) || null, 'หัวห้องออกจากเกม'); else endMatch(meP(), 'เพื่อนออกจากเกม'); }
   netUI();
 }
 function markPicks() {
@@ -4827,6 +5028,7 @@ function netUI() {
   start.textContent = NET.mode && NET.role === 'guest' && inRoom ? 'รอเจ้าของห้องกดเริ่ม' : 'เริ่มต่อสู้';
   start.disabled = !!NET.mode && !(inRoom && NET.role === 'host' && NET.gpres);
   if (!inRoom) return;
+  if (NET.party) { netMsg(NET.role === 'host' ? `รหัสห้อง ${NET.code} รอเพื่อนในปาร์ตี้ ${NET.party.slots.length}/${NET.party.n - 1}` : NET.hpres ? 'เข้าปาร์ตี้แล้ว รอหัวห้องเริ่ม' : `กำลังหาห้อง ${NET.code}...`); return; }
   if (NET.role === 'host') netMsg(NET.gpres ? `ห้อง ${NET.code}: เพื่อนเข้าห้องแล้ว เลือกอาชีพแล้วกดเริ่มต่อสู้ได้เลย` : `รหัสห้อง ${NET.code} ส่งรหัสนี้ให้เพื่อน แล้วรอเพื่อนเข้าห้อง`);
   else netMsg(NET.hpres ? `เข้าห้อง ${NET.code} แล้ว เลือกอาชีพของคุณ แล้วรอเจ้าของห้องกดเริ่ม` : `กำลังหาห้อง ${NET.code}...`);
 }
@@ -4851,9 +5053,11 @@ async function netOpen(role, code) {
   const me = room.peers().find(p => p.sameTab);
   NET.tries = 0;
   Object.assign(NET, { on: true, room, role, code, me: role === 'host' ? 0 : 1, self: me ? me.peer : '', mate: null, gpres: null, hpres: null, seen: false, full: false,
-    inMatch: false, ended: false, acts: [], actN: Date.now(), lastAct: 0, aa: 0, gm: 0, building: 0, eseq: 0, tick: 0, sn: 0 });
-  vsBot = false;
-  await room.presence(role === 'host' ? { r: 'h', pk: picks[0], sg: stageKey, me: myInfo() } : { r: 'g', pk: picks[1], me: myInfo() }).catch(() => {});
+    inMatch: false, ended: false, acts: [], actN: Date.now(), lastAct: 0, aa: 0, gm: 0, building: 0, eseq: 0, tick: 0, sn: 0, gps: {}, dgo: null, rin: NO_IN });
+  const tp = mobMode && !tutMode ? townParty() : null;
+  NET.party = tp ? { n: Math.max(1, Math.min(4, tp.n | 0 || 4)), t0: Date.now(), slots: [] } : null;
+  if (!NET.party) vsBot = false;
+  await room.presence(role === 'host' ? { r: 'h', pk: picks[0], sg: stageKey, me: myInfo() } : { r: 'g', pk: picks[NET.party ? 0 : 1], me: myInfo() }).catch(() => {});
   NET.unsub = room.onPeers(() => { if (NET.room === room) netPeers(); }, e => { if (NET.room === room) netLeave('การเชื่อมต่อห้องหลุด (' + e.code + ')'); });
   netPeers();
   if (role === 'host') setTimeout(() => { // someone already hosts this code: pick another
@@ -5435,7 +5639,7 @@ loadSavedData();
 cam.x = 0;
 fitCanvas(); drawStripResize();
 requestAnimationFrame(loop);
-window.__game = { NET, get S() { return S; }, get BOSS() { return BOSS; }, get cam() { return cam; }, input, fire, useSkill, botPlan, useUlt, useSlot, runSim, simPairs, simSummary, simCSV, statOf, hitDamage, critChance, get SKILLS() { return SKILLS; }, explode, selfSkill, foeSkill, turnStartEffects, setLoadout, botLoadout, get CLASSES() { return CLASSES; }, get botAccOv() { return botAccOv; } };
+window.__game = { NET, partyReady, get S() { return S; }, get BOSS() { return BOSS; }, get cam() { return cam; }, input, fire, useSkill, botPlan, useUlt, useSlot, runSim, simPairs, simSummary, simCSV, statOf, hitDamage, critChance, get SKILLS() { return SKILLS; }, explode, selfSkill, foeSkill, turnStartEffects, setLoadout, botLoadout, get CLASSES() { return CLASSES; }, get botAccOv() { return botAccOv; } };
 })();
 </script>
 
