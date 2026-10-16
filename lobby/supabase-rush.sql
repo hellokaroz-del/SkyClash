@@ -29,6 +29,11 @@ create table if not exists public.rush_bot (
   egg_pick int
 );
 alter table public.rush_bot add column if not exists prizes jsonb; -- the 12 eggs when they hold prizes from egg_pool
+-- ลุย against a player gets a ticket too (Karoz 2026-10-16: eggs set for "ลุย · เจอผู้เล่น" never showed up):
+-- mode 'pvp', with the game code the pair was given. A player match pays like the bot match (Karoz 2026-10-16: the same
+-- gold and EXP formula), and its eggs come from the 'rush' prize list
+alter table public.rush_bot add column if not exists mode text not null default 'bot';
+alter table public.rush_bot add column if not exists game_code text;
 create index if not exists rush_bot_user_idx on public.rush_bot (user_id, created_at desc);
 alter table public.rush_bot enable row level security;
 revoke all on public.rush_bot from anon, authenticated;
@@ -112,6 +117,25 @@ begin
   return jsonb_build_object('status', 'bot', 'ticket', t.id, 'level', t.level, 'bot_level', t.bot_level);
 end $$;
 
+-- ลุย found a player: a ticket for that match, asked by each side as its game opens. Only while the pairing is fresh
+-- (the queue row still holds this game code, made in the last 2 minutes); asking again for the same game gives the same ticket
+create or replace function public.match_ticket(p_code text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare q public.match_queue; lv int; plv int; t public.rush_bot;
+begin
+  if auth.uid() is null then raise exception 'not_signed_in'; end if;
+  select * into t from public.rush_bot where user_id = auth.uid() and mode = 'pvp' and game_code = p_code and ended_at is null
+    and created_at > now() - interval '2 hours' order by created_at desc limit 1;
+  if found then return jsonb_build_object('ticket', t.id); end if;
+  select * into q from public.match_queue where user_id = auth.uid();
+  if not found or q.game_code is null or q.game_code <> p_code or q.matched_at < now() - interval '2 minutes' then raise exception 'no_match'; end if;
+  select greatest(1, least(100, coalesce(level, 1))) into lv from public.profiles where id = auth.uid();
+  select greatest(1, least(100, coalesce(level, 1))) into plv from public.profiles where id = q.partner;
+  delete from public.rush_bot where user_id = auth.uid() and ended_at is null; -- an earlier ลุย match left before its end pays nothing
+  insert into public.rush_bot (user_id, level, bot_level, mode, game_code) values (auth.uid(), lv, coalesce(plv, lv), 'pvp', p_code) returning * into t;
+  return jsonb_build_object('ticket', t.id);
+end $$;
+
 -- the bot match ended: pay the reward and fill the eggs
 drop function if exists public.rush_end(uuid, text, int);
 create or replace function public.rush_end(p_ticket uuid, p_result text, p_dmg int) returns jsonb
@@ -132,20 +156,20 @@ begin
   share := case when coalesce(p_dmg, 0) <= 0 then 0 when p_result = 'win' then 1 else 0.25 end;
   g := round(10 * t.level * share); -- 100 x level / 10
   e := round(20 * t.level * share); -- 200 x level / 10
-  if share > 0 then pz := public.egg_fill('rush_bot'); end if;
+  if share > 0 then pz := public.egg_fill(case when t.mode = 'pvp' then 'rush' else 'rush_bot' end); end if;
   if share > 0 and pz is null then
-    -- this mode's range; before per-mode ranges the setting was one { min, max } for this mode
-    select coalesce(value->'rush_bot', case when value ? 'min' then value end) into eg from public.game_settings where key = 'egg';
+    -- this mode's range; before per-mode ranges the setting was one { min, max } for the bot mode
+    select case when t.mode = 'pvp' then value->'rush' else coalesce(value->'rush_bot', case when value ? 'min' then value end) end into eg from public.game_settings where key = 'egg';
     if eg is not null and jsonb_typeof(eg->'min') = 'number' and jsonb_typeof(eg->'max') = 'number' then
       mn := greatest(0, (eg->>'min')::numeric::int); mx := greatest(mn, (eg->>'max')::numeric::int);
       if mx > 0 then arr := array(select mn + floor(random() * (mx - mn + 1))::int from generate_series(1, 12)); end if;
     end if;
   end if;
   if g > 0 then update public.profiles set gold = gold + g where id = auth.uid(); end if;
-  if e > 0 then perform public.gain_exp(auth.uid(), e, 'rush_bot'); end if;
+  if e > 0 then perform public.gain_exp(auth.uid(), e, case when t.mode = 'pvp' then 'rush_pvp' else 'rush_bot' end); end if;
   update public.rush_bot set result = p_result, ended_at = now(), gold = g, exp = e, eggs = arr, prizes = pz where id = t.id;
   select * into p from public.profiles where id = auth.uid();
-  return jsonb_build_object('result', p_result, 'level', t.level, 'dmg', greatest(0, coalesce(p_dmg, 0)), 'gold', g, 'exp', e, 'eggs', coalesce(jsonb_array_length(pz), array_length(arr, 1), 0),
+  return jsonb_build_object('result', p_result, 'mode', t.mode, 'level', t.level, 'dmg', greatest(0, coalesce(p_dmg, 0)), 'gold', g, 'exp', e, 'eggs', coalesce(jsonb_array_length(pz), array_length(arr, 1), 0),
     'me', jsonb_build_object('level', p.level, 'exp', p.exp, 'gold', p.gold, 'gem', p.gem, 'coupon', p.coupon));
 end $$;
 
@@ -174,5 +198,5 @@ end $$;
 
 revoke all on function public.gain_exp(uuid, int, text) from public, anon, authenticated;
 revoke all on function public.egg_fill(text), public.egg_give(uuid, jsonb) from public, anon, authenticated;
-revoke all on function public.match_bot(), public.rush_end(uuid, text, int), public.egg_pick(uuid, int) from public;
-grant execute on function public.match_bot(), public.rush_end(uuid, text, int), public.egg_pick(uuid, int) to authenticated;
+revoke all on function public.match_bot(), public.match_ticket(text), public.rush_end(uuid, text, int), public.egg_pick(uuid, int) from public;
+grant execute on function public.match_bot(), public.match_ticket(text), public.rush_end(uuid, text, int), public.egg_pick(uuid, int) to authenticated;

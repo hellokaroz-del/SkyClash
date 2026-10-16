@@ -2021,10 +2021,16 @@ function renderRoom() {
   if (!co.room || co.down) return; // while the town's channel rejoins, keep the room as it was (nobody has left)
   let r = roomOf(co.room);
   if (!r) {
+    // Karoz 2026-10-16: back from a dungeon phase, members fell out of the room or the run went back to phase 1. The
+    // host's entry can vanish for a moment (its tab reconnecting); taking over at once made a second host. Now the
+    // room waits 8 s for the host to come back before the next member takes over
+    const now = Date.now(); co.hostGone = co.hostGone || now;
+    if (now - co.hostGone < 8000) { clearTimeout(co.hostWait); co.hostWait = setTimeout(renderRoom, 1000); return; }
     if (heirOf(co.room) !== myKey()) return; // the new host's entry is on its way
     Object.assign(co, { host: true, ready: false, game: null, lastGame: null, seek: 0, vs: null }); sharePresence();
     r = roomOf(co.room);
   }
+  co.hostGone = 0;
   const mem = membersOf(co.room);
   // two players taking over at once (presence seen a moment apart): the lower key stays host
   if (co.host && mem.some(p => p.host && p.key !== myKey() && p.key < myKey())) { co.host = false; co.ready = false; sharePresence(); return renderRoom(); }
@@ -2144,7 +2150,9 @@ function startRoom() {
       : launch(d => { press(d, '#mode-slime'); press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#start'); }, false, null, run);
     // a later phase goes on with the run's ticket (the server moved it on when the phase before was cleared)
     if (run.ph > 1) {
-      if (serverOn() && !dgRun.ticket) { dgReset(); renderRoom(); msg.textContent = 'รอบนี้จบไปแล้ว เริ่มใหม่จากเฟส 1'; return; }
+      // alone without the run's ticket: start again; a party goes on (a member who took over as host without a
+      // ticket plays the phase without its own reward, the others still have theirs)
+      if (serverOn() && !dgRun.ticket && mem.length < 2) { dgReset(); renderRoom(); msg.textContent = 'รอบนี้จบไปแล้ว เริ่มใหม่จากเฟส 1'; return; }
       Object.assign(dgRun, { ending: false, result: null }); play(); return;
     }
     // signed in: a ticket from the server first, so a cleared run can be paid (dungeon_end); the preview plays without one
@@ -2204,6 +2212,9 @@ function onMatch(d) {
     mm.on = false; clearTimeout(matchClock);
     co.vs = d.partner_room || '?'; co.game = d.game_code; sharePresence(); renderRoom();
     const code = d.game_code;
+    // Karoz 2026-10-16: a player match gets its own ticket for the eggs set for "ลุย · เจอผู้เล่น" (lobby/supabase-rush.sql)
+    Object.assign(rush, { ticket: null, pvp: true, ending: false, result: null });
+    online.sb.rpc('match_ticket', { p_code: code }).then(({ data: t, error }) => { if (error) console.warn('match_ticket', error); else if (t && t.ticket && rush.pvp) rush.ticket = t.ticket; }, () => {});
     if (d.role === 'host') {
       const pick = MAPS[Math.floor(Math.random() * MAPS.length)]; co.map = pick.k; sharePresence();
       launch(g => { setupGame(g, 0, pick.k); g.getElementById('net-code').value = code; press(g, '#net-make'); }, true);
@@ -2225,7 +2236,7 @@ async function rushBot() {
   }
   if (data && data.status === 'matched') { mm.on = true; onMatch(data); return; } // a player turned up at the last moment
   if (!data || data.status !== 'bot') { stopMatch(); $('rm-msg').textContent = 'หลุดจากคิว กดลุยอีกครั้ง'; return; }
-  Object.assign(rush, { ticket: data.ticket, level: data.level, ending: false, result: null });
+  Object.assign(rush, { ticket: data.ticket, level: data.level, pvp: false, ending: false, result: null });
   co.vs = 'bot'; co.game = null; sharePresence(); renderRoom();
   const pick = MAPS[Math.floor(Math.random() * MAPS.length)]; co.map = pick.k;
   launch(d => {
@@ -2239,7 +2250,7 @@ async function rushBot() {
 // the bot match ended: wait for the game's Victory/Defeat, then the reward
 addEventListener('message', e => {
   const d = e.data;
-  if (e.origin !== location.origin || !d || d.type !== 'aoa-match-end' || d.vs !== 'bot' || !rush.ticket || rush.ending) return;
+  if (e.origin !== location.origin || !d || d.type !== 'aoa-match-end' || d.vs !== (rush.pvp ? 'pvp' : 'bot') || !rush.ticket || rush.ending) return;
   rush.ending = true; rush.result = { result: ['win', 'loss', 'draw'].includes(d.result) ? d.result : 'loss', dmg: Math.max(0, d.dmg | 0) };
   clearTimeout(rush.timer); rush.timer = setTimeout(rushReward, 4500);
 });
@@ -2328,7 +2339,7 @@ async function rushReward() {
   showResult([['ทอง', data.gold | 0], ['EXP', data.exp | 0]], data.exp | 0, `ของรางวัล (${head} · Lv.${data.level} x${(data.level / 10).toFixed(1)})`, 'EXP ที่ได้');
   $('td-up').hidden = !(prof.level > lv0);
   $('td-msg').textContent = !(data.dmg > 0) ? 'ไม่ได้ทำดาเมจเลย ไม่ได้รับของรางวัลและไม่ได้ทุบไข่'
-    : r.result === 'win' ? 'ชนะบอทได้ของรางวัลเต็ม' : 'ได้ของรางวัล 25% ของตอนชนะ';
+    : r.result === 'win' ? (data.mode === 'pvp' ? 'ชนะผู้เล่นได้ของรางวัลเต็ม' : 'ชนะบอทได้ของรางวัลเต็ม') : 'ได้ของรางวัล 25% ของตอนชนะ';
   if (data.eggs > 0) { go.textContent = 'ทุบไข่'; go.onclick = () => { $('tut-done').hidden = true; showEggs(ticket, data.eggs); }; }
   else { go.textContent = 'กลับห้อง'; go.onclick = rushDone; }
   go.disabled = false; go.focus();
@@ -2363,7 +2374,7 @@ function showEggs(ticket, n, fn = 'egg_pick') {
 }
 // back to the room the player made
 function rushDone() {
-  Object.assign(rush, { ticket: null, ending: false, result: null }); clearTimeout(rush.timer);
+  Object.assign(rush, { ticket: null, pvp: false, ending: false, result: null }); clearTimeout(rush.timer);
   dgReset();
   $('eggs').hidden = true; $('tut-done').hidden = true; $('back').hidden = false;
   $('back').click();
@@ -3435,7 +3446,7 @@ const settings = { maintenance: { on: false, msg: '' }, jobs_open: {}, egg: {}, 
 // so far; the others keep their range for when they do (Karoz 2026-10-15)
 const EGG_MODES = [
   { k: 'rush_bot', th: 'ลุย · เจอบอท', live: true, note: 'จับคู่เกิน 30 วิแล้วเจอบอท ผู้เล่นที่ทำดาเมจได้ทุบไข่ 1 ฟอง' },
-  { k: 'rush', th: 'ลุย · เจอผู้เล่น', note: 'โหมดนี้ยังไม่แจกไข่ ตั้งไว้ก่อนได้' },
+  { k: 'rush', th: 'ลุย · เจอผู้เล่น', live: true, note: 'จับคู่เจอผู้เล่น ทั้งสองฝั่งที่ทำดาเมจได้ทุบไข่ 1 ฟอง (ทอง/EXP สูตรเดียวกับเจอบอท) ต้องรัน supabase-rush.sql ใหม่ก่อน' },
   { k: 'duel', th: 'ดวล', note: 'โหมดนี้ยังไม่แจกไข่ ตั้งไว้ก่อนได้' },
   { k: 'dungeon', th: 'ดันเจี้ยน', note: 'โหมดยังไม่เปิด ตั้งไว้ก่อนได้' },
 ];
@@ -4159,6 +4170,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.79</div>
+<div id="ver">v0.61.80</div>
 </body>
 </html>

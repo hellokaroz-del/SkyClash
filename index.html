@@ -1484,7 +1484,7 @@ function explode(q) {
   for (const pl of S.players) {
     if (!pl.alive || boxDist(pl, q.x, q.y) > r) continue;
     const foe = teamOf(pl.i) !== teamOf(owner.i);
-    if (pct <= 0 && !foe) continue;
+    if (!foe) continue; // Karoz 2026-10-16: your own shots never hurt you or a teammate (they did, down to 1 HP, when you fired point blank)
     let dmg = pct > 0 ? hitDamage(owner, pl, base, sk && sk.vsDot && hasDot(pl) ? sk.vsDot : pct, sk ? sk.ignoreDef : 0, q.up) : 0, rx = null; const defR = HD_DEFR;
     if (foe && sk && sk.burst) { rx = skillRx(reactionOf(pl, owner), sk); if (rx && rx.bonus) dmg += hitDamage(owner, pl, 'matk', rx.bonus, 0, q.up) * (1 + (owner.c.pv.reactDmg || 0) / 100); }
     if (foe && sk && sk.vsPoison && pl.dots.some(d => d.kind === 'poison')) { dmg += hitDamage(owner, pl, base, sk.vsPoison, 0, q.up); pl.dots = pl.dots.filter(d => d.kind !== 'poison'); say(pl, 'พิษระเบิด!', '#8de05a', 80, 104); } // Poison Explosion
