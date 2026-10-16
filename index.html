@@ -4866,7 +4866,7 @@ function hostSnap() {
   const sn = { n: ++NET.sn, m: NET.m, mt, f: S.frame, st: S.state, t: S.turn, tc: S.turnCount, pw: nr(S.power), tm: nr(S.timer), w: S.wind,
     bn: S.banner, cs: Math.round(cam.shake || 0), wn: S.state === 'over' ? S.winIdx : -1, aa: NET.lastAct, zn: (S.zones || []).map(z => [nr(z.x), nr(z.y), nr(z.r), z.t, z.heal ? 1 : 0]),
     gm: S.golem ? [S.golem.owner, nr(S.golem.x), nr(S.golem.y), S.golem.face, Math.round(S.golem.hp), S.golem.maxHp, Math.round(S.golem.shield), S.golem.turns, S.golem.anim.k, Math.round(S.golem.anim.t), S.golem.hitT || 0] : 0,
-    pl: S.players.map(p => PK.map(k => nr(p[k]))),
+    pl: S.players.map(p => PK.map(k => nr(p[k]))), dl: S.players.map(p => Math.round((S.dealt || {})[p.i] || 0)),
     pj: S.projs.filter(q => !q.done).map(q => PJK.map(k => nr(k === 'kind' ? q.src || q.kind : q[k]))), ev: [] };
   if (NET.party) Object.assign(sn, { aa: NET.lastActs, mb: S.mob ? [S.mob.spawned, S.mob.total] : 0,
     ro: S.players.map(p => p.mob ? [p.uid, p.k, p.tint, p.level, p.name, p.maxHp, p.c.name] : [0]),
@@ -4943,6 +4943,7 @@ function applySnap(sn) {
     return q;
   });
   if (NET.gc) { S.state = 'charging'; S.power = NET.gc.pw; }
+  if (Array.isArray(sn.dl)) { S.dealt = S.dealt || {}; sn.dl.forEach((v, i) => { S.dealt[S.players[i] ? S.players[i].i : i] = v; }); } // damage dealt lives on the host; guests need it for the ลุย reward
   if (sn.st === 'over' && !NET.ended) { NET.ended = true; S.winIdx = sn.wn; endMatch(sn.wn >= 0 ? S.players[sn.wn] : null); }
   const sig = [S.turn, S.state, S.turnCount].concat(S.players.map(p => [p.armed, (p.cds || []).join('.'), p.warpCd, p.energy >= SKILL_COST, p.frozen, p.hidden].join())).join('|');
   if (sig !== NET.sig) { NET.sig = sig; updatePad(); }
