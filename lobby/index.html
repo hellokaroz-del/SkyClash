@@ -548,6 +548,22 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .room-card.framed #rm-back { top: 258px; background-image: url("img/btn-brown2.webp?v=1"); }
 .room-card.framed .rm-side .co-big.go { left: 786px; top: 396px; width: 164px; height: 84px; font-size: 26px; }
 .room-card.framed .rm-side .err { position: absolute; left: 786px; top: 486px; width: 164px; font-size: 12px; text-align: center; color: #b3261e; }
+/* dungeon waiting room (Karoz 2026-10-16): the same dungeon frame as the hall; slots, map and chat over the corridor,
+   room buttons in the upper parchment, the ready/go button in the lower one */
+#rm-card.dg { width: 1300px; height: 620px; background-image: url("img/dg-frame.webp?v=1"); }
+#rm-card.dg .x { right: 22px; top: 16px; }
+#rm-card.dg h2 { left: 141px; top: 126px; width: 764px; color: #f0dcb0; text-shadow: 0 2px 3px #000; }
+#rm-card.dg .rm-slots { left: 141px; top: 160px; width: 300px !important; height: 234px !important; }
+#rm-card.dg .rm-mid { left: 453px !important; top: 160px; width: 452px !important; height: 234px !important; }
+#rm-card.dg .rm-map { background-position: center 85%; } /* the wider map keeps the monsters at the bottom in view */
+#rm-card.dg #rm-chat { left: 141px; top: 402px; width: 764px; height: 120px; }
+#rm-card.dg #rm-chat #chat { width: 1389px; height: 218px; }
+#rm-card.dg .rm-state { left: 968px; top: 140px; width: 190px; color: #3a2410; font-weight: 700; }
+#rm-card.dg .rm-side .co-big { left: 972px; width: 182px; height: 52px; }
+#rm-card.dg #rm-invite { top: 196px; }
+#rm-card.dg #rm-back { top: 254px; }
+#rm-card.dg .rm-side .co-big.go { left: 966px; top: 386px; width: 194px; height: 84px; }
+#rm-card.dg .rm-side .err { left: 966px; top: 476px; width: 194px; }
 @media (max-width: 760px) { .co-grid:not(.framed .co-grid) { grid-template-columns: 1fr; } }
 .card .err { color: var(--bad); min-height: 1.3em; margin: 0; font-size: 14px; }
 .card .x { float: right; border: 0; background: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted); padding: 2px 4px; }
@@ -1956,7 +1972,8 @@ function coErr(t) { $('co-err').textContent = t || ''; }
 function fitColo() {
   const dg = $('co-card').classList.contains('dg'), w = dg ? 1300 : 1060, h = dg ? 620 : 642; // the dungeon frame is wider
   $('co-card').style.setProperty('--k', Math.min(1, (innerWidth - 24) / w, (innerHeight - 24) / h).toFixed(3));
-  $('rm-card').style.setProperty('--k', Math.min((innerWidth - 8) / 1060, (innerHeight - 8) / 642).toFixed(3)); // the waiting room fills the screen
+  const rdg = $('rm-card').classList.contains('dg'), rw = rdg ? 1300 : 1060, rh = rdg ? 620 : 642;
+  $('rm-card').style.setProperty('--k', Math.min((innerWidth - 8) / rw, (innerHeight - 8) / rh).toFixed(3)); // the waiting room fills the screen
 }
 addEventListener('resize', fitColo);
 function openColo(hall) {
@@ -2102,7 +2119,7 @@ function renderRoom() {
   }
   const dgn = r.mode === 'dungeon';
   const dgd = dgn && dgAt(dgOf(r.map), r.dlv), ph = dgn && dgd && dgd.phases > 1 ? Math.min(dgd.phases, r.dph || 1) : 0;
-  $('rm-map').classList.toggle('dg', dgn); $('rm-card').classList.toggle('dg', dgn);
+  $('rm-map').classList.toggle('dg', dgn); if ($('rm-card').classList.contains('dg') !== dgn) { $('rm-card').classList.toggle('dg', dgn); fitColo(); }
   $('rm-map').classList.toggle('dgx', !!dgd); $('rm-map').classList.toggle('pick', !!dgd && co.host && !r.game);
   if (dgn) { // the dungeon's stages aren't made yet: the party can gather, the gate stays shut for now
     $('rm-map').style.backgroundImage = dgd ? `url('${dgd.img}')` : ''; $('rm-map').classList.remove('rnd', 'seek');
@@ -4203,6 +4220,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.85</div>
+<div id="ver">v0.61.86</div>
 </body>
 </html>
