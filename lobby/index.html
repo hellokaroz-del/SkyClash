@@ -353,6 +353,9 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .rm-map .q { display: none; font-size: 110px; font-weight: 900; color: #fff4c8; text-shadow: 0 0 18px #ffb300, 0 4px 0 #8a4d18; z-index: 1; }
 .rm-map.rnd::before { content: ""; position: absolute; inset: 0; background: rgba(40, 20, 0, .55); backdrop-filter: blur(3px); }
 .rm-map.rnd .q { display: block; }
+#rm-card.dg .rm-roll .dice { display: none; }
+.rm-map.dg { background: radial-gradient(circle at 50% 60%, #2b3f6a, #120c1c 75%); }
+.rm-map.dg::after { content: ""; position: absolute; inset: 8% 10%; background: url("img/dg-portal.webp?v=1") center / contain no-repeat; }
 .rm-roll { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center; padding: 8px 12px;
   border-radius: 12px; border: 2px solid #b8893a; background: linear-gradient(#efd9a8, #d4b273); color: #5a3a14; }
 .rm-roll .dice { grid-row: span 2; font-size: 34px; }
@@ -388,6 +391,37 @@ img.hero-sm { animation: heroGlowSm 2.6s ease-in-out infinite; }
 .framed .room .no { font-size: 12px; }
 .framed .room .host { font-size: 11px; }
 .framed .co-empty { color: #6a4a24; font-size: 15px; }
+/* Dungeon hall (Karoz 2026-10-16): the same frame, the rooms are warp gates in a row that scrolls sideways */
+.colo.dg .co-only, .colo:not(.dg) .dg-only, .colo.dg .co-rooms, .colo:not(.dg) .dg-strip { display: none !important; }
+.dg-only { display: contents; }
+.framed.dg .co-bar select { width: 132px; }
+.dg-strip { display: flex; gap: 14px; overflow-x: auto; overflow-y: hidden; height: 300px; padding: 4px 4px 8px; scroll-snap-type: x proximity; scrollbar-width: thin; scrollbar-color: #b8893a transparent; }
+.dg-gate { flex: 0 0 186px; scroll-snap-align: start; display: flex; flex-direction: column; align-items: center; gap: 6px; border: 0; background: none; padding: 0; cursor: pointer; font: inherit; text-align: left; }
+.dg-gate .pt { position: relative; width: 168px; height: 182px; background: url("img/dg-portal.webp?v=1") center bottom / contain no-repeat;
+  filter: drop-shadow(0 6px 6px rgba(40, 20, 0, .45)); transition: transform .18s, filter .18s; }
+.dg-gate .pt::after { content: ""; position: absolute; left: 30%; right: 30%; top: 26%; bottom: 26%; border-radius: 50%; background: radial-gradient(rgba(140, 220, 255, .55), transparent 70%);
+  mix-blend-mode: screen; animation: dgPulse 2.4s ease-in-out infinite; pointer-events: none; }
+@keyframes dgPulse { 50% { opacity: .35; transform: scale(.92); } }
+.dg-gate:not(:disabled):hover .pt, .dg-gate:not(:disabled):focus-visible .pt { transform: translateY(-5px); filter: drop-shadow(0 0 12px rgba(110, 200, 255, .9)) drop-shadow(0 6px 6px rgba(40, 20, 0, .45)); }
+.dg-gate:focus-visible { outline: none; }
+.dg-gate.off .pt { filter: grayscale(1) brightness(1.05) contrast(.9) drop-shadow(0 6px 6px rgba(40, 20, 0, .35)); }
+.dg-gate.off .pt::after { display: none; }
+.dg-gate:disabled { cursor: default; }
+.dg-gate.mine .pt { filter: drop-shadow(0 0 10px rgba(255, 214, 102, .95)) drop-shadow(0 6px 6px rgba(40, 20, 0, .45)); }
+.dg-gate .pt .tag { position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%); padding: 3px 12px; border-radius: 999px; font-size: 13px; font-weight: 800; white-space: nowrap;
+  background: rgba(30, 20, 10, .85); color: #fff; border: 2px solid #c99a3c; }
+.dg-card { width: 100%; min-height: 92px; padding: 6px 9px; border-radius: 12px; background: linear-gradient(#2a1d33, #160f1e); border: 2px solid #8a6630;
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 150, .12), 0 3px 6px rgba(40, 20, 0, .35); color: #fff; }
+.dg-gate:not(:disabled):hover .dg-card { border-color: #e2b55a; }
+.dg-card .hd { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font-size: 12px; color: #e8d3a8; border-bottom: 1px solid rgba(226, 181, 90, .35); padding-bottom: 3px; margin-bottom: 3px; }
+.dg-card .hd b { font-size: 15px; color: #ffe08a; }
+.dg-card ul { list-style: none; margin: 0; padding: 0; }
+.dg-card li { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 5px; align-items: center; font-size: 12px; line-height: 19px; }
+.dg-card li img { width: 20px; height: 20px; object-fit: contain; }
+.dg-card li span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dg-card li span.adm { color: #ff6b6b; font-weight: 700; }
+.dg-card li small { color: #c9b48a; font-size: 11px; }
+.dg-card .new { font-size: 13px; color: #e8d3a8; text-align: center; padding-top: 14px; line-height: 1.5; }
 .framed .co-main .err { margin: 4px 0 0; min-height: 1.2em; font-size: 13px; color: #b3261e; }
 .framed .co-foot { position: absolute; left: 0; right: 0; bottom: -2px; align-items: center; margin: 0; gap: 6px; flex-wrap: nowrap; }
 .framed .co-foot .co-pg { height: 30px; padding: 0 8px; font-size: 12px; white-space: nowrap; color: #ffe2a0; }
@@ -966,16 +1000,19 @@ img.jb { pointer-events: auto; } /* the small job badge keeps its name tooltip *
     <div class="co-grid">
       <section class="co-main" aria-label="รายชื่อห้อง">
         <div class="co-bar">
-          <b>รายชื่อห้อง</b>
-          <select id="co-mode" aria-label="โหมด"><option value="">ทุกโหมด</option><option value="duel">ดวล</option><option value="rush">ลุย (สุ่มแผนที่)</option></select>
-          <span class="co-find"><input id="co-code" inputmode="numeric" maxlength="4" placeholder="ระบุหมายเลขห้อง" aria-label="หมายเลขห้อง" autocomplete="off"><button class="btn go" id="co-join">เข้า</button></span>
+          <b class="co-only">รายชื่อห้อง</b>
+          <span class="dg-only"><b>เลือกเนื้อเรื่อง</b><select id="dg-story" aria-label="เลือกเนื้อเรื่อง"><option value="">เนื้อเรื่องทั้งหมด</option></select>
+            <b>เลือกระดับ</b><select id="dg-lv" aria-label="เลือกระดับ"><option value="">ทั้งหมด</option></select></span>
+          <select class="co-only" id="co-mode" aria-label="โหมด"><option value="">ทุกโหมด</option><option value="duel">ดวล</option><option value="rush">ลุย (สุ่มแผนที่)</option></select>
+          <span class="co-find co-only"><input id="co-code" inputmode="numeric" maxlength="4" placeholder="ระบุหมายเลขห้อง" aria-label="หมายเลขห้อง" autocomplete="off"><button class="btn go" id="co-join">เข้า</button></span>
           <button class="btn" id="co-refresh">⟳ รีเฟรช</button>
         </div>
         <div class="co-rooms" id="co-rooms"></div>
+        <div class="dg-strip" id="dg-strip" aria-label="ห้องดันเจี้ยน"></div>
         <p class="err" id="co-err" role="status"></p>
         <div class="co-foot">
-          <button class="btn co-pg" id="co-prev">◀ ก่อนหน้า</button>
-          <button class="btn co-pg" id="co-next">ถัดไป ▶</button>
+          <button class="btn co-pg co-only" id="co-prev">◀ ก่อนหน้า</button>
+          <button class="btn co-pg co-only" id="co-next">ถัดไป ▶</button>
           <button class="btn co-big" id="co-make">สร้างห้อง</button>
           <button class="btn go co-big" id="co-go">ลุย</button>
         </div>
@@ -1363,7 +1400,7 @@ const BUILDINGS = [
   { k: 'wedding', desc: 'จับคู่กับคนพิเศษ แล้วจัดงานแต่งให้ทั้งเมืองรู้', name: 'Wedding Hall', th: SOON, at: [690, 408] },
   { k: 'stadium', desc: 'ดูห้องที่เปิดอยู่ สร้างห้อง หรือเข้าห้องของเพื่อน แล้วดวลกันแบบออนไลน์', name: 'Stadium', th: 'สนามประลอง', at: [957, 324], act: () => openColo() },
   { k: 'guild', desc: 'สร้างหรือเข้าร่วมกิลด์ แล้วร่วมมือกับเพื่อนพิชิตศัตรู', name: 'Guild', th: SOON, at: [1295, 378] },
-  { k: 'dungeon', desc: 'ลงดันเจียนไปผจญภัย', name: 'Dungeon', th: SOON, at: [1763, 312] }, // Karoz 2026-10-07: no bot-difficulty popup here
+  { k: 'dungeon', desc: 'ลงดันเจียนไปผจญภัย รวมปาร์ตี้ได้ 4 คน', name: 'Dungeon', th: 'ดันเจี้ยน', at: [1763, 312], act: () => openColo('dungeon') }, // Karoz 2026-10-07: no bot-difficulty popup here
   { k: 'smith', desc: 'ตีบวกและอัปเกรดอาวุธให้แรงขึ้น', name: 'Blacksmith', th: SOON, at: [306, 522] },
   { k: 'brewery', desc: 'ร้านเหล้าประจำเมือง พบปะเพื่อนและรับเควส', name: 'Brewery', th: SOON, at: [1446, 610] },
   { k: 'fame', desc: 'ทำเนียบผู้กล้า ดูอันดับผู้เล่นที่เก่งที่สุด', name: 'Hall of Fame', th: SOON, at: [1768, 674] },
@@ -1605,8 +1642,8 @@ const press = (d, sel) => { const el = d.querySelector(sel); if (el) el.click();
 // once the game shows it, and the guests' lobbies join that code by themselves.
 const ROOMS_PER_PAGE = 6, SLOTS = 4, GAME_MAX = 2; // the game plays 2 at a time for now
 const MAPS = [{ k: 'jungle', name: 'อารยธรรมโบราณ', img: 'img/map-jungle.webp?v=1' }];
-const MODES = { duel: 'ดวล', rush: 'ลุย' }; // ลุย (Karoz): the map is always picked at random
-const co = { page: 0, room: null, host: false, max: 2, shut: [2, 3], mode: 'duel', map: MAPS[0].k, game: null, lastGame: null, ch: null, live: false, seek: 0, vs: null };
+const MODES = { duel: 'ดวล', rush: 'ลุย', dungeon: 'ดันเจี้ยน' }; // ลุย (Karoz): the map is always picked at random
+const co = { hall: 'colo', page: 0, room: null, host: false, max: 2, shut: [2, 3], mode: 'duel', map: MAPS[0].k, game: null, lastGame: null, ch: null, live: false, seek: 0, vs: null };
 const myKey = () => co.live ? online.user.id : 'me';
 const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: prof.job || '', level: prof.level || 1, exp: prof.exp | 0, admin: isAdmin(), room: co.room, host: co.host, max: co.max, shut: co.shut, mode: co.mode, map: co.map, game: co.game, seek: co.seek || 0, vs: co.vs || null, at: co.at || 0 });
 // everyone in town; this player's own entry is always the local state, so it never lags behind a sync
@@ -1656,7 +1693,12 @@ function artImg(job, cls) {
 function renderColo() {
   renderRoom();
   if ($('m-colo').hidden) return;
-  const mode = $('co-mode').value, rooms = townRooms().filter(r => !mode || r.mode === mode);
+  if (co.hall === 'dungeon') renderDungeon(); else renderRoomList();
+  renderSide();
+}
+// Colosseum rooms: dungeon parties have their own hall
+function renderRoomList() {
+  const mode = $('co-mode').value, rooms = townRooms().filter(r => r.mode !== 'dungeon' && (!mode || r.mode === mode));
   const pages = Math.max(1, Math.ceil(rooms.length / ROOMS_PER_PAGE));
   co.page = Math.min(co.page, pages - 1);
   const box = $('co-rooms'); box.textContent = '';
@@ -1681,6 +1723,47 @@ function renderColo() {
     box.appendChild(p);
   }
   $('co-prev').disabled = co.page === 0; $('co-next').disabled = co.page >= pages - 1;
+}
+// Dungeon hall (Karoz 2026-10-16): every party is a warp gate; click a gate to walk in. Under it, the people in the
+// room with their class emblem. A grey gate is full or already inside; the last grey gate makes a new party.
+// The row scrolls sideways, and the mouse wheel moves it right.
+const dgRooms = () => townRooms().filter(r => r.mode === 'dungeon');
+function renderDungeon() {
+  const box = $('dg-strip'); box.textContent = '';
+  for (const r of dgRooms()) {
+    const full = r.n >= r.max, off = full || !!r.game, b = document.createElement('button'), mem = membersOf(r.code);
+    b.type = 'button'; b.className = 'dg-gate' + (off && !r.mine ? ' off' : '') + (r.mine ? ' mine' : ''); b.disabled = off && !r.mine;
+    b.setAttribute('aria-label', `ห้อง ${r.code} ${r.n}/${r.max}${r.game ? ' กำลังลุย' : full ? ' เต็ม' : ''}: ${mem.map(p => p.name).join(', ')}`);
+    b.innerHTML = '<span class="pt"></span><span class="dg-card"><span class="hd"><b></b><span></span></span><ul></ul></span>';
+    if (off) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = r.game ? 'กำลังลุย' : 'เต็ม'; b.querySelector('.pt').appendChild(t); }
+    b.querySelector('.hd b').textContent = `${r.n}/${r.max}`;
+    b.querySelector('.hd span').textContent = 'ห้อง ' + r.code;
+    const ul = b.querySelector('ul');
+    for (const p of mem) {
+      const li = document.createElement('li'), pj = jobOf(p.job);
+      li.innerHTML = (pj ? `<img alt="${pj.name}" title="${pj.name}" src="img/${pj.admin ? 'cls' : 'emb'}-${pj.k}.webp?v=${ART_V}">` : '<i></i>') + '<span></span><small></small>';
+      li.querySelector('span').textContent = p.name; li.querySelector('span').classList.toggle('adm', !!p.admin);
+      li.querySelector('small').textContent = 'Lv.' + lvOf(p); ul.appendChild(li);
+    }
+    b.onclick = () => enterRoom(r.code);
+    box.appendChild(b);
+  }
+  // an empty gate at the end opens a new party
+  const n = document.createElement('button'); n.type = 'button'; n.className = 'dg-gate off';
+  n.innerHTML = '<span class="pt"></span><span class="dg-card"><span class="new">ประตูว่าง<br>กดเพื่อสร้างห้อง</span></span>';
+  n.setAttribute('aria-label', 'สร้างห้องดันเจี้ยนใหม่'); n.onclick = () => makeRoom('dungeon'); box.appendChild(n);
+}
+$('dg-strip').addEventListener('wheel', e => {
+  const s = $('dg-strip'), d = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : 0;
+  if (!d || s.scrollWidth <= s.clientWidth) return;
+  e.preventDefault(); s.scrollLeft += d * (e.deltaMode === 1 ? 40 : 1);
+}, { passive: false });
+// ลุยด่วน: the first party that still has room, or a new one
+function quickDungeon() {
+  const r = dgRooms().find(x => !x.mine && !x.game && x.n < x.max);
+  if (r) enterRoom(r.code); else makeRoom('dungeon');
+}
+function renderSide() {
   // own character
   const j = jobOf(prof.job);
   $('co-name').textContent = prof.name || 'ผู้เล่น'; $('co-name').classList.toggle('adm', isAdmin());
@@ -1709,7 +1792,13 @@ function fitColo() {
   $('rm-card').style.setProperty('--k', Math.min((innerWidth - 8) / 1060, (innerHeight - 8) / 642).toFixed(3)); // the waiting room fills the screen
 }
 addEventListener('resize', fitColo);
-function openColo() { fitColo(); if (co.room) { openModal('m-room'); renderRoom(); return; } coErr(''); co.page = 0; openModal('m-colo'); renderColo(); }
+function openColo(hall) {
+  fitColo(); if (co.room) { openModal('m-room'); renderRoom(); return; }
+  co.hall = hall === 'dungeon' ? 'dungeon' : 'colo'; const dg = co.hall === 'dungeon';
+  $('co-card').classList.toggle('dg', dg); $('t-colo').textContent = dg ? 'ดันเจี้ยน' : 'ห้องเล่นเกม';
+  $('co-refresh').textContent = dg ? 'ล้างใหม่' : '⟳ รีเฟรช'; $('co-go').textContent = dg ? 'ลุยด่วน' : 'ลุย';
+  coErr(''); co.page = 0; openModal('m-colo'); renderColo(); if (dg) $('dg-strip').scrollLeft = 0;
+}
 // share where this player is: in town, hosting a room, or in someone's room
 function sharePresence() { co.at = Date.now(); if (co.live) co.ch.track(myPresence()).catch(() => {}); }
 function startPresence() {
@@ -1723,7 +1812,8 @@ function startPresence() {
 function makeRoom(mode) {
   const used = new Set(townRooms().map(r => r.code));
   let code; do code = String(1000 + Math.floor(Math.random() * 9000)); while (used.has(code));
-  Object.assign(co, { room: code, host: true, max: 2, shut: [2, 3], mode, map: mode === 'rush' ? null : MAPS[0].k, game: null, lastGame: null, seek: 0, vs: null });
+  const dg = mode === 'dungeon'; // a dungeon party takes 4
+  Object.assign(co, { room: code, host: true, max: dg ? SLOTS : 2, shut: dg ? [] : [2, 3], mode, map: mode === 'rush' || dg ? null : MAPS[0].k, game: null, lastGame: null, seek: 0, vs: null });
   sharePresence(); setRoom(code); showRoom();
 }
 function enterRoom(code) {
@@ -1734,14 +1824,15 @@ function enterRoom(code) {
   if (r.mine) { showRoom(); return; }
   if (r.n >= r.max) { coErr(`ห้อง ${c} เต็มแล้ว`); return; }
   if (r.vs) { coErr(`ห้อง ${c} เจอคู่แข่งแล้ว`); return; }
-  Object.assign(co, { room: c, host: false, max: 2, game: null, lastGame: r.game }); // a match already running in it is not ours to join
+  Object.assign(co, { room: c, host: false, max: 2, mode: r.mode, game: null, lastGame: r.game }); // a match already running in it is not ours to join
   sharePresence(); setRoom(c); showRoom();
 }
 function showRoom() { fitColo(); $('m-colo').hidden = true; $('rm-msg').textContent = ''; openModal('m-room'); renderRoom(); }
 function leaveRoom(why) {
   if (mm.on || co.seek) stopMatch();
+  const hall = co.mode === 'dungeon' ? 'dungeon' : 'colo';
   Object.assign(co, { room: null, host: false, max: 2, game: null, lastGame: null, seek: 0, vs: null });
-  sharePresence(); $('m-room').hidden = true; openColo(); if (why) coErr(why);
+  sharePresence(); $('m-room').hidden = true; openColo(hall); if (why) coErr(why);
 }
 let roomClock = 0;
 // the town chat moves into the waiting room while it is open, and back into town after (the same element, so nothing is lost)
@@ -1787,6 +1878,16 @@ function renderRoom() {
     }
     slots.appendChild(b);
   }
+  const dgn = r.mode === 'dungeon';
+  $('rm-map').classList.toggle('dg', dgn); $('rm-card').classList.toggle('dg', dgn);
+  if (dgn) { // the dungeon's stages aren't made yet: the party can gather, the gate stays shut for now
+    $('rm-map').style.backgroundImage = ''; $('rm-map').classList.remove('rnd', 'seek');
+    $('rm-mapname').textContent = 'ดันเจี้ยน'; $('rm-mapsub').textContent = 'ปาร์ตี้สูงสุด 4 คน';
+    $('rm-rules').innerHTML = '<li>รวมปาร์ตี้ได้สูงสุด 4 คน</li><li>หัวห้องกดลุยเพื่อเข้าดันเจี้ยน</li><li>ด่านในดันเจี้ยนกำลังสร้าง เข้าเล่นได้เร็วๆ นี้</li>';
+    $('rm-go').disabled = !co.host; $('rm-go').textContent = !co.host ? 'รอหัวห้อง' : 'ลุย';
+    $('rm-state').textContent = 'ด่านดันเจี้ยนกำลังสร้าง ยังเข้าเล่นไม่ได้';
+    return;
+  }
   // map panel: ลุย always rolls a random map
   const rnd = r.mode === 'rush';
   $('rm-map').style.backgroundImage = `url('${(map || MAPS[0]).img}')`;
@@ -1818,6 +1919,7 @@ function joinGame(code) { launch(d => { setupGame(d, 1); d.getElementById('net-c
 function startRoom() {
   const mem = membersOf(co.room), msg = $('rm-msg');
   if (co.mode === 'rush') { seekMatch(); return; }
+  if (co.mode === 'dungeon') { msg.textContent = 'ด่านในดันเจี้ยนกำลังสร้าง ยังเข้าเล่นไม่ได้'; return; }
   if (mem.length < 2) { msg.textContent = 'ต้องมีผู้เล่นอย่างน้อย 2 คน'; return; }
   if (mem.length > GAME_MAX) { msg.textContent = `ตอนนี้เกมเล่นได้ทีละ ${GAME_MAX} คน ช่องที่ 3–4 จะใช้ได้เมื่อเกมรองรับหลายคน`; return; }
   msg.textContent = '';
@@ -1974,8 +2076,8 @@ $('rm-invite').onclick = async () => {
   else { try { await navigator.clipboard.writeText(text); toast('คัดลอกคำเชิญแล้ว'); } catch (_) { toast(text); } }
 };
 
-$('co-make').onclick = () => makeRoom('duel');
-$('co-go').onclick = () => makeRoom('rush');
+$('co-make').onclick = () => makeRoom(co.hall === 'dungeon' ? 'dungeon' : 'duel');
+$('co-go').onclick = () => co.hall === 'dungeon' ? quickDungeon() : makeRoom('rush');
 $('co-join').onclick = () => enterRoom();
 $('co-code').addEventListener('keydown', e => { if (e.key === 'Enter') enterRoom(); });
 $('co-refresh').onclick = () => { coErr(''); renderColo(); };
@@ -3660,6 +3762,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.60</div>
+<div id="ver">v0.61.61</div>
 </body>
 </html>
