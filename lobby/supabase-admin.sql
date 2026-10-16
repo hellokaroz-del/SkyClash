@@ -95,8 +95,12 @@ revoke all on function public.admin_note(text, uuid, jsonb) from public, anon, a
 -- 3) game settings: maintenance = { "on": true/false, "msg": "..." }, jobs_open = { "doram": true },
 --    egg = { "rush_bot": { "min": n, "max": n }, "rush": {...}, "duel": {...}, "dungeon": {...} } (coupons in each egg,
 --    one range per mode; only rush_bot hands out eggs so far, supabase-rush.sql)
+--    egg_pool = { "rush_bot": [prize, ...], "dg:slime:normal": [...] }: what the 12 eggs can hold, per mode and per dungeon
+--    level (Karoz 2026-10-16). A prize is { "t": "item" | "gold" | "coupon", "min": n, "max": n, "w": chance weight } and,
+--    for an item, "id", "slot", "stats" and "bound". Each egg holds one prize picked by weight, min-max of it. A mode
+--    with an egg_pool list uses it; ลุย against the bot falls back to the older coupon range in egg.
 create table if not exists public.game_settings (
-  key text primary key check (key in ('maintenance', 'jobs_open', 'egg')),
+  key text primary key check (key in ('maintenance', 'jobs_open', 'egg', 'egg_pool')),
   value jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
@@ -106,7 +110,7 @@ grant select on public.game_settings to anon, authenticated;
 drop policy if exists "settings readable" on public.game_settings;
 create policy "settings readable" on public.game_settings for select to anon, authenticated using (true);
 alter table public.game_settings drop constraint if exists game_settings_key_check;
-alter table public.game_settings add constraint game_settings_key_check check (key in ('maintenance', 'jobs_open', 'egg'));
+alter table public.game_settings add constraint game_settings_key_check check (key in ('maintenance', 'jobs_open', 'egg', 'egg_pool'));
 insert into public.game_settings (key, value) values ('maintenance', '{"on": false, "msg": ""}'), ('jobs_open', '{}') on conflict (key) do nothing;
 
 create or replace function public.maintenance_on() returns boolean
@@ -358,7 +362,7 @@ language plpgsql security definer set search_path = public as $$
 declare k text; r jsonb;
 begin
   perform public.admin_me();
-  if p_key not in ('maintenance', 'jobs_open', 'egg') or p_value is null or jsonb_typeof(p_value) <> 'object' then raise exception 'bad_setting'; end if;
+  if p_key not in ('maintenance', 'jobs_open', 'egg', 'egg_pool') or p_value is null or jsonb_typeof(p_value) <> 'object' then raise exception 'bad_setting'; end if;
   -- egg coupons, one range per mode: whole numbers, 0 <= min <= max <= 1,000,000
   if p_key = 'egg' then
     for k, r in select * from jsonb_each(p_value) loop
@@ -366,6 +370,24 @@ begin
         or not (jsonb_typeof(r->'min') = 'number' and jsonb_typeof(r->'max') = 'number'
         and (r->>'min')::numeric = floor((r->>'min')::numeric) and (r->>'max')::numeric = floor((r->>'max')::numeric)
         and (r->>'min')::numeric >= 0 and (r->>'max')::numeric >= (r->>'min')::numeric and (r->>'max')::numeric <= 1000000) then
+        raise exception 'bad_setting';
+      end if;
+    end loop;
+  end if;
+  -- egg prizes per mode or dungeon level: at most 20 prizes in each, whole numbers, 1 <= min <= max <= 1,000,000,
+  -- a chance weight of 1 - 1,000,000, and an item's id, slot, stats and personal/public flag
+  if p_key = 'egg_pool' then
+    for k, r in select * from jsonb_each(p_value) loop
+      if k !~ '^(rush_bot|rush|duel|dg:[a-z0-9_]{1,20}:[a-z0-9_]{1,20})$' or jsonb_typeof(r) <> 'array' or jsonb_array_length(r) > 20 then raise exception 'bad_setting'; end if;
+      if exists (select 1 from jsonb_array_elements(r) x where not (
+        jsonb_typeof(x) = 'object' and x->>'t' in ('item', 'gold', 'coupon')
+        and jsonb_typeof(x->'min') = 'number' and jsonb_typeof(x->'max') = 'number' and jsonb_typeof(x->'w') = 'number'
+        and (x->>'min')::numeric = floor((x->>'min')::numeric) and (x->>'max')::numeric = floor((x->>'max')::numeric) and (x->>'w')::numeric = floor((x->>'w')::numeric)
+        and (x->>'min')::numeric >= 1 and (x->>'max')::numeric >= (x->>'min')::numeric and (x->>'max')::numeric <= 1000000
+        and (x->>'w')::numeric between 1 and 1000000
+        and (x->>'t' <> 'item' or (char_length(coalesce(x->>'id', '')) between 1 and 40 and (x->>'max')::numeric <= 9999
+          and coalesce(jsonb_typeof(x->'stats'), 'object') = 'object' and char_length(coalesce(x->>'slot', '')) <= 20
+          and coalesce(jsonb_typeof(x->'bound'), 'boolean') = 'boolean')))) then
         raise exception 'bad_setting';
       end if;
     end loop;
