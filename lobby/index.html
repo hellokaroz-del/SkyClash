@@ -1725,7 +1725,7 @@ function renderRoomList() {
   $('co-prev').disabled = co.page === 0; $('co-next').disabled = co.page >= pages - 1;
 }
 // Dungeon hall (Karoz 2026-10-16): every party is a warp gate; click a gate to walk in. Under it, the people in the
-// room with their class emblem. A grey gate is full or already inside; the last grey gate makes a new party.
+// room with their class emblem. A grey gate is full or already inside. No parties, nothing shown (Karoz 2026-10-16).
 // The row scrolls sideways, and the mouse wheel moves it right.
 const dgRooms = () => townRooms().filter(r => r.mode === 'dungeon');
 function renderDungeon() {
@@ -1748,10 +1748,6 @@ function renderDungeon() {
     b.onclick = () => enterRoom(r.code);
     box.appendChild(b);
   }
-  // an empty gate at the end opens a new party
-  const n = document.createElement('button'); n.type = 'button'; n.className = 'dg-gate off';
-  n.innerHTML = '<span class="pt"></span><span class="dg-card"><span class="new">ประตูว่าง<br>กดเพื่อสร้างห้อง</span></span>';
-  n.setAttribute('aria-label', 'สร้างห้องดันเจี้ยนใหม่'); n.onclick = () => makeRoom('dungeon'); box.appendChild(n);
 }
 $('dg-strip').addEventListener('wheel', e => {
   const s = $('dg-strip'), d = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : 0;
@@ -3762,6 +3758,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.61</div>
+<div id="ver">v0.61.62</div>
 </body>
 </html>
