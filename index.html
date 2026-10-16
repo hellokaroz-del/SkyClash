@@ -317,14 +317,16 @@ const FONT = '"Mitr", "Noto Sans Thai", sans-serif';
 // Karoz's crawl art: frames facing right (r) and left (l); h = drawn height on the field (the swordsman's is sized so his body matches the mage's)
 const SPRITE_SRC = { blade: { "r": ["assets/a114.webp", "assets/a115.webp", "assets/a116.webp", "assets/a117.webp", "assets/a118.webp"], "l": ["assets/a119.webp", "assets/a120.webp", "assets/a121.webp", "assets/a122.webp", "assets/a123.webp"], "h": 47 }, mage: {"stand": "assets/a000.png", "r": ["assets/a164.webp", "assets/a165.webp", "assets/a166.webp", "assets/a167.webp", "assets/a168.webp"], "l": ["assets/a169.webp", "assets/a170.webp", "assets/a171.webp", "assets/a172.webp", "assets/a173.webp"], "h": 46.5}, thief: { "r": ["assets/a124.webp", "assets/a125.webp", "assets/a126.webp", "assets/a127.webp", "assets/a128.webp"], "l": ["assets/a129.webp", "assets/a130.webp", "assets/a131.webp", "assets/a132.webp", "assets/a133.webp"], "h": 41.1 }, merchant: { "r": ["assets/a134.webp", "assets/a135.webp", "assets/a136.webp", "assets/a137.webp", "assets/a138.webp"], "l": ["assets/a139.webp", "assets/a140.webp", "assets/a141.webp", "assets/a142.webp", "assets/a143.webp"], "h": 43.0 }, archer: { "r": ["assets/a144.webp", "assets/a145.webp", "assets/a146.webp", "assets/a147.webp", "assets/a148.webp"], "l": ["assets/a149.webp", "assets/a150.webp", "assets/a151.webp", "assets/a152.webp", "assets/a153.webp"], "h": 43.8 }, cleric: { "r": ["assets/a154.webp", "assets/a155.webp", "assets/a156.webp", "assets/a157.webp", "assets/a158.webp"], "l": ["assets/a159.webp", "assets/a160.webp", "assets/a161.webp", "assets/a162.webp", "assets/a163.webp"], "h": 45.2 }, doram: { "r": ["assets/a174.webp", "assets/a175.webp", "assets/a176.webp", "assets/a177.webp", "assets/a178.webp"], "l": ["assets/a179.webp", "assets/a180.webp", "assets/a181.webp", "assets/a182.webp", "assets/a183.webp"], "h": 47.2 } };
 // Karoz's pixel-art show pictures, one per class: the portrait everywhere, and the field figure for classes
+// every game picture comes from newImg: a failed download (Chrome drops some when hundreds load at once) is retried a few times
+function newImg() { const im = new Image(); let n = 0; im.onerror = () => { const s = (im.src || '').replace(/[?&]r=\d+$/, ''); if (!s || s.startsWith('data:') || s.startsWith('blob:') || ++n > 4) return; setTimeout(() => { im.src = s + (s.includes('?') ? '&' : '?') + 'r=' + n; }, 1200 * n); }; return im; }
 // without crawl frames. SHOW_FACE is the way each picture faces (its weapon side); SHOW_CX where the body sits.
 const SHOW_SRC = {"blade": "assets/a009.webp", "mage": "assets/a010.webp", "archer": "assets/a011.webp", "cleric": "assets/a012.webp", "thief": "assets/a013.webp", "merchant": "assets/a014.webp", "doram": "assets/a015.webp"};
-const SHOW = {}; for (const k in SHOW_SRC) { SHOW[k] = new Image(); SHOW[k].src = SHOW_SRC[k]; }
+const SHOW = {}; for (const k in SHOW_SRC) { SHOW[k] = newImg(); SHOW[k].src = SHOW_SRC[k]; }
 const SHOW_FACE = { blade: -1, mage: -1, archer: 1, cleric: -1, thief: 1, merchant: -1, doram: 1 };
 const SHOW_CX = { merchant: 0.36 };
 const SPR = {};
 for (const [k, d] of Object.entries(SPRITE_SRC)) {
-  const ld = src => { const im = new Image(); im.src = src; return im; };
+  const ld = src => { const im = newImg(); im.src = src; return im; };
   SPR[k] = { stand: d.stand ? ld(d.stand) : null, r: d.r.map(ld), l: d.l.map(ld), h: d.h || 40 };
 }
 // Karoz's mage cast art: frames 1-5 while the fire button is held, frame 6 on release.
@@ -332,19 +334,19 @@ for (const [k, d] of Object.entries(SPRITE_SRC)) {
 const CAST_SRC = { mage: [{"src": "assets/a016.webp", "ax": 105.0, "ay": 126.1, "tx": 255, "ty": 102}, {"src": "assets/a017.webp", "ax": 91.6, "ay": 137.1, "tx": 252, "ty": 90}, {"src": "assets/a018.webp", "ax": 84.8, "ay": 160.1, "tx": 220, "ty": 40}, {"src": "assets/a019.webp", "ax": 100.0, "ay": 187.4, "tx": 195, "ty": 30}, {"src": "assets/a020.webp", "ax": 130.5, "ay": 189.1, "tx": 195, "ty": 30}, {"src": "assets/a021.webp", "ax": 115, "ay": 131, "tx": 219, "ty": 73}] };
 const CAST = {}, CAST_SCALE = 0.33;
 // Karoz's knocked-out mage: the body stays on the field, the little ghost floats above it (art lies facing left)
-const DEAD = { mage: { body: Object.assign(new Image(), { src: "assets/a022.webp" }), ghost: Object.assign(new Image(), { src: "assets/a023.webp" }), ax: 118.0, ay: 127, gx: 79.4, gy: -41.2 } }, DEAD_SCALE = 0.34;
+const DEAD = { mage: { body: Object.assign(newImg(), { src: "assets/a022.webp" }), ghost: Object.assign(newImg(), { src: "assets/a023.webp" }), ax: 118.0, ay: 127, gx: 79.4, gy: -41.2 } }, DEAD_SCALE = 0.34;
 // Karoz's mage shot: a blue comet (head at hx/hy, flies to the right in the art)
-const COMET = Object.assign(new Image(), { src: "assets/a024.webp" }), COMET_HEAD = [75.0, 59.0];
+const COMET = Object.assign(newImg(), { src: "assets/a024.webp" }), COMET_HEAD = [75.0, 59.0];
 // Karoz's wind arrows: 13 levels, wind 0, 0.5, 1 ... 6 (art points right)
-const WIND_IMG = ["assets/a025.webp", "assets/a026.webp", "assets/a027.webp", "assets/a028.webp", "assets/a029.webp", "assets/a030.webp", "assets/a031.webp", "assets/a032.webp", "assets/a033.webp", "assets/a034.webp", "assets/a035.webp", "assets/a036.webp", "assets/a037.webp"].map(s => Object.assign(new Image(), { src: s })), WIND_C = [60.0, 54.0];
+const WIND_IMG = ["assets/a025.webp", "assets/a026.webp", "assets/a027.webp", "assets/a028.webp", "assets/a029.webp", "assets/a030.webp", "assets/a031.webp", "assets/a032.webp", "assets/a033.webp", "assets/a034.webp", "assets/a035.webp", "assets/a036.webp", "assets/a037.webp"].map(s => Object.assign(newImg(), { src: s })), WIND_C = [60.0, 54.0];
 const windFx = { w: null, t: 99, streaks: [] };
-for (const [k, list] of Object.entries(CAST_SRC)) CAST[k] = list.map(e => { const im = new Image(); im.src = e.src; return { im, ax: e.ax, ay: e.ay, tx: e.tx, ty: e.ty }; });
+for (const [k, list] of Object.entries(CAST_SRC)) CAST[k] = list.map(e => { const im = newImg(); im.src = e.src; return { im, ax: e.ax, ay: e.ay, tx: e.tx, ty: e.ty }; });
 // Karoz's warp orb art: 6 spinning flight frames + 6 landing frames
 const WARP_SRC = {"orb": ["assets/a038.png", "assets/a039.png", "assets/a040.png", "assets/a041.png", "assets/a042.png", "assets/a043.png"], "land": ["assets/a044.png", "assets/a045.png", "assets/a046.png", "assets/a047.png", "assets/a048.png", "assets/a049.png"]};
-const WARP = { orb: WARP_SRC.orb.map(src => { const im = new Image(); im.src = src; return im; }), land: WARP_SRC.land.map(src => { const im = new Image(); im.src = src; return im; }) };
+const WARP = { orb: WARP_SRC.orb.map(src => { const im = newImg(); im.src = src; return im; }), land: WARP_SRC.land.map(src => { const im = newImg(); im.src = src; return im; }) };
 // HUD frames (Karoz's art): power bar slices + angle dial
 const HUD_SRC = {"barL": "assets/a050.png", "barM": "assets/a051.png", "barR": "assets/a052.png", "dial": "assets/a053.png"};
-const HUD = {}; for (const [k, src] of Object.entries(HUD_SRC)) { const im = new Image(); im.src = src; HUD[k] = im; }
+const HUD = {}; for (const [k, src] of Object.entries(HUD_SRC)) { const im = newImg(); im.src = src; HUD[k] = im; }
 const WARP_CD = 3;
 const ICE_TURNS = 2; // ice curse: a frozen player skips this many of their own turns
 // Karoz's sounds: skill sounds play the moment the charged shot is released (keys match p.armed); victory/defeat play with the result banner
@@ -369,7 +371,7 @@ function fadeBgm() {
 }
 function sfx(k) { if (SIM) return; if (k && typeof netEv === 'function') netEv(['s', k]); if (MUTED || !k) return; if (k.startsWith('a:') && !SFX[k]) { const u = assetURL(k); if (!u) return; SFX[k] = new Audio(u); } if (!SFX[k]) return; const a = SFX[k].cloneNode(); a.volume = 0.9; const pr = a.play(); if (pr) pr.catch(() => {}); }
 // Karoz's 7-frame lightning strike for the mage ultimate (frame 4 is the impact); ground ring sits at y 499 of 577, beam at x 150
-const ULT_FX = ["assets/a059.webp", "assets/a060.webp", "assets/a061.webp", "assets/a062.webp", "assets/a063.webp", "assets/a064.webp", "assets/a065.webp"].map(src => { const im = new Image(); im.src = src; return im; });
+const ULT_FX = ["assets/a059.webp", "assets/a060.webp", "assets/a061.webp", "assets/a062.webp", "assets/a063.webp", "assets/a064.webp", "assets/a065.webp"].map(src => { const im = newImg(); im.src = src; return im; });
 // POW gauge: fills from hits taken and dealt; full at 120 unlocks the class ultimate on B
 const POW_MAX = 120, BOLT_R = SEG; // homing circle around the enemy: 2 slots across
 // Admin test switches (human players only): immortal, POW always full, no skill cooldown
@@ -392,13 +394,13 @@ const hitBox = pl => { const w = pl.hbW || HB.w, h = pl.hbH || HB.h; return { l:
 function boxDist(pl, x, y) { const b = hitBox(pl), nx = Math.max(b.l, Math.min(b.r, x)), ny = Math.max(b.t, Math.min(b.b, y)); return Math.hypot(x - nx, y - ny); }
 // Karoz's Ultimate button: 10 frames, 10%..100% of the POW gauge
 const ULT_SRC = ["assets/a066.png", "assets/a067.png", "assets/a068.png", "assets/a069.png", "assets/a070.png", "assets/a071.png", "assets/a072.png", "assets/a073.png", "assets/a074.png", "assets/a075.png"];
-const ULT_IMG = ULT_SRC.map(src => { const im = new Image(); im.src = src; return im; });
+const ULT_IMG = ULT_SRC.map(src => { const im = newImg(); im.src = src; return im; });
 // Karoz's 15-frame loop played while the gauge is full
 const ULT_LOOP_SRC = ["assets/a076.webp", "assets/a077.webp", "assets/a078.webp", "assets/a079.webp", "assets/a080.webp", "assets/a081.webp", "assets/a082.webp", "assets/a083.webp", "assets/a084.webp", "assets/a085.webp", "assets/a086.webp", "assets/a087.webp", "assets/a088.webp", "assets/a089.webp", "assets/a090.webp"];
-const ULT_LOOP = ULT_LOOP_SRC.map(src => { const im = new Image(); im.src = src; return im; });
+const ULT_LOOP = ULT_LOOP_SRC.map(src => { const im = newImg(); im.src = src; return im; });
 const ULT_RECT = { x: 866, y: 330, w: 86, h: 86 };
 // Karoz's skill frame: 6 slots over the Energy bar; positions measured on the source art (2172 px wide, cropped from y=95)
-const SKILL_FRAME = new Image(); SKILL_FRAME.src = 'assets/a091.webp';
+const SKILL_FRAME = newImg(); SKILL_FRAME.src = 'assets/a091.webp';
 const SF = { x: 628, y: VH - 113, w: 330, src: 2172, srcH: 600, cx: [240, 580, 918, 1255, 1593, 1930], cy: 220, win: 230, track: [360, 445, 1854, 507] };
 const ENERGY_MAX = 250, SKILL_COST = 100, WALK_COST = 0.7; // walking costs 0.7 Energy per unit moved; the Ultimate is free
 // balance spec V1: damage = stat x skill% x DMG_K x 100 / (100 + DEF or MDEF); healing and MATK shields = MATK x skill% x HEAL_K; crit chance from LUK; Energy per turn from SPD
@@ -544,7 +546,7 @@ const assetImg = {};
 function assetURL(ref) { if (!ref) return ''; if (ref.startsWith('a:')) { const a = GD.assets[ref.slice(2)]; return a ? a.data || a.path || '' : ''; } return ref; }
 function assetImage(ref) {
   const id = ref.slice(2);
-  if (!assetImg[id]) { assetImg[id] = new Image(); const u = assetURL(ref); if (typeof retryImg === 'function' && u && !u.startsWith('data:') && !u.startsWith('blob:')) retryImg(assetImg[id], u); else assetImg[id].src = u; }
+  if (!assetImg[id]) { assetImg[id] = newImg(); const u = assetURL(ref); if (typeof retryImg === 'function' && u && !u.startsWith('data:') && !u.startsWith('blob:')) retryImg(assetImg[id], u); else assetImg[id].src = u; }
   return assetImg[id];
 }
 function iconKey(sk) {
@@ -572,7 +574,7 @@ function applyData(gd) {
   for (const [k, d] of Object.entries(gd.classes || {})) {
     const c = classFrom(d);
     if (d.show) { SHOW_SRC[k] = assetURL(d.show); SHOW[k] = assetImage(d.show); }
-    else if (BUILTIN_SHOW[k]) { SHOW_SRC[k] = BUILTIN_SHOW[k]; SHOW[k] = new Image(); SHOW[k].src = BUILTIN_SHOW[k]; }
+    else if (BUILTIN_SHOW[k]) { SHOW_SRC[k] = BUILTIN_SHOW[k]; SHOW[k] = newImg(); SHOW[k].src = BUILTIN_SHOW[k]; }
     else { delete SHOW_SRC[k]; delete SHOW[k]; }
     SHOW_FACE[k] = d.face != null ? d.face : (BUILTIN_FACE[k] != null ? BUILTIN_FACE[k] : 1);
     CLASSES[k] = c;
@@ -1142,14 +1144,14 @@ function surfaceY(x) { for (let y = STAGE.scanFrom; y < WH; y++) if (solid(x, y)
 // jungle: Karoz's ancient-ruins art; the foreground image is the ground, collision comes from its solid parts
 // (thin hanging vines are left out), and nothing can be dug or destroyed.
 let STAGE = null;
-const JUNGLE = { fg: new Image(), col: new Image(), bg: new Image() };
+const JUNGLE = { fg: newImg(), col: newImg(), bg: newImg() };
 JUNGLE.fg.src = "assets/a095.webp";
 JUNGLE.col.src = "assets/a096.png";
 JUNGLE.bg.src = "assets/a097.webp";
 const BUILTIN_IMG = { 'jungle-bg': JUNGLE.bg, 'jungle-fg': JUNGLE.fg, 'jungle-col': JUNGLE.col };
 // the meadow (Karoz 2026-10-07, the tutorial's field): pixel sky and grass-and-dirt ground, loaded only when the stage is used
 const MEADOW_SRC = { 'meadow-bg': 'assets/a221.webp', 'meadow-fg': 'assets/a222.webp', 'hall-bg': 'assets/boss-hall-bg.webp', 'hall-fg': 'assets/boss-hall-floor.webp' };
-function refImage(ref) { if (!ref) return null; if (MEADOW_SRC[ref] && !BUILTIN_IMG[ref]) { const im = new Image(); im.src = MEADOW_SRC[ref]; BUILTIN_IMG[ref] = im; } if (ref === 'hills' && !BUILTIN_IMG.hills) BUILTIN_IMG.hills = makeHills(); if (ref === 'flat' && !BUILTIN_IMG.flat) BUILTIN_IMG.flat = makeFlat(); if (ref === 'flatcol' && !BUILTIN_IMG.flatcol) BUILTIN_IMG.flatcol = makeFlatCol(); if (ref === 'hallcol' && !BUILTIN_IMG.hallcol) BUILTIN_IMG.hallcol = makeFlatCol(HALL_Y); return ref.startsWith('a:') ? assetImage(ref) : BUILTIN_IMG[ref] || null; }
+function refImage(ref) { if (!ref) return null; if (MEADOW_SRC[ref] && !BUILTIN_IMG[ref]) { const im = newImg(); im.src = MEADOW_SRC[ref]; BUILTIN_IMG[ref] = im; } if (ref === 'hills' && !BUILTIN_IMG.hills) BUILTIN_IMG.hills = makeHills(); if (ref === 'flat' && !BUILTIN_IMG.flat) BUILTIN_IMG.flat = makeFlat(); if (ref === 'flatcol' && !BUILTIN_IMG.flatcol) BUILTIN_IMG.flatcol = makeFlatCol(); if (ref === 'hallcol' && !BUILTIN_IMG.hallcol) BUILTIN_IMG.hallcol = makeFlatCol(HALL_Y); return ref.startsWith('a:') ? assetImage(ref) : BUILTIN_IMG[ref] || null; }
 // a plain grassy hill ground (diggable) for stages without their own ground picture
 function makeHills() {
   const c = document.createElement('canvas'); c.width = WW; c.height = WH; const x = c.getContext('2d');
@@ -1159,7 +1161,7 @@ function makeHills() {
   x.fillStyle = g; x.fill();
   x.lineWidth = 14; x.strokeStyle = '#6fbf4a'; x.beginPath(); for (let X = 0; X <= WW; X += 6) x[X ? 'lineTo' : 'moveTo'](X, h(X) + 5); x.stroke();
   x.lineWidth = 4; x.strokeStyle = '#9ee06a'; x.beginPath(); for (let X = 0; X <= WW; X += 6) x[X ? 'lineTo' : 'moveTo'](X, h(X) + 1); x.stroke();
-  const im = new Image(); im.src = c.toDataURL('image/png'); return im;
+  const im = newImg(); im.src = c.toDataURL('image/png'); return im;
 }
 // the slime test stage: dead flat ground of old stone blocks with grass on top; it can't be dug or broken (Karoz)
 const FLAT_Y = WH - 190;
@@ -1182,16 +1184,23 @@ function makeFlat() {
   x.fillStyle = '#4f9a3a'; x.fillRect(0, FLAT_Y, WW, 14);
   x.fillStyle = '#7fcf55'; x.fillRect(0, FLAT_Y, WW, 5);
   x.fillStyle = '#9ee06a'; for (let X = 0; X < WW; X += 9) x.fillRect(X, FLAT_Y - 3 - (X * 7 % 5), 3, 4 + (X * 7 % 5)); // grass tufts
-  const im = new Image(); im.src = c.toDataURL('image/png'); return im;
+  const im = newImg(); im.src = c.toDataURL('image/png'); return im;
 }
 // collision for the flat stage: one dead-flat line a little below the top of the grass, so the grass is only decoration
 // (the tufts no longer make tiny steps that catch the characters' feet)
 function makeFlatCol(top = FLAT_Y + 6) {
   const c = document.createElement('canvas'); c.width = WW; c.height = WH; const x = c.getContext('2d');
   x.fillStyle = '#fff'; x.fillRect(0, top, WW, WH - top);
-  const im = new Image(); im.src = c.toDataURL('image/png'); return im;
+  const im = newImg(); im.src = c.toDataURL('image/png'); return im;
 }
-function stageReady(st) { return Promise.all([st.bg, st.fg, st.col].map(refImage).filter(Boolean).map(im => im.decode().catch(() => {}))); }
+// waits for the stage pictures to really arrive (retries included, up to 20 s): building the ground mask from a picture
+// that hasn't loaded leaves no ground, and players walk on air
+function stageReady(st) {
+  return Promise.all([st.bg, st.fg, st.col].map(refImage).filter(Boolean).map(im => new Promise(ok => {
+    const t0 = performance.now(), check = () => { if (ready(im) || performance.now() - t0 > 20000) im.decode().catch(() => {}).then(ok); else setTimeout(check, 100); };
+    check();
+  })));
+}
 // the ground picture is the playfield; collision comes from the stage's mask picture (white = solid) or,
 // without one, from the ground picture's opaque pixels
 function loadStage() {
@@ -1789,7 +1798,7 @@ const GOLEM_SRC = {"walk": {"f": ["assets/a184.webp", "assets/a185.webp", "asset
 // by itself as soon as its spirit lands a mark that reacts with one already on the target (no Spirit Burst needed).
 // Its marks are the owner's marks, so the Doram and the Golem can finish each other's combos.
 const GOLEM_IMG = {};
-for (const [k, d] of Object.entries(GOLEM_SRC)) GOLEM_IMG[k] = d.f.map(src => { const im = new Image(); im.src = src; return im; });
+for (const [k, d] of Object.entries(GOLEM_SRC)) GOLEM_IMG[k] = d.f.map(src => { const im = newImg(); im.src = src; return im; });
 const GOLEM_BOX = { w: 62, h: 104 }, GS = 1.3; // GS: drawn 1.3x the art's base size
 const golemBox = g => ({ l: g.x - GOLEM_BOX.w / 2, r: g.x + GOLEM_BOX.w / 2, t: g.y - GOLEM_BOX.h, b: g.y });
 function golemDist(g, x, y) { const b = golemBox(g), nx = Math.max(b.l, Math.min(b.r, x)), ny = Math.max(b.t, Math.min(b.b, y)); return Math.hypot(x - nx, y - ny); }
@@ -2047,7 +2056,7 @@ const SLIME = { total: 15, field: 3, hp: 400, atk: 18, def: 20, mdef: 20, luk: 5
 const SLIME_COL = ['#a8b4b4', '#9ccc4a', '#5ab8e0', '#e0b494', '#e8962e', '#d8503a', '#d050a8'];
 const SLIME_NAME = ['เทา', 'เขียว', 'ฟ้า', 'ครีม', 'ส้ม', 'แดง', 'ชมพู'];
 // the sheet: 7 colours x 6 moves, 14 frames each, 56 x 64 cells, the slime's centre 20 px from the left, feet on the bottom
-const SLIME_IMG = new Image(); SLIME_IMG.src = "assets/a220.png";
+const SLIME_IMG = newImg(); SLIME_IMG.src = "assets/a220.png";
 const SL_ROWS = ['idle', 'move', 'jump', 'hurt', 'die', 'atk'];
 function slimeFrame(tint, row, f, sc, face) {
   if (!ready(SLIME_IMG)) { ctx.fillStyle = SLIME_COL[tint] || '#9ccc4a'; ctx.beginPath(); ctx.ellipse(0, -7 * sc, 9 * sc, 7 * sc, 0, 0, 7); ctx.fill(); return; }
@@ -2060,14 +2069,14 @@ function slimeFrame(tint, row, f, sc, face) {
 // Cells are 195 x 181 with the slime's feet centred at x 97.5 on the bottom edge, set 207 x 193 apart: a clear 6 px gap
 // round every cell, so drawing one never picks up the edge of the slime next to it (Karoz saw faint lines without it). Frames: 0 rest, 1 dip, 2 crouch,
 // 3 launch (tall), 4 in the air, 5 coming down, 6 landing (flat), 7 settling back
-const HOP_IMG = new Image(); HOP_IMG.src = 'assets/slime-hop.webp';
+const HOP_IMG = newImg(); HOP_IMG.src = 'assets/slime-hop.webp';
 // how big the slime is drawn on the field: 40 px tall at rest (its rest frame is 147 px in the sheet), about a hero on
 // the field (the crawl pictures are 41-47 px) (Karoz 2026-10-08)
 const SLIME_DRAW = 40 / 147;
 const HOP = { w: 195, h: 181, sw: 207, sh: 193, gap: 6, foot: 97.5, scale: SLIME_DRAW };
 // Karoz's hurt faces (2026-10-08), laid out exactly like the hop sheet: 0 startled, 1 sad and squashed, 2 wailing
 // (a hard hit), 3 sad standing (low HP)
-const HURT_IMG = new Image(); HURT_IMG.src = 'assets/slime-hurt.webp';
+const HURT_IMG = newImg(); HURT_IMG.src = 'assets/slime-hurt.webp';
 function hopFrame(tint, f, face, sx = 1, sy = 1, img = HOP_IMG) {
   ctx.save(); if (face < 0) ctx.scale(-1, 1); ctx.scale(sx, sy);
   const w = HOP.w * HOP.scale, h = HOP.h * HOP.scale;
@@ -2076,7 +2085,7 @@ function hopFrame(tint, f, face, sx = 1, sy = 1, img = HOP_IMG) {
 }
 // Karoz's death (2026-10-08): 8 frames, the slime cracks, breaks apart and ends as a puddle with droplets, same 7 tints.
 // Cells are 244 x 152 (wider, for the flying pieces), feet centred at x 122 on the bottom edge, set 256 x 164 apart
-const DIE_IMG = new Image(); DIE_IMG.src = 'assets/slime-die.webp';
+const DIE_IMG = newImg(); DIE_IMG.src = 'assets/slime-die.webp';
 const DIE = { w: 244, h: 152, sw: 256, sh: 164, gap: 6, foot: 122, scale: SLIME_DRAW, step: 5, hold: 24, fade: 16 };
 function dieFrame(tint, f, face) {
   ctx.save(); if (face < 0) ctx.scale(-1, 1);
@@ -2098,7 +2107,7 @@ function lungePose(t) {
 // Karoz's lunge (2026-10-08): 8 frames, set by the slime's front so a stretched frame trails behind it: 0 rest,
 // 1 dip, 2 crouch, 3 spring forward, 4 dash (streaking, droplets behind), 5 impact (splat), 6 springing back, 7 rest.
 // Cells are 312 x 172 with the feet at x 192.4 on the bottom edge (room behind for the trail), set 324 x 184 apart
-const ATK_IMG = new Image(); ATK_IMG.src = 'assets/slime-atk.webp';
+const ATK_IMG = newImg(); ATK_IMG.src = 'assets/slime-atk.webp';
 const ATK = { w: 312, h: 172, sw: 324, sh: 184, gap: 6, foot: 192.38, scale: SLIME_DRAW, hit: 23 };
 function atkFrame(tint, f, face) {
   ctx.save(); if (face < 0) ctx.scale(-1, 1);
@@ -2166,8 +2175,8 @@ const BOSS_SHEET = {
   spit: { src: 'assets/boss-slime-spit.webp', w: 264, h: 325, ax: 128, ay: 283 },
   wave: { src: 'assets/boss-slime-wave.webp', w: 389, h: 246, ax: 180, ay: 243 },
 };
-for (const s of Object.values(BOSS_SHEET)) { s.img = new Image(); s.img.src = s.src; }
-const BOSS_FACE = new Image(); BOSS_FACE.src = 'assets/boss-slime-face.webp';
+for (const s of Object.values(BOSS_SHEET)) { s.img = newImg(); s.img.src = s.src; }
+const BOSS_FACE = newImg(); BOSS_FACE.src = 'assets/boss-slime-face.webp';
 // how long each move plays (ticks) and on which tick it strikes
 const BOSS_ACT = { stomp: { len: 70, hit: 34 }, summon: { len: 56, hit: 34 }, spit: { len: 50, hit: 27 }, wave: { len: 50, hit: 24 } };
 // Karoz 2026-10-16: the moves were over before you could see them. They now play at 0.6 speed (each one about 1.4-1.9 s),
@@ -2991,7 +3000,7 @@ const MD = (() => {
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   return {
     // drifting clouds cut from the sky painting itself (a sheet of 4: top, height, width)
-    sheet: Object.assign(new Image(), { src: 'assets/a223.png' }), cuts: [[0, 65, 220], [65, 50, 185], [115, 70, 360], [185, 70, 310]],
+    sheet: Object.assign(newImg(), { src: 'assets/a223.png' }), cuts: [[0, 65, 220], [65, 50, 185], [115, 70, 360], [185, 70, 310]],
     clouds: Array.from({ length: 5 }, (_, i) => ({ k: i % 4, x: rnd() * 1400, y: 40 + i * 52 + rnd() * 20, v: 0.06 + rnd() * 0.1, z: 0.15 + i * 0.06, a: 0.75 + rnd() * 0.2 })),
     birds: Array.from({ length: 2 }, (_, i) => ({ x: -200 - i * 900, y: 70 + i * 60, v: 0.55 + i * 0.2, n: 3 + i })),
     petals: Array.from({ length: 34 }, (_, i) => ({ x: rnd() * VW, y: rnd() * VH, v: 0.25 + rnd() * 0.5, p: rnd() * 7, c: ['#ffd6e8', '#ffffff', '#ffe27a', '#ffb3cf', '#d8f7a8'][i % 5], s: 2 + Math.floor(rnd() * 2) })),
@@ -3746,7 +3755,7 @@ function myTeam() { const h = meP(); return teamOf(h ? h.i : S.turn); }
 // an icon that failed to load (a busy connection, many windows open at once) is asked for again a few times, so the
 // skill bar doesn't fall back to the skill's name for the rest of the session
 function retryImg(im, src) { let n = 0; im.onerror = () => { if (++n <= 4) setTimeout(() => { im.src = src + (src.includes('?') ? '&' : '?') + 'r=' + n; }, 1500 * n); }; im.src = src; return im; }
-const ICON_IMG = {}; for (const [k, src] of Object.entries(ICONS)) ICON_IMG[k] = retryImg(new Image(), src);
+const ICON_IMG = {}; for (const [k, src] of Object.entries(ICONS)) ICON_IMG[k] = retryImg(newImg(), src);
 function warpDef(p) {
   return { key: 'F', name: 'สกิลบิน', icon: 'warp', cd: p.warpCd, max: WARP_CD, on: p.armed === 'z', use: useWarp,
       desc: 'ปาลูกแก้วที่หมุนกลางอากาศ แล้ววาร์ปไปยังจุดที่ลูกแก้วตก ไม่ทำดาเมจ และใช้แทนการยิงของตานั้น' };
@@ -3770,9 +3779,9 @@ function slotRect(i) {
 function slotUsable(p, d) { return !d.empty && p === cur() && playing() && ctl(p) && S.state === 'aim' && d.cd <= 0 && !p.armed && p.energy >= SKILL_COST && !d.locked && (!(p.frozen > 0) || !!d.purge); }
 // PASS: skip the rest of your turn (sits under the turn clock)
 const PASS_RECT = { x: VW / 2 - 50, y: 137, w: 100, h: 32 };
-const PASS_IMG = new Image(); PASS_IMG.src = 'assets/a098.webp';
+const PASS_IMG = newImg(); PASS_IMG.src = 'assets/a098.webp';
 const COUNT_SRC = ["assets/a099.webp", "assets/a100.webp", "assets/a101.webp", "assets/a102.webp", "assets/a103.webp", "assets/a104.webp", "assets/a105.webp", "assets/a106.webp", "assets/a107.webp", "assets/a108.webp", "assets/a109.webp", "assets/a110.webp", "assets/a111.webp", "assets/a112.webp", "assets/a113.webp"];
-const COUNT_IMG = COUNT_SRC.map(src => { const im = new Image(); im.src = src; return im; });
+const COUNT_IMG = COUNT_SRC.map(src => { const im = newImg(); im.src = src; return im; });
 const countFx = { n: 0, t: 99, sparks: [] };
 // wind medallion: Karoz's 13 arrows (flipped for a left wind), pops in when the wind changes,
 // with streaks blowing past that get faster, longer and more numerous as the wind rises
@@ -5222,7 +5231,7 @@ function importData(file) {
 function newId(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 function readURL(file) { return new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(file); }); }
 async function processImage(file, o) {
-  const im = new Image(); im.src = await readURL(file); await im.decode();
+  const im = newImg(); im.src = await readURL(file); await im.decode();
   let w = im.naturalWidth, h = im.naturalHeight;
   if (o.exact) { w = o.exact[0]; h = o.exact[1]; }
   else { const k = Math.min(1, (o.maxW || 1e9) / w, (o.maxH || 1e9) / h); w = Math.round(w * k); h = Math.round(h * k); }
