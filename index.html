@@ -4920,7 +4920,8 @@ function applySnap(sn) {
   if (sn.cs) cam.shake = Math.max(cam.shake || 0, sn.cs);
   (sn.pl || []).forEach((row, i) => {
     const p = S.players[i]; if (!p) return;
-    PK.forEach((k, j) => { if (k === 'x' || k === 'y') p['n' + k] = row[j]; else p[k] = row[j]; });
+    const own = p.predT > 0; // walking/aiming here right now: keep this screen's facing and angle
+    PK.forEach((k, j) => { if (k === 'x' || k === 'y') p['n' + k] = row[j]; else if (!(own && (k === 'angle' || k === 'face' || k === 'energy'))) p[k] = row[j]; });
     if (p.x == null || Math.hypot(p.nx - p.x, p.ny - p.y) > 60) { p.x = p.nx; p.y = p.ny; }
   });
   partyMoves(sn);
@@ -4958,6 +4959,18 @@ function guestTick() {
     }
     if (NET.gc) { S.state = 'charging'; S.power = NET.gc.pw; }
   }
+  // your own walking and aiming show at once (Karoz 2026-10-16: more real time): the same steps the host will take,
+  // drawn here before its snapshot comes back; the host's position takes over again once you let go
+  if (mine && S.state === 'aim' && p.alive && !(p.frozen > 0)) {
+    const dir = input.left ? -1 : input.right ? 1 : 0;
+    if (dir || input.up || input.down) {
+      const [alo, ahi] = aimRange(p);
+      if (input.up) p.angle = Math.min(ahi, p.angle + 0.5);
+      if (input.down) p.angle = Math.max(alo, p.angle - 0.5);
+      if (dir) { p.face = dir; cam.manual = false; if (!(Math.abs(p.vy || 0) > 0.5)) walkStep(p, dir); const [lo, hi] = aimRange(p); p.angle = Math.max(lo, Math.min(hi, p.angle)); }
+      p.predT = 20;
+    }
+  }
   if (S.state === 'flying') for (const q of S.projs) {
     if (q.done) continue;
     if (q.delay > 0) { q.delay--; continue; }
@@ -4967,7 +4980,8 @@ function guestTick() {
     for (let s = 0; s < 4; s++) { q.vy += G * q.gf / 4; q.vx += S.wind * WINDK * q.wf / 4; q.x += q.vx / 4; q.y += q.vy / 4; }
   }
   for (const pl of S.players) {
-    if (pl.nx != null) { pl.x += (pl.nx - pl.x) * 0.4; pl.y += (pl.ny - pl.y) * 0.4; }
+    if (pl.predT > 0) pl.predT--; // your own hero while you walk: the host's position (a moment behind) only pulls it back if far off
+    if (pl.nx != null && !(pl.predT > 0 && Math.abs(pl.nx - pl.x) < 40)) { const k = pl.predT > 0 ? 0.08 : pl.i === NET.me ? 0.35 : 0.5; pl.x += (pl.nx - pl.x) * k; pl.y += (pl.ny - pl.y) * k; }
     if (pl === p && S.state === 'charging') pl.castT = (pl.castT || 0) + 1;
     if (pl.releaseT > 0) pl.releaseT--;
     if (pl.mob && (pl === p || pl.mv) && S.state === 'mob') { if (pl.anim) pl.anim.t++; if (pl.act) pl.act.t++; } // the slime's move plays on between snapshots
@@ -4981,16 +4995,22 @@ function netTick() {
   if (NET.role === 'host') {
     hostReadGuest();
     if (NET.inMatch && S && !S.demo) captureFx();
-    if (++NET.tick % 3) return;
+    // Karoz 2026-10-16 (more real time): 30 snapshots a second (was 20), and one at once when the turn or phase changes
+    const key = S && NET.inMatch && !S.demo ? S.state + '|' + S.turn + '|' + S.turnCount + '|' + (NET.seq || 0) : '';
+    if (++NET.tick % 2 && key === NET.sentKey) return;
+    NET.sentKey = key;
     const pr = { r: 'h', pk: picks[0], sg: stageKey, g: NET.mate || '', me: myInfo() };
     if (NET.party) { pr.g = ''; pr.gs = NET.inMatch ? NET.party.gs : NET.party.slots; pr.pn = NET.party.n; }
     if (NET.inMatch && S && !S.demo) pr.sn = hostSnap();
     NET.room.presence(pr).catch(() => {});
   } else {
     if (NET.hpres) applySnap(NET.hpres.sn);
-    if (NET.tick++ % 3) return;
-    NET.acts = NET.acts.filter(a => a.n > (NET.aa || 0));
+    // keys go to the host the moment they change (a held key every 2 frames as before was 3), so walking answers sooner
     const i = { l: input.left ? 1 : 0, r: input.right ? 1 : 0, u: input.up ? 1 : 0, d: input.down ? 1 : 0, f: NET.gc ? 1 : 0, pw: NET.gc ? Math.round(NET.gc.pw) : 0 };
+    const ik = i.l + 2 * i.r + 4 * i.u + 8 * i.d + 16 * i.f;
+    if (NET.tick++ % 2 && ik === NET.sentIn) return;
+    NET.sentIn = ik;
+    NET.acts = NET.acts.filter(a => a.n > (NET.aa || 0));
     NET.room.presence({ r: 'g', pk: picks[NET.party ? 0 : 1], in: i, a: NET.acts.slice(-12), ea: [NET.gm || 0, NET.eseq || 0], me: myInfo() }).catch(() => {});
   }
 }
