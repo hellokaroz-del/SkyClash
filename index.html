@@ -2151,12 +2151,13 @@ const makeSlimeAt = i => { const sl = makeSlime(i), L = slimeLevel(S.mob.spawned
 // ---------- King สไลม์ (Karoz 2026-10-16): ทุ่งสไลม์ ยาก, phase 2 ----------
 // The boss stands at the far right of the throne hall and never walks. Its turn picks one of:
 //   กระโดดทับ: anyone right up against its hit box is jumped on and dies at once (damage Infinity)
-//   เรียกลูกน้อง: 2 slimes of the level drop in beside it, every 3 of its turns
-//   บ้วนพลัง: a bubble spat at the player with the least HP, 150% ATK
+//   เรียกลูกน้อง: 2 slimes of the level drop in beside it; first on its 3rd turn, then at most once every 5 of its turns,
+//     and never while 4 or more of them are still standing (Karoz 2026-10-16: it called them too often)
+//   บ้วนพลัง: a bubble spat at a random player, 150% ATK (Karoz 2026-10-16: was the one with the least HP)
 //   ฟันคลื่นดาบ: a sword wave at 2 random players, 120% ATK each
 // and whenever a player's shot hits it, 15% of the time it swallows the hit (กลืนกิน): that hit does 0.
 // Its stats are the level's slime stats with BOSS.hpMul times the HP (Claude's default until Karoz sets them).
-const BOSS = { name: 'King สไลม์', hpMul: 4, summonCd: 3, summonN: 2, swallow: 0.15, spitPct: 150, wavePct: 120, waveN: 2, reach: 6, draw: 0.62, w: 170, h: 120, x: WW - 200 };
+const BOSS = { name: 'King สไลม์', hpMul: 4, summonCd: 5, summonFirst: 3, summonMax: 4, summonN: 2, swallow: 0.15, spitPct: 150, wavePct: 120, waveN: 2, reach: 6, draw: 0.62, w: 170, h: 120, x: WW - 200 };
 // Karoz's sheets: 8 frames each, laid side by side in cells w x h with the boss's feet at (ax, ay); facing left
 const BOSS_SHEET = {
   stomp: { src: 'assets/boss-slime-stomp.webp', w: 372, h: 254, ax: 190, ay: 250 },
@@ -2172,7 +2173,7 @@ const BOSS_ACT = { stomp: { len: 70, hit: 34 }, summon: { len: 56, hit: 34 }, sp
 const bossPhase = dg => !!(dg && dg.phases > 1 && dg.ph >= dg.phases);
 function makeBoss(i) {
   const b = makeSlimeAt(i);
-  Object.assign(b, { k: 'boss', boss: true, name: BOSS.name, guild: 'ท้องพระโรงสไลม์', x: BOSS.x, face: -1, hbW: BOSS.w, hbH: BOSS.h, scd: 0, act: null, swT: 0 });
+  Object.assign(b, { k: 'boss', boss: true, name: BOSS.name, guild: 'ท้องพระโรงสไลม์', x: BOSS.x, face: -1, hbW: BOSS.w, hbH: BOSS.h, scd: BOSS.summonFirst, act: null, swT: 0 });
   b.c = Object.assign({}, b.c, { name: 'บอส', r: 60 });
   b.hp = b.maxHp = b.c.hp = Math.round(b.c.hp * BOSS.hpMul);
   b.y = surfaceY(b.x);
@@ -2189,8 +2190,8 @@ function bossTick(p) {
     const box = hitBox(p), close = hs.filter(h => !(h.hidden > 0) && hitBox(h).r >= box.l - BOSS.reach);
     let k, tg;
     if (close.length) { k = 'stomp'; tg = close; }
-    else if (p.scd <= 0) { k = 'summon'; tg = []; }
-    else if (Math.random() < 0.5) { k = 'spit'; tg = [hs.slice().sort((a, b) => a.hp - b.hp)[0]]; }
+    else if (p.scd <= 0 && S.players.filter(x => x.mob && !x.boss && x.alive).length < BOSS.summonMax) { k = 'summon'; tg = []; }
+    else if (Math.random() < 0.5) { k = 'spit'; tg = [hs[Math.floor(Math.random() * hs.length)]]; }
     else { k = 'wave'; tg = hs.slice().sort(() => Math.random() - 0.5).slice(0, BOSS.waveN); }
     p.act = { k, t: 0, tg, dx: k === 'stomp' ? Math.min(0, tg[0].x + 30 - p.x) : 0 };
     mp.phase = 'act';
