@@ -1729,7 +1729,7 @@ const myPresence = () => ({ name: prof.name || 'ผู้เล่น', job: pro
 // everyone in town; this player's own entry is always the local state, so it never lags behind a sync
 function townPeople() {
   const me = Object.assign({ key: myKey() }, myPresence());
-  if (!co.live) return [me]; // not connected yet: only this player (no made-up people, Karoz 2026-10-09)
+  if (!co.live || !co.ch) return [me]; // not connected yet: only this player (no made-up people, Karoz 2026-10-09)
   const st = co.ch.presenceState(), out = [];
   for (const k in st) {
     if (!st[k].length || k === me.key) continue;
@@ -1934,13 +1934,40 @@ function openColo(hall) {
   coErr(''); co.page = 0; openModal('m-colo'); renderColo(); if (dg) $('dg-strip').scrollLeft = 0;
 }
 // share where this player is: in town, hosting a room, or in someone's room
-function sharePresence() { co.at = Date.now(); if (co.live) co.ch.track(myPresence()).catch(() => {}); }
+// Karoz 2026-10-16: friends sometimes never showed up in a room (on making it, or back from a dungeon). Several changes in
+// a row (back to town, EXP, ready) each sent our state at once; Supabase drops presence messages sent too fast, and a
+// dropped last one left everyone else on the old state. Now changes in a burst go as one message with the newest state,
+// a refused one is sent again, the state is re-sent every few seconds while in a room, and a dropped channel rejoins.
+function sharePresence() {
+  co.at = Date.now();
+  if (!co.live || co.trackT) return;
+  const wait = Math.max(0, 250 - (Date.now() - (co.trackAt || 0)));
+  co.trackT = setTimeout(async () => {
+    co.trackT = null; co.trackAt = Date.now();
+    if (!co.live) return;
+    let r = 'error'; try { r = await co.ch.track(myPresence()); } catch (_) {}
+    if (r !== 'ok') setTimeout(sharePresence, 1000);
+  }, wait);
+}
 function startPresence() {
   if (!online.sb || !online.user || co.ch) return;
-  co.ch = online.sb.channel('town-presence', { config: { presence: { key: online.user.id } } })
+  const ch = co.ch = online.sb.channel('town-presence', { config: { presence: { key: online.user.id } } })
     .on('presence', { event: 'sync' }, renderColo)
-    .subscribe(st => { if (st === 'SUBSCRIBED') { co.live = true; sharePresence(); renderColo(); } });
+    .on('presence', { event: 'join' }, renderColo)
+    .on('presence', { event: 'leave' }, renderColo)
+    .subscribe(st => {
+      if (co.ch !== ch) return;
+      if (st === 'SUBSCRIBED') { co.live = true; co.down = false; sharePresence(); renderColo(); }
+      else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') co.down = true; // the client joins again by itself; SUBSCRIBED follows
+      else if (st === 'CLOSED') { // closed for good: a fresh channel
+        co.down = true; co.ch = null; try { online.sb.removeChannel(ch); } catch (_) {}
+        clearTimeout(co.rejoinT); co.rejoinT = setTimeout(startPresence, 2000);
+      }
+    });
 }
+// in a room, say who we are every 5 s (a lost message is fixed within moments); out of one, every 30 s
+setInterval(() => { if (co.live && (co.room || Date.now() - (co.trackAt || 0) > 30000)) sharePresence(); }, 5000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { if (co.live) sharePresence(); else if (online.user && !co.ch) startPresence(); if (!co.down) renderColo(); } });
 
 // ---------- waiting room ----------
 function makeRoom(mode, dgk) {
@@ -1991,7 +2018,7 @@ function heirOf(code) {
   return ks[Math.abs(h) % ks.length];
 }
 function renderRoom() {
-  if (!co.room) return;
+  if (!co.room || co.down) return; // while the town's channel rejoins, keep the room as it was (nobody has left)
   let r = roomOf(co.room);
   if (!r) {
     if (heirOf(co.room) !== myKey()) return; // the new host's entry is on its way
@@ -4132,6 +4159,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.77</div>
+<div id="ver">v0.61.78</div>
 </body>
 </html>
