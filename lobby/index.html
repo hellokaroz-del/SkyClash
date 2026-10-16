@@ -1595,12 +1595,13 @@ function launch(setup, watchRoom, bot, dungeon) {
       const g = fr.contentWindow.__game, msg = fr.contentDocument.getElementById('net-msg');
       if (g && g.S && !g.S.demo) { clearInterval(started); cover.hidden = true; return; }
       // online: the host's game waits for its own start button once the other player is in; the town presses it
-      if (g && g.NET && g.NET.on && g.NET.role === 'host' && g.NET.gpres && Date.now() - lastStart > 1500) { lastStart = Date.now(); press(fr.contentDocument, '#start'); }
+      // a dungeon party's host starts once the party is in (or has waited long enough), the game says when
+      if (g && g.NET && g.NET.on && g.NET.role === 'host' && (g.NET.party ? g.partyReady() : g.NET.gpres) && Date.now() - lastStart > 1500) { lastStart = Date.now(); press(fr.contentDocument, '#start'); }
       if (!tut.on && msg && msg.textContent.trim()) {
         // the game's online status (connection trouble shows as it is); a host left waiting 40 s is told why
         const waiting = /^รหัสห้อง/.test(msg.textContent.trim());
         if (waiting && !waitFrom) waitFrom = Date.now(); else if (!waiting) waitFrom = 0;
-        cover.textContent = !waiting ? msg.textContent.trim() : Date.now() - waitFrom < 40000 ? 'กำลังรอคู่แข่งเข้าเกม...'
+        cover.textContent = !waiting ? msg.textContent.trim() : dungeon && dungeon.party ? 'กำลังรอเพื่อนในปาร์ตี้เข้าเกม...' : Date.now() - waitFrom < 40000 ? 'กำลังรอคู่แข่งเข้าเกม...'
           : 'คู่แข่งยังต่อเข้ามาไม่ได้ อาจเป็นเพราะเน็ตของอีกฝั่ง กด ← กลับเมือง แล้วกดลุยใหม่ได้เลย';
       }
     } catch (e) {}
@@ -2004,7 +2005,7 @@ function renderRoom() {
   if ($('m-room').hidden) return;
   const map = MAPS.find(m => m.k === r.map);
   // a guest follows the host into the match as soon as the host's game shows its code
-  if (!co.host && r.game && r.game !== co.lastGame && gameBox.hidden) { co.lastGame = r.game; joinGame(r.game); return; }
+  if (!co.host && r.game && r.game !== co.lastGame && gameBox.hidden) { co.lastGame = r.game; if (r.mode === 'dungeon') dgJoin(r); else joinGame(r.game); return; }
   $('rm-no').textContent = r.code;
   $('rm-mode').textContent = MODES[r.mode];
   const slots = $('rm-slots'); slots.textContent = '';
@@ -2038,9 +2039,9 @@ function renderRoom() {
     $('rm-mapname').textContent = dgd ? `${dgd.name} · ${dgLvName(r.dlv)}` : 'ดันเจี้ยน';
     $('rm-mapsub').textContent = !dgd ? 'ปาร์ตี้สูงสุด 4 คน' : ph ? `เฟส ${ph}/${dgd.phases}${ph === dgd.phases ? ' · ' + dgd.boss : ''} · เหมาะกับ Lv ${dgd.lv}` : `เหมาะกับ Lv ${dgd.lv} · ปาร์ตี้สูงสุด 4 คน`;
     $('rm-tip').innerHTML = ''; if (dgd) { const b = document.createElement('b'); b.textContent = ph > 1 ? `เฟส ${ph}: ${dgd.boss}` : `แนะนำ Lv ${dgd.lv}`; $('rm-tip').append(b, ph > 1 ? `ผ่านเฟส ${ph - 1} แล้ว กดลุยเพื่อไปสู้กับ ${dgd.boss}` : dgd.desc); }
-    $('rm-rules').innerHTML = '<li>รวมปาร์ตี้ได้สูงสุด 4 คน</li><li>หัวห้องกดลุยเพื่อเข้าดันเจี้ยน</li><li>ตอนนี้เข้าเล่นได้ทีละ 1 คน</li>';
+    $('rm-rules').innerHTML = '<li>เล่นได้ 1-4 คน</li><li>ทุกคนกดพร้อม แล้วหัวห้องกดลุย</li><li>ทุกคนได้ของรางวัลของตัวเอง</li>';
     $('rm-go').disabled = !co.host; $('rm-go').textContent = !co.host ? 'รอหัวห้อง' : ph > 1 ? `ลุยเฟส ${ph}` : 'ลุย';
-    $('rm-state').textContent = r.game ? 'กำลังเล่นอยู่' : !co.host ? 'รอหัวห้องกดลุย' : mem.length > 1 ? 'ตอนนี้ดันเจี้ยนเล่นได้ทีละ 1 คน' : ph > 1 ? `กดลุยเพื่อไปสู้กับ ${dgd.boss}` : 'กดลุยเพื่อเข้าดันเจี้ยน';
+    $('rm-state').textContent = r.game ? 'กำลังเล่นอยู่' : !co.host ? 'รอหัวห้องกดลุย' : ph > 1 ? `กดลุยเพื่อไปสู้กับ ${dgd.boss}` : 'กดลุยเพื่อเข้าดันเจี้ยน';
     readyGo(r, mem); return;
   }
   // map panel: ลุย always rolls a random map
@@ -2084,17 +2085,32 @@ function setupGame(d, slot, stage) {
   if (stage) press(d, '#stage-' + stage);
   if (prof.job) press(d, `#pick-${slot}-${prof.job}`);
 }
+// a dungeon party member follows the host into the run: its own ticket first (each member is paid for itself), then
+// its game joins the host's as a guest. A later phase goes on with the ticket of this same run; a member who missed the
+// phases before plays along without a reward
+function dgJoin(r) {
+  const run = { k: dgOf(r.map) ? r.map : DUNGEONS[0].k, lv: r.dlv || DG_LEVELS[0].k, ph: r.dph || 1, party: { role: 'guest', n: membersOf(r.code).length } }, code = r.game;
+  const go = () => launch(d => { press(d, '#mode-slime'); press(d, `#pick-0-${prof.job || 'blade'}`); d.getElementById('net-code').value = code; press(d, '#net-join'); }, false, null, run);
+  Object.assign(dgRun, { ending: false, result: null });
+  if (run.ph > 1) { if (dgRun.key !== run.k + ':' + run.lv) dgRun.ticket = null; go(); return; }
+  if (!serverOn()) { dgRun.ticket = null; go(); return; }
+  online.sb.rpc('dungeon_start', { p_dungeon: run.k, p_lv: run.lv }).then(({ data, error }) => {
+    if (error) { $('rm-msg').textContent = sqlNeed(error) || why(error); dgRun.ticket = null; go(); return; } // plays along, without a reward
+    Object.assign(dgRun, { ticket: data.ticket, key: run.k + ':' + run.lv }); go();
+  });
+}
 function joinGame(code) { launch(d => { setupGame(d, 1); d.getElementById('net-code').value = code; press(d, '#net-join'); }); }
 function startRoom() {
   const mem = membersOf(co.room), msg = $('rm-msg');
   if (!co.host) { co.ready = !co.ready; sharePresence(); renderRoom(); return; }
   if (!co.seek && notReady(mem).length) { msg.textContent = 'รอให้ทุกคนกดพร้อมก่อน'; return; }
   if (co.mode === 'rush') { seekMatch(); return; }
-  if (co.mode === 'dungeon') { // the game plays the dungeon one hero at a time for now: the party's host goes in
-    if (mem.length > 1) { msg.textContent = 'ตอนนี้ดันเจี้ยนเล่นได้ทีละ 1 คน เล่นพร้อมกันหลายคนจะตามมา'; return; }
+  if (co.mode === 'dungeon') { // 1-4 players (Karoz 2026-10-16): alone the game starts at once; a party's host opens an online game the others join
     msg.textContent = '';
     const run = { k: dgOf(co.map) ? co.map : DUNGEONS[0].k, lv: co.dlv || DG_LEVELS[0].k, ph: co.dph || 1 };
-    const play = () => launch(d => { press(d, '#mode-slime'); press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#start'); }, false, null, run);
+    if (mem.length > 1) run.party = { role: 'host', n: mem.length };
+    const play = () => run.party ? launch(d => { press(d, '#mode-slime'); press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#net-make'); }, true, null, run)
+      : launch(d => { press(d, '#mode-slime'); press(d, `#pick-0-${prof.job || 'blade'}`); press(d, '#start'); }, false, null, run);
     // a later phase goes on with the run's ticket (the server moved it on when the phase before was cleared)
     if (run.ph > 1) {
       if (serverOn() && !dgRun.ticket) { dgReset(); renderRoom(); msg.textContent = 'รอบนี้จบไปแล้ว เริ่มใหม่จากเฟส 1'; return; }
@@ -2104,7 +2120,7 @@ function startRoom() {
     if (serverOn()) {
       online.sb.rpc('dungeon_start', { p_dungeon: run.k, p_lv: run.lv }).then(({ data, error }) => {
         if (error) { msg.textContent = /dungeon_start|schema cache|function/.test(error.message || '') ? 'ต้องรัน supabase-dungeon.sql ใน Supabase ก่อน' : why(error); return; }
-        Object.assign(dgRun, { ticket: data.ticket, ending: false, result: null });
+        Object.assign(dgRun, { ticket: data.ticket, key: run.k + ':' + run.lv, ending: false, result: null });
         play();
       });
       return;
@@ -4112,6 +4128,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.72</div>
+<div id="ver">v0.61.73</div>
 </body>
 </html>
