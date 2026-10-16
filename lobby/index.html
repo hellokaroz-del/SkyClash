@@ -1432,6 +1432,24 @@ const $ = id => document.getElementById(id);
 const world = $('world');
 // no browser right-click menu over the game (Karoz 2026-10-08); the boxes players type into keep it for copy and paste
 addEventListener('contextmenu', e => { if (!e.target.closest('input, textarea, [contenteditable]')) e.preventDefault(); });
+// a picture that fails to download (Chrome drops some under load) is retried a few times instead of staying blank
+document.addEventListener('error', e => {
+  const im = e.target; if (!(im instanceof HTMLImageElement)) return;
+  const src = (im.getAttribute('src') || '').replace(/[?&]r=\d+$/, ''), n = (+im.dataset.retry || 0) + 1;
+  if (!src || src.startsWith('data:') || src.startsWith('blob:') || n > 4) return;
+  im.dataset.retry = n; setTimeout(() => { if ((im.getAttribute('src') || '').startsWith(src)) im.src = src + (src.includes('?') ? '&' : '?') + 'r=' + n; }, 1200 * n);
+}, true);
+// the browser may keep an old copy of this page for a while after an update; if the live one is newer, open that instead,
+// so everyone in a room plays the same version
+addEventListener('DOMContentLoaded', () => {
+  const cur = (document.getElementById('ver') || {}).textContent; if (!cur || location.protocol === 'file:') return;
+  fetch(location.pathname + '?cb=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => {
+    const live = (t.match(/<div id="ver">([^<]+)<\/div>/) || [])[1];
+    if (!live || live.trim() === cur.trim()) return;
+    try { if (sessionStorage.getItem('aoa-ver-jump') === live) return; sessionStorage.setItem('aoa-ver-jump', live); } catch { return; }
+    const q = new URLSearchParams(location.search); q.set('v', live.trim()); location.replace(location.pathname + '?' + q + location.hash);
+  }).catch(() => {});
+});
 addEventListener('dragstart', e => { if (e.target.tagName === 'IMG') e.preventDefault(); });
 // like the game page: the developer-tools, view-source, save and print shortcuts do nothing here (F12, Ctrl+Shift+I/J/C/K,
 // Ctrl+U/S/P). This only keeps casual players out; what really protects the game is that the server checks every change
@@ -4170,6 +4188,6 @@ sysLine('ยินดีต้อนรับสู่เมือง กดท�
 boot();
 sysLine('พิมพ์ /help เพื่อดูคำสั่งแชท');
 </script>
-<div id="ver">v0.61.82</div>
+<div id="ver">v0.61.83</div>
 </body>
 </html>
