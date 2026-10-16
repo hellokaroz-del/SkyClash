@@ -1484,7 +1484,7 @@ function explode(q) {
   for (const pl of S.players) {
     if (!pl.alive || boxDist(pl, q.x, q.y) > r) continue;
     const foe = teamOf(pl.i) !== teamOf(owner.i);
-    if (!foe) continue; // Karoz 2026-10-16: your own shots never hurt you or a teammate (they did, down to 1 HP, when you fired point blank)
+    if (pct <= 0 && !foe) continue;
     let dmg = pct > 0 ? hitDamage(owner, pl, base, sk && sk.vsDot && hasDot(pl) ? sk.vsDot : pct, sk ? sk.ignoreDef : 0, q.up) : 0, rx = null; const defR = HD_DEFR;
     if (foe && sk && sk.burst) { rx = skillRx(reactionOf(pl, owner), sk); if (rx && rx.bonus) dmg += hitDamage(owner, pl, 'matk', rx.bonus, 0, q.up) * (1 + (owner.c.pv.reactDmg || 0) / 100); }
     if (foe && sk && sk.vsPoison && pl.dots.some(d => d.kind === 'poison')) { dmg += hitDamage(owner, pl, base, sk.vsPoison, 0, q.up); pl.dots = pl.dots.filter(d => d.kind !== 'poison'); say(pl, 'พิษระเบิด!', '#8de05a', 80, 104); } // Poison Explosion
@@ -2043,7 +2043,7 @@ function settleGolem() {
 // 15 slimes in all, 3 on the field at a time; when one dies the next drops in. Each slime takes its own short turn
 // after the hero: it hops towards the hero (2 hops, up to 1.5 slots) and, once next to the hero, slams into them (melee only).
 // Numbers for the test; tune them here.
-const SLIME = { total: 15, field: 3, hp: 400, atk: 18, def: 20, mdef: 20, luk: 5, hop: 72, hops: 2, reach: 62, acc: 0.85, scale: 2.5, door: 1480 };
+const SLIME = { total: 15, field: 3, hp: 400, atk: 18, def: 20, mdef: 20, luk: 5, hop: 72, hops: 2, reach: 125, stop: 110, acc: 0.85, scale: 2.5, door: 1480 };
 const SLIME_COL = ['#a8b4b4', '#9ccc4a', '#5ab8e0', '#e0b494', '#e8962e', '#d8503a', '#d050a8'];
 const SLIME_NAME = ['เทา', 'เขียว', 'ฟ้า', 'ครีม', 'ส้ม', 'แดง', 'ชมพู'];
 // the sheet: 7 colours x 6 moves, 14 frames each, 56 x 64 cells, the slime's centre 20 px from the left, feet on the bottom
@@ -2581,7 +2581,9 @@ function mobTick(p) {
   if (mp.phase === 'hop') { // the jump row: crouch, airborne for frames 2-8, land
     if (mp.t >= 6 && mp.t < 27 && mp.left > 0) {
       const st = Math.min(mp.left, SLIME.hop / 21), nx = p.x + p.face * st;
-      const blocked = Math.abs(tx - nx) < SLIME.reach - 14 || nx < 20 || nx > WW - 20; // other slimes don't block: they can overlap (Karoz)
+      // Karoz 2026-10-16: a slime stops SLIME.stop px short of the hero and lunges from there (it used to walk right up
+      // against the hero, where a shot at it blew up on the shooter too); other slimes don't block: they can overlap (Karoz)
+      const blocked = Math.abs(tx - nx) < SLIME.stop || nx < 20 || nx > WW - 20;
       if (blocked) mp.left = 0; else { p.x = nx; p.y = surfaceY(Math.round(p.x)); mp.left -= st; }
     }
     if (mp.t >= 42) { mp.hops++; mp.phase = 'think'; mp.t = 4; p.anim = { k: 'idle', t: 0 };
